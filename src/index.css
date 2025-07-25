@@ -114,11 +114,24 @@ All colors MUST be HSL.
 @layer components {
   /* Masonry Grid Optimizations */
   .masonry-grid {
-    /* Ensure minimum 3 columns on all breakpoints */
-    grid-template-columns: repeat(auto-fill, minmax(min(33%, 180px), 1fr));
+    /* Strict minimum 3 columns at all viewport widths ≥320px */
+    grid-template-columns: repeat(3, 1fr);
     
     /* Prevent layout shift during loading */
     contain: layout style paint;
+  }
+
+  /* Progressive enhancement for larger screens */
+  @media (min-width: 1024px) {
+    .masonry-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .masonry-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
   }
 
   /* Video hover animations */

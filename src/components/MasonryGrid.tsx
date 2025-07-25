@@ -19,12 +19,12 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
   useEffect(() => {
     const updateColumns = () => {
-      if (window.innerWidth < 640) {
-        setColumns(1);
-      } else if (window.innerWidth < 1024) {
-        setColumns(2);
+      if (window.innerWidth < 1024) {
+        setColumns(3); // Minimum 3 columns at all times
+      } else if (window.innerWidth < 1440) {
+        setColumns(4);
       } else {
-        setColumns(3);
+        setColumns(5);
       }
     };
 
@@ -49,7 +49,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       className="masonry-grid max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(min(33%, 180px), 1fr))',
+        gridTemplateColumns: `repeat(${columns}, 1fr)`,
         gap: '1rem',
         minHeight: '100vh'
       }}
