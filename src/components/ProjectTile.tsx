@@ -54,17 +54,23 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
   }, [project.coverVideo, isMobile]);
 
   const handleMouseEnter = () => {
+    // Disable hover effects on touch devices to prevent flicker
+    if (isMobile) return;
+    
     setIsHovered(true);
     setShowPreview(true);
-    if (project.coverVideo && videoRef.current && !isMobile) {
+    if (project.coverVideo && videoRef.current) {
       videoRef.current.play();
     }
   };
 
   const handleMouseLeave = () => {
+    // Disable hover effects on touch devices to prevent flicker
+    if (isMobile) return;
+    
     setIsHovered(false);
     setShowPreview(false);
-    if (videoRef.current && !isMobile) {
+    if (videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
     }
@@ -89,7 +95,7 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
           tabIndex={0}
           role="button"
           aria-label={`View ${project.title} project`}
-          whileHover={{ scale: 1.05 }}
+          whileHover={!isMobile ? { scale: 1.05 } : {}}
           transition={{ duration: 0.25 }}
         >
           <div
