@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
@@ -16,12 +16,47 @@ interface ProjectTileProps {
 const ProjectTile = ({ project, index }: ProjectTileProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const tileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 992);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    // Mobile video teaser on viewport entry
+    if (project.coverVideo && tileRef.current) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && isMobile && videoRef.current) {
+              videoRef.current.play();
+              setTimeout(() => {
+                if (videoRef.current) {
+                  videoRef.current.pause();
+                  videoRef.current.currentTime = 0;
+                }
+              }, 2000); // 2s teaser
+            }
+          });
+        },
+        { threshold: 0.5 }
+      );
+      observer.observe(tileRef.current);
+      return () => {
+        observer.disconnect();
+        window.removeEventListener('resize', checkMobile);
+      };
+    }
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [project.coverVideo, isMobile]);
 
   const handleMouseEnter = () => {
     setIsHovered(true);
     setShowPreview(true);
-    if (project.coverVideo && videoRef.current) {
+    if (project.coverVideo && videoRef.current && !isMobile) {
       videoRef.current.play();
     }
   };
@@ -29,7 +64,7 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
   const handleMouseLeave = () => {
     setIsHovered(false);
     setShowPreview(false);
-    if (videoRef.current) {
+    if (videoRef.current && !isMobile) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
     }
@@ -44,9 +79,9 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
   };
 
   return (
-    <div className="relative group">
+    <div ref={tileRef} className="relative group">
       <motion.div
-        className="relative overflow-hidden rounded-lg cursor-pointer"
+        className="relative overflow-hidden rounded-lg"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onKeyDown={handleKeyDown}
@@ -54,7 +89,7 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
         role="button"
         aria-label={`View ${project.title} project`}
       >
-        <Link to={`/projects/${project.slug}`}>
+        <Link to={`/projects/${project.slug}`} className="cursor-pointer">
           <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ duration: 0.25 }}
@@ -68,9 +103,11 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
                 ref={videoRef}
                 src={project.coverVideo}
                 className="w-full h-full object-cover transition-all duration-300"
+                style={{ pointerEvents: 'none' }}
                 muted
                 loop
                 playsInline
+                preload="metadata"
                 poster={project.coverImage}
               />
             ) : (
@@ -78,6 +115,7 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
                 src={project.coverImage}
                 alt={project.title}
                 className="w-full h-full object-cover transition-all duration-300"
+                style={{ pointerEvents: 'none' }}
                 loading="lazy"
               />
             )}
@@ -88,8 +126,9 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
               animate={{ opacity: isHovered ? 1 : 0 }}
               transition={{ duration: 0.25 }}
               className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end p-4"
+              style={{ pointerEvents: 'none' }}
             >
-              <div className="text-white">
+              <div className="text-white" style={{ pointerEvents: 'none' }}>
                 <h3 className="font-playfair text-lg font-semibold drop-shadow-lg">
                   {project.title}
                 </h3>
@@ -119,6 +158,7 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
                 className="aspect-square overflow-hidden rounded"
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.2 }}
+                style={{ pointerEvents: 'auto' }}
               >
                 <img
                   src={image}

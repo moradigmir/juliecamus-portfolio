@@ -46,13 +46,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="masonry-grid max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: '1rem',
-        minHeight: '100vh'
-      }}
+      className="gallery-grid max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+      style={{ minHeight: '100vh' }}
     >
       {projects.map((project, index) => (
         <motion.div
