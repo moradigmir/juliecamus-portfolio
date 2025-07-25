@@ -100,5 +100,64 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer components {
+  /* Masonry Grid Optimizations */
+  .masonry-grid {
+    /* Ensure minimum 3 columns on all breakpoints */
+    grid-template-columns: repeat(auto-fill, minmax(min(33%, 180px), 1fr));
+    
+    /* Prevent layout shift during loading */
+    contain: layout style paint;
+  }
+
+  /* Video hover animations */
+  .video-tile {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .video-tile:hover {
+    transform: scale(1.02);
+  }
+
+  /* Custom scrollbar for preview panels */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.8);
+  }
+
+  /* Focus styles for accessibility */
+  .focus-ring:focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+
+  /* Backdrop blur support */
+  .backdrop-blur-glass {
+    backdrop-filter: blur(12px) saturate(180%);
+    background-color: hsl(var(--card) / 0.8);
   }
 }

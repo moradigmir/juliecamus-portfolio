@@ -46,21 +46,26 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="grid gap-4 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+      className="masonry-grid max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(min(33%, 180px), 1fr))',
+        gap: '1rem',
+        minHeight: '100vh'
       }}
     >
-      {columnArrays.map((column, columnIndex) => (
-        <div key={columnIndex} className="space-y-4">
-          {column.map((project, projectIndex) => (
-            <ProjectTile
-              key={project.slug}
-              project={project}
-              index={columnIndex * Math.ceil(projects.length / columns) + projectIndex}
-            />
-          ))}
-        </div>
+      {projects.map((project, index) => (
+        <motion.div
+          key={project.slug}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1, duration: 0.6 }}
+        >
+          <ProjectTile
+            project={project}
+            index={index}
+          />
+        </motion.div>
       ))}
     </motion.div>
   );

@@ -1,73 +1,64 @@
-# Welcome to your Lovable project
+# Julie Camus - Portfolio Website
 
-## Project info
+A responsive, visually striking portfolio website for French high-end makeup artist Julie Camus, featuring an immersive gallery homepage with dynamic masonry layout.
 
-**URL**: https://lovable.dev/projects/33f7ba8d-73f4-456d-adc6-931bad72606e
+## Features
 
-## How can I edit this code?
+- **Masonry Gallery**: Dynamic grid layout with minimum 3 columns on all breakpoints
+- **Interactive Previews**: Hover effects with video autoplay and side preview panels
+- **Responsive Design**: Optimized for all screen sizes from 320px to desktop
+- **Dark Elegant Theme**: Deep charcoal background with lavender accents (#E0B0FF)
+- **Smooth Animations**: Framer Motion powered transitions and effects
+- **Keyboard Accessible**: Full keyboard navigation support
+- **Touch Optimized**: Mobile-friendly interactions and modal previews
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Framework**: React 18 + TypeScript + Vite
+- **Styling**: Tailwind CSS with custom design system
+- **Animations**: Framer Motion
+- **Routing**: React Router DOM
+- **UI Components**: Radix UI + shadcn/ui
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/33f7ba8d-73f4-456d-adc6-931bad72606e) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Local Development
 
-**Use your preferred IDE**
+1. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+2. **Start development server**:
+   ```bash
+   npm run dev
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+3. **Open browser**: Navigate to `http://localhost:8080`
 
-Follow these steps:
+### Build for Production
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+## Adding Projects
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Projects are managed in `src/data/projects.ts`. Add new projects to the array with cover images, videos, and galleries.
 
-**Use GitHub Codespaces**
+## Design System
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- **Primary**: Lavender (#E0B0FF) accent color
+- **Typography**: Playfair Display + Inter
+- **Theme**: Dark elegant with semantic tokens
 
-## What technologies are used for this project?
+## Performance
 
-This project is built with:
+- Lazy loading for all media
+- Optimized animations with GPU acceleration
+- Responsive image handling
+- Mobile-first responsive design
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Browser Support
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/33f7ba8d-73f4-456d-adc6-931bad72606e) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Modern browsers (Chrome 88+, Firefox 85+, Safari 14+, Edge 88+)
