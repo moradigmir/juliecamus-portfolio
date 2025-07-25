@@ -112,34 +112,31 @@ All colors MUST be HSL.
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer components {
-  /* Gallery Masonry Styles - Enforce 3-column minimum */
-  .gallery-masonry {
-    display: flex;
-    margin-left: -1rem;
-    width: auto;
+  /* Strict 3-Column Grid - Exactly 3 columns everywhere, centered on ultrawide */
+  .strict-three-column-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    max-width: 1200px; /* Center on ultrawide screens */
+    margin: 0 auto;
+    padding: 0;
   }
 
-  .gallery-masonry-col {
-    padding-left: 1rem;
-    background-clip: padding-box;
-  }
-
-  .gallery-masonry-col > .gallery-tile {
-    margin-bottom: 1rem;
+  @media (min-width: 768px) {
+    .strict-three-column-grid {
+      gap: 1.5rem;
+    }
   }
 
   @media (min-width: 1024px) {
-    .gallery-masonry {
-      margin-left: -1.5rem;
+    .strict-three-column-grid {
+      gap: 2rem;
     }
-    
-    .gallery-masonry-col {
-      padding-left: 1.5rem;
-    }
-    
-    .gallery-masonry-col > .gallery-tile {
-      margin-bottom: 1.5rem;
-    }
+  }
+
+  /* Gallery tile styles */
+  .gallery-tile {
+    width: 100%;
   }
 
   /* Video hover animations */

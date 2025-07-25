@@ -79,24 +79,23 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
   };
 
   return (
-    <div ref={tileRef} className="relative group">
-      <motion.div
-        className="relative overflow-hidden rounded-lg"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
-        role="button"
-        aria-label={`View ${project.title} project`}
-      >
-        <Link to={`/projects/${project.slug}`} className="block cursor-pointer">
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            transition={{ duration: 0.25 }}
-            className="relative aspect-[4/5] overflow-hidden bg-muted rounded-lg shadow-lg"
+    <div ref={tileRef} className="relative group cursor-pointer">
+      <Link to={`/projects/${project.slug}`} className="block w-full h-full">
+        <motion.div
+          className="relative overflow-hidden rounded-lg"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onKeyDown={handleKeyDown}
+          tabIndex={0}
+          role="button"
+          aria-label={`View ${project.title} project`}
+          whileHover={{ scale: 1.05 }}
+          transition={{ duration: 0.25 }}
+        >
+          <div
+            className="relative aspect-square overflow-hidden bg-muted rounded-lg shadow-lg"
             style={{
-              boxShadow: isHovered ? '0 25px 50px -12px rgba(224, 176, 255, 0.25)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-              pointerEvents: 'auto'
+              boxShadow: isHovered ? '0 25px 50px -12px rgba(224, 176, 255, 0.25)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
             }}
           >
             {project.coverVideo ? (
@@ -132,55 +131,56 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
                 </h3>
               </div>
             </motion.div>
-          </motion.div>
-        </Link>
-      </motion.div>
 
-      {/* Preview Panel for desktop (≥992px) */}
-      {showPreview && project.images && project.images.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, x: 20, scale: 0.95 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: 20, scale: 0.95 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="hidden lg:block absolute left-full top-0 ml-4 w-80 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-4 shadow-2xl z-20 pointer-events-auto"
-          style={{ boxShadow: '0 25px 50px -12px rgba(224, 176, 255, 0.25)' }}
-        >
-          <h4 className="font-playfair text-lg font-semibold mb-3 text-card-foreground">
-            {project.title}
-          </h4>
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            {project.images.slice(0, 4).map((image, idx) => (
-              <motion.div 
-                key={idx} 
-                className="aspect-square overflow-hidden rounded pointer-events-auto"
-                whileHover={{ scale: 1.05 }}
-                transition={{ duration: 0.2 }}
+            {/* Inline Preview Panel - renders inside tile to prevent hover flicker */}
+            {showPreview && project.images && project.images.length > 0 && !isMobile && (
+              <motion.div
+                initial={{ scaleY: 0, opacity: 0 }}
+                animate={{ scaleY: 1, opacity: 1 }}
+                exit={{ scaleY: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="absolute inset-x-0 bottom-0 bg-card/95 backdrop-blur-sm border-t border-border p-4 pointer-events-none"
+                style={{ 
+                  transformOrigin: 'bottom',
+                  backdropFilter: 'blur(12px) saturate(180%)'
+                }}
               >
-                <img
-                  src={image}
-                  alt={`${project.title} ${idx + 1}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
+                <h4 className="font-playfair text-sm font-semibold mb-2 text-card-foreground pointer-events-none">
+                  {project.title}
+                </h4>
+                <div className="grid grid-cols-3 gap-1 mb-2 pointer-events-none">
+                  {project.images.slice(0, 3).map((image, idx) => (
+                    <div 
+                      key={idx} 
+                      className="aspect-square overflow-hidden rounded-sm pointer-events-none"
+                    >
+                      <img
+                        src={image}
+                        alt={`${project.title} ${idx + 1}`}
+                        className="w-full h-full object-cover pointer-events-none"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {project.images.length > 3 && (
+                  <p className="text-xs text-primary font-medium pointer-events-none">
+                    +{project.images.length - 3} more images
+                  </p>
+                )}
               </motion.div>
-            ))}
+            )}
           </div>
-          {project.images.length > 4 && (
-            <p className="text-sm text-primary font-medium">
-              +{project.images.length - 4} more images
-            </p>
-          )}
         </motion.div>
-      )}
+      </Link>
 
       {/* Mobile Preview Modal (<992px) */}
-      {showPreview && project.images && project.images.length > 0 && (
+      {showPreview && project.images && project.images.length > 0 && isMobile && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={() => setShowPreview(false)}
         >
           <motion.div

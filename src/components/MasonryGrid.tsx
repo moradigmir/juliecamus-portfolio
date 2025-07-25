@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import Masonry from 'react-masonry-css';
 import ProjectTile from './ProjectTile';
 
 interface Project {
@@ -15,28 +14,16 @@ interface MasonryGridProps {
 }
 
 const MasonryGrid = ({ projects }: MasonryGridProps) => {
-  // Breakpoint configuration ensuring minimum 3 columns
-  const breakpointCols = {
-    default: 5,
-    1440: 4,
-    1024: 4,
-    768: 3,
-    320: 3
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
+      className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{ minHeight: '100vh' }}
     >
-      <Masonry
-        breakpointCols={breakpointCols}
-        className="gallery-masonry"
-        columnClassName="gallery-masonry-col"
-      >
+      {/* Strict 3-column grid - exactly 3 columns everywhere, centered on ultrawide */}
+      <div className="strict-three-column-grid">
         {projects.map((project, index) => (
           <motion.div
             key={project.slug}
@@ -51,7 +38,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             />
           </motion.div>
         ))}
-      </Masonry>
+      </div>
     </motion.div>
   );
 };
