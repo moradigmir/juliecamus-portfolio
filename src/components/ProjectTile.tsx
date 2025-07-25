@@ -89,21 +89,21 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
         role="button"
         aria-label={`View ${project.title} project`}
       >
-        <Link to={`/projects/${project.slug}`} className="cursor-pointer">
+        <Link to={`/projects/${project.slug}`} className="block cursor-pointer">
           <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ duration: 0.25 }}
             className="relative aspect-[4/5] overflow-hidden bg-muted rounded-lg shadow-lg"
             style={{
-              boxShadow: isHovered ? '0 25px 50px -12px rgba(224, 176, 255, 0.25)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+              boxShadow: isHovered ? '0 25px 50px -12px rgba(224, 176, 255, 0.25)' : '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+              pointerEvents: 'auto'
             }}
           >
             {project.coverVideo ? (
               <video
                 ref={videoRef}
                 src={project.coverVideo}
-                className="w-full h-full object-cover transition-all duration-300"
-                style={{ pointerEvents: 'none' }}
+                className="w-full h-full object-cover transition-all duration-300 pointer-events-none"
                 muted
                 loop
                 playsInline
@@ -114,8 +114,7 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
               <img
                 src={project.coverImage}
                 alt={project.title}
-                className="w-full h-full object-cover transition-all duration-300"
-                style={{ pointerEvents: 'none' }}
+                className="w-full h-full object-cover transition-all duration-300 pointer-events-none"
                 loading="lazy"
               />
             )}
@@ -125,11 +124,10 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: isHovered ? 1 : 0 }}
               transition={{ duration: 0.25 }}
-              className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end p-4"
-              style={{ pointerEvents: 'none' }}
+              className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end p-4 pointer-events-none"
             >
-              <div className="text-white" style={{ pointerEvents: 'none' }}>
-                <h3 className="font-playfair text-lg font-semibold drop-shadow-lg">
+              <div className="text-white pointer-events-none">
+                <h3 className="font-playfair text-lg font-semibold drop-shadow-lg pointer-events-none">
                   {project.title}
                 </h3>
               </div>
@@ -145,7 +143,7 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 20, scale: 0.95 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="hidden lg:block absolute left-full top-0 ml-4 w-80 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-4 shadow-2xl z-20"
+          className="hidden lg:block absolute left-full top-0 ml-4 w-80 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-4 shadow-2xl z-20 pointer-events-auto"
           style={{ boxShadow: '0 25px 50px -12px rgba(224, 176, 255, 0.25)' }}
         >
           <h4 className="font-playfair text-lg font-semibold mb-3 text-card-foreground">
@@ -155,10 +153,9 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
             {project.images.slice(0, 4).map((image, idx) => (
               <motion.div 
                 key={idx} 
-                className="aspect-square overflow-hidden rounded"
+                className="aspect-square overflow-hidden rounded pointer-events-auto"
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.2 }}
-                style={{ pointerEvents: 'auto' }}
               >
                 <img
                   src={image}

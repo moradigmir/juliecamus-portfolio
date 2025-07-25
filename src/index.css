@@ -112,21 +112,33 @@ All colors MUST be HSL.
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer components {
-  /* Gallery Grid - Enforce 3-column minimum */
-  .gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)); /* forces ≥3 columns */
-    grid-auto-flow: row dense; /* fill gaps */
-    gap: 1rem;
-    
-    /* Prevent layout shift during loading */
-    contain: layout style paint;
+  /* Gallery Masonry Styles - Enforce 3-column minimum */
+  .gallery-masonry {
+    display: flex;
+    margin-left: -1rem;
+    width: auto;
   }
 
-  /* Progressive enhancement for larger screens */
+  .gallery-masonry-col {
+    padding-left: 1rem;
+    background-clip: padding-box;
+  }
+
+  .gallery-masonry-col > .gallery-tile {
+    margin-bottom: 1rem;
+  }
+
   @media (min-width: 1024px) {
-    .gallery-grid {
-      grid-template-columns: repeat(auto-fill, minmax(min(25%, 240px), 1fr));
+    .gallery-masonry {
+      margin-left: -1.5rem;
+    }
+    
+    .gallery-masonry-col {
+      padding-left: 1.5rem;
+    }
+    
+    .gallery-masonry-col > .gallery-tile {
+      margin-bottom: 1.5rem;
     }
   }
 
