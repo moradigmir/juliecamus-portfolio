@@ -54,9 +54,6 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
   }, [project.coverVideo, isMobile]);
 
   const handleMouseEnter = () => {
-    // Disable hover effects on touch devices to prevent flicker
-    if (isMobile) return;
-    
     setIsHovered(true);
     setShowPreview(true);
     if (project.coverVideo && videoRef.current) {
@@ -65,9 +62,6 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
   };
 
   const handleMouseLeave = () => {
-    // Disable hover effects on touch devices to prevent flicker
-    if (isMobile) return;
-    
     setIsHovered(false);
     setShowPreview(false);
     if (videoRef.current) {
@@ -139,15 +133,10 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
             </motion.div>
 
             {/* Inline Preview Panel - renders inside tile to prevent hover flicker */}
-            {showPreview && project.images && project.images.length > 0 && !isMobile && (
-              <motion.div
-                initial={{ scaleY: 0, opacity: 0 }}
-                animate={{ scaleY: 1, opacity: 1 }}
-                exit={{ scaleY: 0, opacity: 0 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="absolute inset-x-0 bottom-0 bg-card/95 backdrop-blur-sm border-t border-border p-4 pointer-events-none"
+            {project.images && project.images.length > 0 && !isMobile && (
+              <div
+                className="tile-preview absolute inset-x-0 bottom-0 bg-card/95 backdrop-blur-sm border-t border-border p-4 pointer-events-none"
                 style={{ 
-                  transformOrigin: 'bottom',
                   backdropFilter: 'blur(12px) saturate(180%)'
                 }}
               >
@@ -173,10 +162,10 @@ const ProjectTile = ({ project, index }: ProjectTileProps) => {
                   <p className="text-xs text-primary font-medium pointer-events-none">
                     +{project.images.length - 3} more images
                   </p>
-                )}
-              </motion.div>
-            )}
-          </div>
+                 )}
+               </div>
+             )}
+           </div>
         </motion.div>
       </Link>
 

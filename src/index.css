@@ -139,6 +139,27 @@ All colors MUST be HSL.
     width: 100%;
   }
 
+  /* Preview panel - hidden by default */
+  .tile-preview {
+    transform: scaleY(0);
+    opacity: 0;
+    transform-origin: bottom;
+    transition: none;
+  }
+
+  /* Hover effects ONLY on devices that truly support hover */
+  @media (hover: hover) and (pointer: fine) {
+    .tile-preview {
+      transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+    }
+    
+    .gallery-tile:hover .tile-preview,
+    .gallery-tile:focus-within .tile-preview {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+  }
+
   /* Video hover animations */
   .video-tile {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
