@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import ProjectTile from './ProjectTile';
 
 interface Project {
@@ -14,6 +15,16 @@ interface MasonryGridProps {
 }
 
 const MasonryGrid = ({ projects }: MasonryGridProps) => {
+  const [expandedTile, setExpandedTile] = useState<number | null>(null);
+
+  const handleTileHover = (index: number) => {
+    setExpandedTile(index);
+  };
+
+  const handleTileLeave = () => {
+    setExpandedTile(null);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -22,19 +33,23 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{ minHeight: '100vh' }}
     >
-      {/* Strict 3-column grid - exactly 3 columns everywhere, centered on ultrawide */}
-      <div className="strict-three-column-grid">
+      {/* Dynamic flowing grid that supports expansion */}
+      <div className="flowing-grid">
         {projects.map((project, index) => (
           <motion.div
             key={project.slug}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1, duration: 0.6 }}
-            className="gallery-tile"
+            className={`gallery-tile-wrapper ${expandedTile === index ? 'expanded' : ''}`}
+            onMouseEnter={() => handleTileHover(index)}
+            onMouseLeave={handleTileLeave}
           >
             <ProjectTile
               project={project}
               index={index}
+              isExpanded={expandedTile === index}
+              onHover={handleTileHover}
             />
           </motion.div>
         ))}

@@ -11,9 +11,11 @@ interface ProjectTileProps {
     images?: string[];
   };
   index: number;
+  isExpanded?: boolean;
+  onHover?: (index: number) => void;
 }
 
-const ProjectTile: React.FC<ProjectTileProps> = ({ project, index }) => {
+const ProjectTile: React.FC<ProjectTileProps> = ({ project, index, isExpanded = false }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLAnchorElement>(null);
 
@@ -51,15 +53,12 @@ const ProjectTile: React.FC<ProjectTileProps> = ({ project, index }) => {
   }, [project.coverVideo]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.6 }}
-    >
+    <div className="flex">
+      {/* Main Tile */}
       <Link
         ref={tileRef}
         to={`/project/${project.slug}`}
-        className="gallery-tile block relative group focus:outline-none focus-ring cursor-pointer"
+        className="gallery-tile block relative group focus:outline-none focus-ring cursor-pointer flex-shrink-0"
         tabIndex={0}
         role="button"
         aria-label={`View ${project.title} project`}
@@ -100,37 +99,44 @@ const ProjectTile: React.FC<ProjectTileProps> = ({ project, index }) => {
             </h3>
           </div>
 
-          {/* Inline Preview Panel - renders inside tile to prevent hover flicker */}
-          {project.images && project.images.length > 0 && (
-            <div
-              className="tile-preview absolute inset-x-0 bottom-0 bg-card/95 backdrop-blur-sm border-t border-border p-4 pointer-events-none"
-              style={{ 
-                backdropFilter: 'blur(12px) saturate(180%)'
-              }}
-            >
-              <div className="grid grid-cols-3 gap-2 mb-3 pointer-events-none">
-                {project.images.slice(0, 3).map((image, idx) => (
-                  <div key={idx} className="aspect-square rounded overflow-hidden pointer-events-none">
-                    <img
-                      src={image}
-                      alt={`${project.title} preview ${idx + 1}`}
-                      className="w-full h-full object-cover pointer-events-none"
-                      loading="lazy"
-                    />
-                  </div>
-                ))}
-              </div>
-              
-              {project.images.length > 3 && (
-                <p className="text-xs text-primary font-medium pointer-events-none">
-                  +{project.images.length - 3} more images
-                </p>
-              )}
-            </div>
-          )}
         </motion.div>
       </Link>
-    </motion.div>
+
+      {/* Right-Side Accordion Preview */}
+      {isExpanded && project.images && project.images.length > 0 && (
+        <motion.div
+          initial={{ width: 0, opacity: 0 }}
+          animate={{ width: 'auto', opacity: 1 }}
+          exit={{ width: 0, opacity: 0 }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+          className="accordion-preview flex overflow-hidden rounded-r-lg border-r border-t border-b border-border bg-card"
+          style={{ pointerEvents: 'none' }} // Prevent hover interference
+        >
+          <div className="flex gap-2 p-4">
+            {project.images.slice(0, 4).map((image, idx) => (
+              <div 
+                key={idx} 
+                className="flex-shrink-0 w-32 h-32 rounded-lg overflow-hidden"
+              >
+                <img
+                  src={image}
+                  alt={`${project.title} preview ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+            ))}
+            {project.images.length > 4 && (
+              <div className="flex-shrink-0 w-32 h-32 rounded-lg bg-muted flex items-center justify-center">
+                <span className="text-sm text-muted-foreground font-medium">
+                  +{project.images.length - 4}
+                </span>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </div>
   );
 };
 
