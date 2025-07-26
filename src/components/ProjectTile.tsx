@@ -13,9 +13,10 @@ interface ProjectTileProps {
   index: number;
   isExpanded?: boolean;
   onHover?: (index: number) => void;
+  onClick?: () => void;
 }
 
-const ProjectTile: React.FC<ProjectTileProps> = ({ project, index }) => {
+const ProjectTile: React.FC<ProjectTileProps> = ({ project, index, onClick }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLAnchorElement>(null);
 
@@ -52,6 +53,13 @@ const ProjectTile: React.FC<ProjectTileProps> = ({ project, index }) => {
     return () => observer.disconnect();
   }, [project.coverVideo]);
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (onClick) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <Link
       ref={tileRef}
@@ -60,6 +68,7 @@ const ProjectTile: React.FC<ProjectTileProps> = ({ project, index }) => {
       tabIndex={0}
       role="button"
       aria-label={`View ${project.title} project`}
+      onClick={handleClick}
     >
       <motion.div
         className="relative w-full h-full rounded-lg overflow-hidden bg-card border border-border shadow-lg"

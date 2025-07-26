@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import ProjectTile from './ProjectTile';
+import Lightbox from './Lightbox';
 
 interface Project {
   slug: string;
@@ -16,14 +17,62 @@ interface MasonryGridProps {
 
 const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [expandedTile, setExpandedTile] = useState<number | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxProject, setLightboxProject] = useState<Project | null>(null);
+  const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  const handleTileHover = (index: number) => {
+  // Debounced hover handlers to prevent mouse chase flicker
+  const handleTileHover = useCallback((index: number) => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+    }
     setExpandedTile(index);
-  };
+  }, [hoverTimeout]);
 
-  const handleTileLeave = () => {
-    setExpandedTile(null);
-  };
+  const handleTileLeave = useCallback(() => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+    }
+    const timeout = setTimeout(() => {
+      setExpandedTile(null);
+    }, 100); // Small delay to prevent flicker when moving between related tiles
+    setHoverTimeout(timeout);
+  }, [hoverTimeout]);
+
+  // Handle accordion tile hover - maintain current expansion without changing it
+  const handleAccordionHover = useCallback(() => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+    }
+    // Don't change expanded state, just clear any pending collapse
+  }, [hoverTimeout]);
+
+  // Lightbox handlers
+  const openLightbox = useCallback((project: Project, imageIndex: number = 0) => {
+    setLightboxProject(project);
+    setLightboxImageIndex(imageIndex);
+    setLightboxOpen(true);
+  }, []);
+
+  const closeLightbox = useCallback(() => {
+    setLightboxOpen(false);
+    setLightboxProject(null);
+    setLightboxImageIndex(0);
+    // Keep accordion expansion when closing lightbox
+  }, []);
+
+  const nextImage = useCallback(() => {
+    if (!lightboxProject) return;
+    const allImages = [lightboxProject.coverImage, ...(lightboxProject.images || [])];
+    setLightboxImageIndex((prev) => (prev + 1) % allImages.length);
+  }, [lightboxProject]);
+
+  const prevImage = useCallback(() => {
+    if (!lightboxProject) return;
+    const allImages = [lightboxProject.coverImage, ...(lightboxProject.images || [])];
+    setLightboxImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+  }, [lightboxProject]);
 
   // Create the grid items array with accordion images as full-sized tiles
   const createGridItems = () => {
@@ -77,8 +126,9 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                 <ProjectTile
                   project={item.project}
                   index={item.originalIndex!}
-                  isExpanded={false}
+                  isExpanded={expandedTile === item.originalIndex}
                   onHover={handleTileHover}
+                  onClick={expandedTile === item.originalIndex ? () => openLightbox(item.project, 0) : undefined}
                 />
               </motion.div>
             );
@@ -92,6 +142,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="gallery-tile-wrapper accordion-tile"
+                onMouseEnter={handleAccordionHover}
+                onMouseLeave={handleTileLeave}
               >
                 <div
                   className="gallery-tile block relative group focus:outline-none focus-ring cursor-pointer"
@@ -99,13 +151,13 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                   role="button"
                   aria-label={`View ${item.project.title} image ${item.imageIndex! + 1}`}
                   onClick={() => {
-                    // Navigate to project detail with image index
-                    window.location.href = `/project/${item.project.slug}?image=${item.imageIndex}`;
+                    // Open lightbox at specific image index (+ 1 to account for cover image)
+                    openLightbox(item.project, item.imageIndex! + 1);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      window.location.href = `/project/${item.project.slug}?image=${item.imageIndex}`;
+                      openLightbox(item.project, item.imageIndex! + 1);
                     }
                   }}
                 >
@@ -133,6 +185,16 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           }
         })}
       </div>
+
+      {/* Lightbox */}
+      <Lightbox
+        isOpen={lightboxOpen}
+        project={lightboxProject}
+        imageIndex={lightboxImageIndex}
+        onClose={closeLightbox}
+        onNext={nextImage}
+        onPrev={prevImage}
+      />
     </motion.div>
   );
 };
