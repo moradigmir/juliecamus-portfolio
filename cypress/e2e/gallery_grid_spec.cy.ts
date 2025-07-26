@@ -35,6 +35,21 @@ describe('Gallery Grid - 3 Column Enforcement', () => {
     });
   });
 
+  it('should enforce strict 3-column grid without gaps', () => {
+    const assertThreeCols = () => {
+      cy.get('.strict-three-column-grid').then($grid => {
+        const gridStyles = getComputedStyle($grid[0]);
+        const columns = gridStyles.gridTemplateColumns.split(' ').length;
+        expect(columns).to.eq(3);
+      });
+    };
+
+    [375, 768, 1280, 1920].forEach(width => {
+      cy.viewport(width, 900);
+      assertThreeCols();
+    });
+  });
+
   it('should not have hover flicker issues', () => {
     // Test hover stability - cursor should remain pointer throughout hover
     cy.get('.gallery-tile').first().within(() => {

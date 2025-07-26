@@ -136,6 +136,8 @@ All colors MUST be HSL.
 
   /* Gallery tile styles */
   .gallery-tile {
+    aspect-ratio: 1 / 1;
+    position: relative;
     width: 100%;
   }
 
@@ -156,6 +158,17 @@ All colors MUST be HSL.
     .gallery-tile:hover .tile-preview,
     .gallery-tile:focus-within .tile-preview {
       transform: scaleY(1);
+      opacity: 1;
+    }
+
+    /* Video hover effects */
+    .gallery-tile:hover .cover-video,
+    .gallery-tile:focus-within .cover-video {
+      transform: scale(1.05);
+    }
+    
+    .gallery-tile:hover .video-overlay,
+    .gallery-tile:focus-within .video-overlay {
       opacity: 1;
     }
   }
