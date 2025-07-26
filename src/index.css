@@ -112,15 +112,15 @@ All colors MUST be HSL.
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer components {
-  /* Flowing Grid - Natural flexbox flow for accordion expansion */
+  /* Flowing Grid - STRICT 3 columns with natural accordion flow */
   .flowing-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0;
-    align-items: flex-start;
+    align-items: start;
   }
 
   @media (min-width: 768px) {
@@ -135,33 +135,15 @@ All colors MUST be HSL.
     }
   }
 
-  /* Gallery tile wrapper for natural flow */
+  /* Gallery tile wrapper - each takes 1 grid column */
   .gallery-tile-wrapper {
-    flex: 0 0 calc(33.333% - 0.667rem); /* 3 columns with gap */
     transition: all 0.3s ease-in-out;
+    grid-column: span 1;
   }
 
-  /* Accordion tiles maintain same size */
+  /* Accordion tiles also take 1 grid column each */
   .gallery-tile-wrapper.accordion-tile {
-    flex: 0 0 calc(33.333% - 0.667rem);
-  }
-
-  @media (min-width: 768px) {
-    .gallery-tile-wrapper {
-      flex: 0 0 calc(33.333% - 1rem);
-    }
-    .gallery-tile-wrapper.accordion-tile {
-      flex: 0 0 calc(33.333% - 1rem);
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .gallery-tile-wrapper {
-      flex: 0 0 calc(33.333% - 1.333rem);
-    }
-    .gallery-tile-wrapper.accordion-tile {
-      flex: 0 0 calc(33.333% - 1.333rem);
-    }
+    grid-column: span 1;
   }
 
   /* Gallery tile styles */
