@@ -8,23 +8,23 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 20 14% 8%;
-    --foreground: 60 9% 98%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
 
-    --card: 20 14% 12%;
-    --card-foreground: 60 9% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
 
-    --popover: 20 14% 12%;
-    --popover-foreground: 60 9% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
 
     --primary: 280 100% 85%;
     --primary-foreground: 20 14% 8%;
 
-    --secondary: 20 14% 16%;
-    --secondary-foreground: 60 9% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
 
-    --muted: 20 14% 16%;
-    --muted-foreground: 60 9% 64%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
 
     --accent: 280 100% 85%;
     --accent-foreground: 20 14% 8%;
@@ -32,8 +32,8 @@ All colors MUST be HSL.
     --destructive: 0 84% 60%;
     --destructive-foreground: 60 9% 98%;
 
-    --border: 20 14% 20%;
-    --input: 20 14% 20%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
     --ring: 280 100% 85%;
 
     --radius: 0.5rem;
@@ -116,7 +116,7 @@ All colors MUST be HSL.
   .flowing-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
+    gap: 0.5rem;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0;
@@ -125,13 +125,13 @@ All colors MUST be HSL.
 
   @media (min-width: 768px) {
     .flowing-grid {
-      gap: 1.5rem;
+      gap: 0.75rem;
     }
   }
 
   @media (min-width: 1024px) {
     .flowing-grid {
-      gap: 2rem;
+      gap: 1rem;
     }
   }
 
