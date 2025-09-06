@@ -38,20 +38,39 @@ const About = () => {
                 
                 <div className="space-y-6 font-inter text-lg text-muted-foreground leading-relaxed">
                   <p>
-                    With over a decade of experience in the luxury beauty industry, Julie Camus has established herself as one of France's most sought-after makeup artists. Her work spans editorial photography, high fashion runway shows, and celebrity red carpet events.
+                    With over 20 years of experience in fashion and beauty, JULIE is a highly skilled makeup artist renowned for her refined technique and meticulous attention to detail. Her signature style blends flawless, imperceptible natural looks with a sophisticated creative vision.
                   </p>
                   
                   <p>
-                    Born and raised in Paris, Julie discovered her passion for makeup artistry at the prestigious École de Maquillage Artistique. Her unique approach combines classical French elegance with contemporary artistic vision, creating looks that are both timeless and cutting-edge.
+                    Trusted by some of the most prestigious luxury brands, she has consistently delivered impeccable results for the most demanding clients. Throughout her career, she has worked alongside celebrated industry figures such as Lucia Pica, former Global Creative Director for Chanel, and Peter Philips, Creative and Image Director of Dior Makeup, with whom she has collaborated for over 15 years.
                   </p>
                   
-                  <p>
-                    Julie's work has been featured in Vogue Paris, Harper's Bazaar, and Elle Magazine. She has collaborated with renowned photographers and fashion designers across Paris, Milan, and New York Fashion Weeks.
-                  </p>
-                  
-                  <p>
-                    When not working on set, Julie teaches masterclasses at the Académie de Beauté in Paris and mentors emerging makeup artists in the industry.
-                  </p>
+                  <div className="mt-8">
+                    <h3 className="font-playfair text-xl font-semibold text-foreground mb-4">
+                      Clients include:
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2 text-base">
+                      <div className="space-y-1">
+                        <p>Dior</p>
+                        <p>Chanel</p>
+                        <p>Givenchy Beauty</p>
+                        <p>ARMANI BEAUTY</p>
+                        <p>Lancôme</p>
+                        <p>LACOSTE</p>
+                        <p>L'Oréal Luxe</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p>Vogue</p>
+                        <p>Harper's Bazaar</p>
+                        <p>Elle</p>
+                        <p>NUMERO</p>
+                        <p>Nike</p>
+                        <p>Puma</p>
+                        <p>Replay</p>
+                        <p>Levi's</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Achievements */}
