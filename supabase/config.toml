@@ -1,1 +1,4 @@
 project_id = "fvrgjyyflojdiklqepqt"
+
+[functions.hidrive-proxy]
+verify_jwt = false
