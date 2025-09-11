@@ -59,11 +59,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           const webdavMatch = url.match(/^https?:\/\/webdav\.hidrive\.strato\.com\/users\/[^/]+(\/.*)$/);
           if (webdavMatch) {
             const path = webdavMatch[1];
-            return `/functions/v1/hidrive-proxy?path=${encodeURIComponent(path)}`;
+            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path)}`;
           }
           if (url.startsWith('hidrive://')) {
             const path = url.replace('hidrive://', '');
-            return `/functions/v1/hidrive-proxy?path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
+            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
           }
         } catch {}
         return url;
@@ -78,16 +78,25 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 
       const requiresProxy = proxiedItems.some(
         (it) =>
-          it.previewUrl.startsWith('/functions/v1/hidrive-proxy') ||
-          it.fullUrl.startsWith('/functions/v1/hidrive-proxy')
+          it.previewUrl.includes('functions.supabase.co/hidrive-proxy') ||
+          it.fullUrl.includes('functions.supabase.co/hidrive-proxy')
       );
 
       if (requiresProxy && proxiedItems.length > 0) {
         try {
           const head = await fetch(proxiedItems[0].previewUrl, { method: 'HEAD' });
-          if (!head.ok) {
-            console.warn('HiDrive proxy not reachable (status ' + head.status + '). Falling back to legacy content.');
-            setMediaItems([]); // Trigger fallback in MasonryGrid
+          const contentType = head.headers.get('content-type') || '';
+          
+          if (!head.ok || head.status < 200 || head.status >= 400) {
+            console.warn(`HiDrive proxy not reachable (status ${head.status}). Falling back to legacy content.`);
+            setMediaItems([]);
+            return;
+          }
+          
+          // Check if we got HTML instead of media (proxy misrouted)
+          if (contentType.includes('text/html')) {
+            console.warn('HiDrive proxy returned HTML (likely misrouted). Falling back to legacy content.');
+            setMediaItems([]);
             return;
           }
         } catch (e) {

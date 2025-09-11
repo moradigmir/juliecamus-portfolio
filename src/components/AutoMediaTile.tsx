@@ -16,6 +16,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [hasError, setHasError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [codecHint, setCodecHint] = useState<string | null>(null);
+  const [proxyMisrouted, setProxyMisrouted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleClick = () => {
@@ -70,9 +71,25 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           headers: { Range: 'bytes=0-2047' },
           signal: controller.signal,
         });
+        
+        const contentType = res.headers.get('content-type') || '';
+        
+        // Check if proxy returned HTML (misrouted)
+        if (contentType.includes('text/html')) {
+          setProxyMisrouted(true);
+          return;
+        }
+        
         if (!(res.ok || res.status === 206)) return;
         const buf = new Uint8Array(await res.arrayBuffer());
         const ascii = new TextDecoder('ascii').decode(buf);
+        
+        // Check if it starts with HTML
+        if (ascii.trim().startsWith('<!DOCTYPE html') || ascii.trim().startsWith('<html')) {
+          setProxyMisrouted(true);
+          return;
+        }
+        
         let hint: string | null = null;
         if (ascii.includes('hvc1') || ascii.includes('hev1')) hint = 'HEVC (hvc1/hev1)';
         else if (ascii.includes('av01')) hint = 'AV1 (av01)';
@@ -122,11 +139,20 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted text-muted-foreground p-4 text-center">
             <div>
               <div className="w-12 h-12 mx-auto mb-2 opacity-50">⚠️</div>
-              <p className="text-sm font-medium">Failed to load</p>
-              {codecHint && (
-                <p className="text-xs opacity-80 mt-1">Detected codec: {codecHint}</p>
+              {proxyMisrouted ? (
+                <>
+                  <p className="text-sm font-medium">Proxy misrouted</p>
+                  <p className="text-xs opacity-70 mt-1">The proxy returned HTML instead of media. Check function deployment.</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">Failed to load</p>
+                  {codecHint && (
+                    <p className="text-xs opacity-80 mt-1">Detected codec: {codecHint}</p>
+                  )}
+                  <p className="text-xs opacity-70 mt-1">If your browser doesn't support this codec, try Safari or download the file.</p>
+                </>
               )}
-              <p className="text-xs opacity-70 mt-1">If your browser doesn’t support this codec, try Safari or download the file.</p>
             </div>
             <div className="flex items-center gap-2">
               <button
