@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MediaItem } from '../lib/mediaConfig';
 
 interface Project {
   slug: string;
@@ -12,7 +13,8 @@ interface Project {
 
 interface LightboxProps {
   isOpen: boolean;
-  project: Project | null;
+  project?: Project | null;
+  media?: MediaItem | null;
   imageIndex: number;
   onClose: () => void;
   onNext: () => void;
@@ -22,16 +24,28 @@ interface LightboxProps {
 const Lightbox: React.FC<LightboxProps> = ({
   isOpen,
   project,
+  media,
   imageIndex,
   onClose,
   onNext,
   onPrev
 }) => {
-  // Get all images including cover image
-  const allImages = project ? [project.coverImage, ...(project.images || [])] : [];
-  const currentImage = allImages[imageIndex];
+  // Handle media vs project content
+  const title = media ? media.title : project?.title || '';
+  const isVideo = media?.type === 'video';
+  
+  // Get all images/content
+  let allContent: string[] = [];
+  if (media) {
+    allContent = [media.fullUrl];
+  } else if (project) {
+    allContent = [project.coverImage, ...(project.images || [])];
+  }
+  
+  const currentContent = allContent[imageIndex];
+  const hasNavigation = allContent.length > 1 && !media; // Media items don't have navigation
 
-  // Keyboard navigation
+  // Keyboard navigation (disabled for media items since they're single content)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isOpen) return;
@@ -41,19 +55,23 @@ const Lightbox: React.FC<LightboxProps> = ({
           onClose();
           break;
         case 'ArrowLeft':
-          e.preventDefault();
-          onPrev();
+          if (hasNavigation) {
+            e.preventDefault();
+            onPrev();
+          }
           break;
         case 'ArrowRight':
-          e.preventDefault();
-          onNext();
+          if (hasNavigation) {
+            e.preventDefault();
+            onNext();
+          }
           break;
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, onNext, onPrev]);
+  }, [isOpen, hasNavigation, onClose, onNext, onPrev]);
 
   // Prevent body scroll when lightbox is open
   useEffect(() => {
@@ -68,7 +86,7 @@ const Lightbox: React.FC<LightboxProps> = ({
     };
   }, [isOpen]);
 
-  if (!project) return null;
+  if (!project && !media) return null;
 
   return (
     <AnimatePresence>
@@ -90,8 +108,8 @@ const Lightbox: React.FC<LightboxProps> = ({
             <X size={24} />
           </button>
 
-          {/* Navigation buttons */}
-          {allImages.length > 1 && (
+          {/* Navigation buttons - only show for projects with multiple images */}
+          {hasNavigation && (
             <>
               <button
                 onClick={(e) => {
@@ -111,7 +129,7 @@ const Lightbox: React.FC<LightboxProps> = ({
                   onNext();
                 }}
                 className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-background/80 hover:bg-background text-foreground transition-colors disabled:opacity-50"
-                disabled={imageIndex === allImages.length - 1}
+                disabled={imageIndex === allContent.length - 1}
                 aria-label="Next image"
               >
                 <ChevronRight size={24} />
@@ -119,36 +137,55 @@ const Lightbox: React.FC<LightboxProps> = ({
             </>
           )}
 
-          {/* Image container */}
+          {/* Content container */}
           <div
             className="flex items-center justify-center w-full h-full p-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <motion.img
-              key={currentImage}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.3 }}
-              src={currentImage}
-              alt={`${project.title} image ${imageIndex + 1}`}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-            />
+            {isVideo ? (
+              <motion.div
+                key={currentContent}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3 }}
+                className="w-full max-w-4xl max-h-full"
+              >
+                <iframe
+                  src={currentContent}
+                  className="w-full aspect-video rounded-lg shadow-2xl"
+                  frameBorder="0"
+                  allow="autoplay; encrypted-media; fullscreen"
+                  allowFullScreen
+                />
+              </motion.div>
+            ) : (
+              <motion.img
+                key={currentContent}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3 }}
+                src={currentContent}
+                alt={`${title} image ${imageIndex + 1}`}
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              />
+            )}
           </div>
 
-          {/* Image counter */}
-          {allImages.length > 1 && (
+          {/* Content counter - only show for projects with multiple images */}
+          {hasNavigation && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm rounded-full px-4 py-2">
               <span className="text-sm text-foreground">
-                {imageIndex + 1} / {allImages.length}
+                {imageIndex + 1} / {allContent.length}
               </span>
             </div>
           )}
 
-          {/* Project title */}
+          {/* Title */}
           <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg px-4 py-2">
             <h2 className="text-lg font-playfair font-semibold text-foreground">
-              {project.title}
+              {title}
             </h2>
           </div>
         </motion.div>

@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { useState, useCallback } from 'react';
 import ProjectTile from './ProjectTile';
+import MediaTile from './MediaTile';
 import Lightbox from './Lightbox';
+import { mediaItems, MediaItem } from '../lib/mediaConfig';
 
 interface Project {
   slug: string;
@@ -15,10 +17,18 @@ interface MasonryGridProps {
   projects: Project[];
 }
 
+type GridItem = {
+  type: 'project' | 'media' | 'accordion';
+  data: Project | MediaItem;
+  accordionImages?: string[];
+  accordionProjectSlug?: string;
+};
+
 const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [expandedTile, setExpandedTile] = useState<number | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxProject, setLightboxProject] = useState<Project | null>(null);
+  const [lightboxMedia, setLightboxMedia] = useState<MediaItem | null>(null);
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -51,13 +61,22 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   // Lightbox handlers
   const openLightbox = useCallback((project: Project, imageIndex: number = 0) => {
     setLightboxProject(project);
+    setLightboxMedia(null);
     setLightboxImageIndex(imageIndex);
+    setLightboxOpen(true);
+  }, []);
+
+  const openMediaLightbox = useCallback((media: MediaItem) => {
+    setLightboxMedia(media);
+    setLightboxProject(null);
+    setLightboxImageIndex(0);
     setLightboxOpen(true);
   }, []);
 
   const closeLightbox = useCallback(() => {
     setLightboxOpen(false);
     setLightboxProject(null);
+    setLightboxMedia(null);
     setLightboxImageIndex(0);
     // Keep accordion expansion when closing lightbox
   }, []);
@@ -74,9 +93,14 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setLightboxImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
   }, [lightboxProject]);
 
-  // Create the grid items array with accordion images as full-sized tiles
+  // Create the grid items array with media items first, then project tiles
   const createGridItems = () => {
-    const items: { type: 'project' | 'accordion'; project: Project; originalIndex?: number; imageIndex?: number; imageSrc?: string }[] = [];
+    const items: { type: 'media' | 'project' | 'accordion'; project?: Project; media?: MediaItem; originalIndex?: number; imageIndex?: number; imageSrc?: string }[] = [];
+    
+    // Add media items first (Google Drive content)
+    mediaItems.forEach((media) => {
+      items.push({ type: 'media', media });
+    });
     
     projects.forEach((project, index) => {
       // Add main project tile
@@ -112,7 +136,23 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       {/* Flexbox flowing grid that supports natural expansion */}
       <div className="flowing-grid">
         {gridItems.map((item, index) => {
-          if (item.type === 'project') {
+          if (item.type === 'media') {
+            return (
+              <motion.div
+                key={`media-${item.media!.id}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.6 }}
+                className="gallery-tile-wrapper"
+              >
+                <MediaTile
+                  media={item.media!}
+                  index={index}
+                  onClick={() => openMediaLightbox(item.media!)}
+                />
+              </motion.div>
+            );
+          } else if (item.type === 'project') {
             return (
               <motion.div
                 key={`project-${item.project.slug}`}
@@ -190,6 +230,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       <Lightbox
         isOpen={lightboxOpen}
         project={lightboxProject}
+        media={lightboxMedia}
         imageIndex={lightboxImageIndex}
         onClose={closeLightbox}
         onNext={nextImage}
