@@ -53,8 +53,30 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         a.orderKey.localeCompare(b.orderKey, undefined, { numeric: true })
       );
       
-      setMediaItems(sortedItems);
-      console.log(`✅ Loaded ${sortedItems.length} media items from manifest`);
+      const mapHiDriveUrlToProxy = (url: string): string => {
+        if (!url) return url;
+        try {
+          const webdavMatch = url.match(/^https?:\/\/webdav\.hidrive\.strato\.com\/users\/[^/]+(\/.*)$/);
+          if (webdavMatch) {
+            const path = webdavMatch[1];
+            return `/functions/v1/hidrive-proxy?path=${encodeURIComponent(path)}`;
+          }
+          if (url.startsWith('hidrive://')) {
+            const path = url.replace('hidrive://', '');
+            return `/functions/v1/hidrive-proxy?path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
+          }
+        } catch {}
+        return url;
+      };
+      
+      const proxiedItems = sortedItems.map((item) => ({
+        ...item,
+        previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
+        fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
+      }));
+      
+      setMediaItems(proxiedItems);
+      console.log(`✅ Loaded ${proxiedItems.length} media items from manifest (HiDrive proxied where applicable)`);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error loading media manifest';

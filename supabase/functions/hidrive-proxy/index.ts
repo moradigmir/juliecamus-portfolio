@@ -1,0 +1,106 @@
+// Supabase Edge Function: HiDrive proxy for anonymous video/image streaming
+// - Proxies requests to IONOS HiDrive WebDAV using Basic Auth stored in Supabase secrets
+// - Allows your public website visitors to stream media without seeing an auth prompt
+// - Usage: /functions/v1/hidrive-proxy?path=/public/media/01/01_short.mp4
+
+// NOTE: Do not log secrets or full target URLs. Keep responses cacheable where possible.
+
+// CORS helpers
+function corsHeaders(origin?: string) {
+  return {
+    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Methods": "GET,HEAD,OPTIONS",
+    "Access-Control-Allow-Headers": "*, Range, Content-Type, Accept, Origin",
+  } as Record<string, string>;
+}
+
+Deno.serve(async (req: Request) => {
+  const url = new URL(req.url);
+  const origin = req.headers.get("Origin") ?? undefined;
+
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: { ...corsHeaders(origin) } });
+  }
+
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    return new Response("Method not allowed", { status: 405, headers: { ...corsHeaders(origin) } });
+  }
+
+  const pathParam = url.searchParams.get("path") || "";
+  if (!pathParam || !pathParam.startsWith("/")) {
+    return new Response("Missing or invalid 'path' query param. Expected like /public/media/...", {
+      status: 400,
+      headers: { ...corsHeaders(origin) },
+    });
+  }
+
+  // Optional: restrict to public/media subtree for safety
+  if (!pathParam.startsWith("/public/")) {
+    return new Response("Access denied: path must start with /public/", { status: 403, headers: { ...corsHeaders(origin) } });
+  }
+
+  const username = Deno.env.get("HIDRIVE_USERNAME");
+  const password = Deno.env.get("HIDRIVE_PASSWORD");
+  if (!username || !password) {
+    return new Response("HiDrive credentials not configured", {
+      status: 503,
+      headers: { ...corsHeaders(origin) },
+    });
+  }
+
+  // Build target URL to HiDrive WebDAV
+  const base = "https://webdav.hidrive.strato.com";
+  // Ensure no double slashes; encode only path segments, preserve slashes
+  const targetUrl = `${base}/users/${encodeURIComponent(username)}${pathParam}`;
+
+  const range = req.headers.get("Range") || undefined;
+
+  try {
+    const auth = "Basic " + btoa(`${username}:${password}`);
+    const upstream = await fetch(targetUrl, {
+      method: req.method,
+      headers: {
+        Authorization: auth,
+        Accept: "*/*",
+        ...(range ? { Range: range } : {}),
+        // Some WebDAVs require a UA
+        "User-Agent": "Lovable-HiDrive-Proxy/1.0",
+      },
+    });
+
+    // If unauthorized or forbidden, avoid leaking details
+    if (upstream.status === 401 || upstream.status === 403) {
+      return new Response("Upstream authorization failed", {
+        status: 502,
+        headers: { ...corsHeaders(origin) },
+      });
+    }
+
+    // Copy relevant headers
+    const headers = new Headers();
+    headers.set("Cache-Control", "public, max-age=3600");
+    headers.set("Accept-Ranges", upstream.headers.get("Accept-Ranges") || "bytes");
+    const ct = upstream.headers.get("Content-Type");
+    if (ct) headers.set("Content-Type", ct);
+    const cl = upstream.headers.get("Content-Length");
+    if (cl) headers.set("Content-Length", cl);
+    const cr = upstream.headers.get("Content-Range");
+    if (cr) headers.set("Content-Range", cr);
+    const lm = upstream.headers.get("Last-Modified");
+    if (lm) headers.set("Last-Modified", lm);
+
+    // CORS
+    const c = corsHeaders(origin);
+    for (const [k, v] of Object.entries(c)) headers.set(k, v);
+
+    // Stream body
+    if (req.method === "HEAD") {
+      return new Response(null, { status: upstream.status, headers });
+    }
+    return new Response(upstream.body, { status: upstream.status, headers });
+  } catch (err) {
+    console.error("HiDrive proxy error", err);
+    return new Response("Proxy error", { status: 500, headers: { ...corsHeaders(origin) } });
+  }
+});
