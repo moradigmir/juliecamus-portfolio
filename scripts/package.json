@@ -1,11 +1,11 @@
 {
   "name": "hidrive-scripts",
-  "version": "1.0.0",
+  "version": "1.0.0", 
   "type": "module",
   "dependencies": {
     "tsx": "^4.7.0"
   },
   "scripts": {
-    "build-media": "HIDRIVE_PASSWORD='Payasugo187!juliecamus' tsx buildMediaManifest.ts"
+    "build-media": "tsx buildMediaManifest.ts"
   }
 }

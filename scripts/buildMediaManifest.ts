@@ -7,9 +7,9 @@ import path from 'path';
 export type MediaType = 'image' | 'video';
 
 export interface MediaItem {
-  orderKey: string;      // "01"
-  folder: string;        // "01"  
-  title: string;         // default = folder name
+  orderKey: string;
+  folder: string;
+  title: string;
   previewUrl: string;
   previewType: MediaType;
   fullUrl: string;
@@ -22,46 +22,41 @@ export interface MediaManifest {
   source: 'hidrive';
 }
 
-// HiDrive API configuration
-interface HiDriveConfig {
-  username: string;
-  password: string;
-  baseUrl: string;
-  rootPath: string;
-}
-
 interface HiDriveFile {
   name: string;
   type: 'file' | 'dir';
-  size?: number;
   path: string;
+  size?: number;
+  href?: string;
 }
 
 class HiDriveClient {
-  private config: HiDriveConfig;
-  private accessToken: string | null = null;
+  private username: string;
+  private password: string;
+  private baseUrl: string;
 
-  constructor(config: HiDriveConfig) {
-    this.config = config;
+  constructor(username: string, password: string) {
+    this.username = username;
+    this.password = password;
+    this.baseUrl = 'https://webdav.hidrive.strato.com';
   }
 
-  async authenticate(): Promise<void> {
-    // For now, we'll use basic auth with the HiDrive WebDAV interface
-    // In production, you'd want to use OAuth2, but this requires client_id/secret setup
-    console.log('Authenticating with HiDrive...');
-    this.accessToken = Buffer.from(`${this.config.username}:${this.config.password}`).toString('base64');
+  private getAuthHeader(): string {
+    return `Basic ${Buffer.from(`${this.username}:${this.password}`).toString('base64')}`;
   }
 
-  async listFiles(dirPath: string): Promise<HiDriveFile[]> {
-    const url = `https://webdav.hidrive.strato.com${this.config.rootPath}${dirPath}`;
-    
+  async listDirectory(dirPath: string): Promise<HiDriveFile[]> {
+    const url = `${this.baseUrl}${dirPath}`;
+    console.log(`📂 Listing directory: ${url}`);
+
     try {
       const response = await fetch(url, {
         method: 'PROPFIND',
         headers: {
-          'Authorization': `Basic ${this.accessToken}`,
+          'Authorization': this.getAuthHeader(),
           'Depth': '1',
-          'Content-Type': 'application/xml'
+          'Content-Type': 'application/xml',
+          'User-Agent': 'Mozilla/5.0 (compatible; MediaManifestBuilder/1.0)'
         },
         body: `<?xml version="1.0" encoding="utf-8"?>
 <D:propfind xmlns:D="DAV:">
@@ -69,201 +64,258 @@ class HiDriveClient {
     <D:displayname/>
     <D:getcontentlength/>
     <D:resourcetype/>
+    <D:href/>
   </D:prop>
 </D:propfind>`
       });
 
       if (!response.ok) {
-        throw new Error(`HiDrive API error: ${response.status} ${response.statusText}`);
+        console.error(`❌ HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`HiDrive request failed: ${response.status} ${response.statusText}`);
       }
 
       const xmlText = await response.text();
+      console.log(`📄 Response received (${xmlText.length} chars)`);
+      
       return this.parseWebDAVResponse(xmlText, dirPath);
     } catch (error) {
-      console.error(`Error listing files in ${dirPath}:`, error);
+      console.error(`❌ Error listing directory ${dirPath}:`, error);
       throw error;
     }
   }
 
   private parseWebDAVResponse(xml: string, basePath: string): HiDriveFile[] {
-    // Simple XML parsing for WebDAV response
+    console.log(`🔍 Parsing WebDAV response for ${basePath}`);
     const files: HiDriveFile[] = [];
-    const responseRegex = /<D:response>(.*?)<\/D:response>/gs;
     
+    // Simple regex-based parsing for WebDAV multistatus response
+    const responsePattern = /<d:response[^>]*>(.*?)<\/d:response>/gis;
     let match;
-    while ((match = responseRegex.exec(xml)) !== null) {
+    
+    while ((match = responsePattern.exec(xml)) !== null) {
       const responseContent = match[1];
       
-      const hrefMatch = responseContent.match(/<D:href>(.*?)<\/D:href>/);
-      const displayNameMatch = responseContent.match(/<D:displayname>(.*?)<\/D:displayname>/);
-      const isCollection = responseContent.includes('<D:collection/>');
+      // Extract href
+      const hrefMatch = responseContent.match(/<d:href[^>]*>(.*?)<\/d:href>/i);
+      if (!hrefMatch) continue;
       
-      if (hrefMatch && displayNameMatch) {
-        const href = hrefMatch[1];
-        const name = displayNameMatch[1];
-        
-        // Skip the current directory entry
-        if (href.endsWith(basePath) || href.endsWith(basePath + '/')) {
-          continue;
-        }
-        
-        files.push({
-          name,
-          type: isCollection ? 'dir' : 'file',
-          path: href
-        });
+      const href = decodeURIComponent(hrefMatch[1]);
+      
+      // Skip the current directory itself
+      if (href === basePath || href === basePath + '/') {
+        continue;
       }
+      
+      // Extract display name
+      const nameMatch = responseContent.match(/<d:displayname[^>]*>(.*?)<\/d:displayname>/i);
+      const name = nameMatch ? nameMatch[1].trim() : path.basename(href);
+      
+      if (!name) continue;
+      
+      // Check if it's a directory
+      const isCollection = responseContent.includes('<d:collection') || responseContent.includes('<d:collection/>');
+      
+      // Extract size
+      const sizeMatch = responseContent.match(/<d:getcontentlength[^>]*>(\d+)<\/d:getcontentlength>/i);
+      const size = sizeMatch ? parseInt(sizeMatch[1]) : undefined;
+      
+      files.push({
+        name,
+        type: isCollection ? 'dir' : 'file',
+        path: href,
+        size,
+        href
+      });
+      
+      console.log(`  📄 Found: ${name} (${isCollection ? 'dir' : 'file'})`);
     }
     
     return files;
   }
 
   getPublicUrl(filePath: string): string {
-    // Generate public URL for HiDrive files
-    // This assumes files in /public/ are accessible via direct URL
-    return `https://my.hidrive.com/api/sharelink/create${filePath}`;
+    // For files in the public folder, we can create direct access URLs
+    // HiDrive allows direct access to files in public shares
+    const cleanPath = filePath.replace('/public/', '');
+    return `https://my.hidrive.com/share/juliecamus${cleanPath}`;
   }
 }
 
 class MediaManifestBuilder {
-  private hidriveClient: HiDriveClient;
+  private client: HiDriveClient;
   
-  constructor(hidriveConfig: HiDriveConfig) {
-    this.hidriveClient = new HiDriveClient(hidriveConfig);
+  constructor(username: string, password: string) {
+    this.client = new HiDriveClient(username, password);
   }
 
   async buildManifest(): Promise<MediaManifest> {
-    console.log('Building media manifest...');
+    console.log('🚀 Starting HiDrive media manifest generation...');
     
-    await this.hidriveClient.authenticate();
-    
-    // List media directories
-    const mediaDirs = await this.listMediaDirectories();
-    console.log(`Found ${mediaDirs.length} media directories:`, mediaDirs.map(d => d.name));
-    
-    const items: MediaItem[] = [];
-    
-    for (const dir of mediaDirs) {
-      console.log(`Processing directory: ${dir.name}`);
-      const mediaItem = await this.processDirectory(dir);
-      if (mediaItem) {
-        items.push(mediaItem);
-      }
-    }
-    
-    // Sort by orderKey numerically
-    items.sort((a, b) => a.orderKey.localeCompare(b.orderKey, undefined, { numeric: true }));
-    
-    return {
-      items,
-      generatedAt: new Date().toISOString(),
-      source: 'hidrive'
-    };
-  }
-
-  private async listMediaDirectories(): Promise<HiDriveFile[]> {
-    const files = await this.hidriveClient.listFiles('/media/');
-    
-    // Filter for numbered directories (01, 02, 03, etc.)
-    return files
-      .filter(file => file.type === 'dir')
-      .filter(file => /^\d+$/.test(file.name))
-      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-  }
-
-  private async processDirectory(dir: HiDriveFile): Promise<MediaItem | null> {
     try {
-      const files = await this.hidriveClient.listFiles(`/media/${dir.name}/`);
-      const mediaFiles = files.filter(file => this.isMediaFile(file.name));
+      // List the /public/media directory
+      const mediaDir = '/public/media';
+      console.log(`📂 Scanning ${mediaDir}`);
       
-      if (mediaFiles.length === 0) {
-        console.warn(`No media files found in directory: ${dir.name}`);
-        return null;
-      }
-
-      const preview = this.selectPreviewFile(mediaFiles);
-      const full = this.selectFullFile(mediaFiles, dir.name);
+      const entries = await this.client.listDirectory(mediaDir);
       
-      if (!preview) {
-        console.warn(`No preview file found for directory: ${dir.name}`);
-        return null;
+      // Filter for numbered directories
+      const numberDirs = entries
+        .filter(entry => entry.type === 'dir')
+        .filter(entry => /^\d+$/.test(entry.name))
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      
+      console.log(`📁 Found numbered directories: ${numberDirs.map(d => d.name).join(', ')}`);
+      
+      const items: MediaItem[] = [];
+      
+      for (const dir of numberDirs) {
+        console.log(`\n🔍 Processing folder: ${dir.name}`);
+        
+        try {
+          const folderPath = `${mediaDir}/${dir.name}`;
+          const files = await this.client.listDirectory(folderPath);
+          
+          const mediaFiles = files.filter(file => 
+            file.type === 'file' && this.isMediaFile(file.name)
+          );
+          
+          console.log(`  📄 Media files found: ${mediaFiles.map(f => f.name).join(', ')}`);
+          
+          if (mediaFiles.length === 0) {
+            console.warn(`  ⚠️  No media files in folder ${dir.name}`);
+            continue;
+          }
+          
+          const preview = this.selectPreviewFile(mediaFiles);
+          const full = this.selectFullFile(mediaFiles, dir.name);
+          
+          if (!preview) {
+            console.warn(`  ⚠️  No suitable preview file for folder ${dir.name}`);
+            continue;
+          }
+          
+          const previewUrl = this.client.getPublicUrl(preview.path);
+          const fullUrl = this.client.getPublicUrl((full || preview).path);
+          
+          console.log(`  ✅ Preview: ${preview.name} -> ${previewUrl}`);
+          console.log(`  ✅ Full: ${(full || preview).name} -> ${fullUrl}`);
+          
+          items.push({
+            orderKey: dir.name,
+            folder: dir.name,
+            title: `Portfolio ${dir.name}`,
+            previewUrl,
+            previewType: this.getMediaType(preview.name),
+            fullUrl,
+            fullType: this.getMediaType((full || preview).name)
+          });
+          
+        } catch (error) {
+          console.error(`❌ Error processing folder ${dir.name}:`, error);
+        }
       }
-
+      
+      console.log(`\n🎉 Successfully processed ${items.length} media folders`);
+      
       return {
-        orderKey: dir.name,
-        folder: dir.name,
-        title: this.formatTitle(dir.name),
-        previewUrl: this.hidriveClient.getPublicUrl(preview.path),
-        previewType: this.getMediaType(preview.name),
-        fullUrl: this.hidriveClient.getPublicUrl(full?.path || preview.path),
-        fullType: this.getMediaType(full?.name || preview.name)
+        items,
+        generatedAt: new Date().toISOString(),
+        source: 'hidrive'
       };
+      
     } catch (error) {
-      console.error(`Error processing directory ${dir.name}:`, error);
-      return null;
+      console.error('❌ Failed to build media manifest:', error);
+      throw error;
     }
   }
 
   private selectPreviewFile(files: HiDriveFile[]): HiDriveFile | null {
+    console.log('    🔍 Selecting preview file...');
+    
     // Priority 1: exact _preview.*
-    let candidate = files.find(f => f.name.match(/^_preview\./));
-    if (candidate) return candidate;
+    let candidate = files.find(f => f.name.match(/^_preview\./i));
+    if (candidate) {
+      console.log(`    ✅ Found exact _preview file: ${candidate.name}`);
+      return candidate;
+    }
     
     // Priority 2: contains _short
-    candidate = files.find(f => f.name.includes('_short'));
-    if (candidate) return candidate;
+    candidate = files.find(f => f.name.toLowerCase().includes('_short'));
+    if (candidate) {
+      console.log(`    ✅ Found _short file: ${candidate.name}`);
+      return candidate;
+    }
     
     // Priority 3: contains _preview
-    candidate = files.find(f => f.name.includes('_preview'));
-    if (candidate) return candidate;
+    candidate = files.find(f => f.name.toLowerCase().includes('_preview'));
+    if (candidate) {
+      console.log(`    ✅ Found _preview file: ${candidate.name}`);
+      return candidate;
+    }
     
     // Priority 4: first image
     candidate = files.find(f => this.getMediaType(f.name) === 'image');
-    if (candidate) return candidate;
+    if (candidate) {
+      console.log(`    ✅ Using first image: ${candidate.name}`);
+      return candidate;
+    }
     
     // Priority 5: first video
     candidate = files.find(f => this.getMediaType(f.name) === 'video');
-    if (candidate) return candidate;
+    if (candidate) {
+      console.log(`    ✅ Using first video: ${candidate.name}`);
+      return candidate;
+    }
     
+    console.log('    ❌ No suitable preview file found');
     return null;
   }
 
   private selectFullFile(files: HiDriveFile[], folderNumber: string): HiDriveFile | null {
+    console.log('    🔍 Selecting full file...');
+    
     const nonPreviewFiles = files.filter(f => 
-      !f.name.includes('_short') && 
-      !f.name.includes('_preview') &&
-      !f.name.startsWith('_preview.')
+      !f.name.toLowerCase().includes('_short') && 
+      !f.name.toLowerCase().includes('_preview') &&
+      !f.name.toLowerCase().startsWith('_preview.')
     );
     
     if (nonPreviewFiles.length === 0) {
-      // Fallback to any file if only preview files exist
-      return files[0] || null;
+      console.log('    ℹ️  All files are preview files, will reuse preview as full');
+      return null;
     }
     
     // Priority 1: video starting with folder number
     let candidate = nonPreviewFiles.find(f => 
       this.getMediaType(f.name) === 'video' && 
-      f.name.startsWith(folderNumber)
+      f.name.toLowerCase().startsWith(folderNumber.toLowerCase())
     );
-    if (candidate) return candidate;
+    if (candidate) {
+      console.log(`    ✅ Found numbered video: ${candidate.name}`);
+      return candidate;
+    }
     
     // Priority 2: first video (non-preview)
     candidate = nonPreviewFiles.find(f => this.getMediaType(f.name) === 'video');
-    if (candidate) return candidate;
+    if (candidate) {
+      console.log(`    ✅ Using first video: ${candidate.name}`);
+      return candidate;
+    }
     
     // Priority 3: first image (non-preview)  
     candidate = nonPreviewFiles.find(f => this.getMediaType(f.name) === 'image');
-    if (candidate) return candidate;
+    if (candidate) {
+      console.log(`    ✅ Using first image: ${candidate.name}`);
+      return candidate;
+    }
     
-    // Fallback: first file
-    return nonPreviewFiles[0] || files[0] || null;
+    console.log('    ℹ️  No suitable full file, will reuse preview');
+    return null;
   }
 
   private isMediaFile(filename: string): boolean {
     const mediaExtensions = [
-      // Images
       '.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif',
-      // Videos  
       '.mp4', '.webm', '.mov', '.avi', '.mkv'
     ];
     
@@ -276,56 +328,71 @@ class MediaManifestBuilder {
     const ext = path.extname(filename).toLowerCase();
     return videoExtensions.includes(ext) ? 'video' : 'image';
   }
-
-  private formatTitle(folderName: string): string {
-    // Convert folder number to a title (can be customized)
-    return `Media ${folderName}`;
-  }
 }
 
 async function main() {
+  console.log('🎬 HiDrive Media Manifest Builder\n');
+  
+  const username = 'juliecamus';
+  const password = process.env.HIDRIVE_PASSWORD;
+  
+  if (!password) {
+    console.error('❌ HIDRIVE_PASSWORD environment variable is required');
+    console.error('   Set it with: export HIDRIVE_PASSWORD="your-password"');
+    process.exit(1);
+  }
+  
+  console.log(`🔐 Connecting to HiDrive as: ${username}`);
+  
   try {
-    const config: HiDriveConfig = {
-      username: process.env.HIDRIVE_USERNAME || 'juliecamus',
-      password: process.env.HIDRIVE_PASSWORD || '',
-      baseUrl: 'https://webdav.hidrive.strato.com',
-      rootPath: '/public'  // Since everything is in the public folder
-    };
-
-    if (!config.password) {
-      console.error('HIDRIVE_PASSWORD environment variable is required');
-      process.exit(1);
-    }
-
-    const builder = new MediaManifestBuilder(config);
+    const builder = new MediaManifestBuilder(username, password);
     const manifest = await builder.buildManifest();
     
-    // Ensure public directory exists
-    const publicDir = path.join(process.cwd(), 'public');
+    // Write to public directory
+    const publicDir = path.join(process.cwd(), '..', 'public');
+    const manifestPath = path.join(publicDir, 'media.manifest.json');
+    
+    // Ensure directory exists
     if (!fs.existsSync(publicDir)) {
       fs.mkdirSync(publicDir, { recursive: true });
     }
     
-    // Write manifest to public directory
-    const manifestPath = path.join(publicDir, 'media.manifest.json');
+    // Write manifest
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     
-    console.log(`✅ Media manifest generated successfully!`);
+    console.log(`\n🎉 Success!`);
     console.log(`📄 Manifest written to: ${manifestPath}`);
-    console.log(`📊 Found ${manifest.items.length} media items`);
+    console.log(`📊 Found ${manifest.items.length} media items:`);
     
-    // Log summary
     manifest.items.forEach((item, index) => {
-      console.log(`${index + 1}. ${item.title} (${item.folder}) - Preview: ${item.previewType}, Full: ${item.fullType}`);
+      console.log(`   ${index + 1}. Folder ${item.folder}: ${item.title}`);
+      console.log(`      Preview: ${item.previewType} (${item.previewUrl})`);
+      console.log(`      Full: ${item.fullType} (${item.fullUrl})`);
     });
     
+    if (manifest.items.length === 0) {
+      console.log('\n⚠️  No media items found. Make sure you have:');
+      console.log('   - Folders named with numbers (01, 02, etc.) in /public/media/');
+      console.log('   - Media files (.jpg, .mp4, etc.) inside those folders');
+    }
+    
   } catch (error) {
-    console.error('❌ Failed to generate media manifest:', error);
+    console.error('\n❌ Failed to generate manifest:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('401')) {
+        console.error('🔑 Authentication failed. Check your HIDRIVE_PASSWORD.');
+      } else if (error.message.includes('404')) {
+        console.error('📁 Directory not found. Make sure /public/media/ exists in your HiDrive.');
+      } else if (error.message.includes('ENOTFOUND') || error.message.includes('network')) {
+        console.error('🌐 Network error. Check your internet connection.');
+      }
+    }
+    
     process.exit(1);
   }
 }
 
-// Run the script
 if (require.main === module) {
   main();
 }
