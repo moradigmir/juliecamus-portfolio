@@ -132,6 +132,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               loop
               playsInline
               preload="metadata"
+              poster="/placeholder.svg"
               onLoadedData={() => setIsLoaded(true)}
               onError={(e) => {
                 setHasError(true);

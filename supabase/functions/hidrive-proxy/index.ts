@@ -64,7 +64,8 @@ Deno.serve(async (req: Request) => {
       headers: {
         Authorization: auth,
         Accept: "*/*",
-        // NOTE: We intentionally forward Range if present to support streaming
+        // Force range for video streaming when GET has no Range
+        ...(req.method === "GET" && !range ? { Range: "bytes=0-" } : {}),
         ...(range ? { Range: range } : {}),
         "User-Agent": "Lovable-HiDrive-Proxy/1.0",
       },
@@ -110,8 +111,9 @@ Deno.serve(async (req: Request) => {
     const finalCT = upstreamCT && upstreamCT !== "application/octet-stream" ? upstreamCT : (inferredCT || upstreamCT);
     if (finalCT) headers.set("Content-Type", finalCT);
 
-    const cl = upstream.headers.get("Content-Length");
-    if (cl) headers.set("Content-Length", cl);
+    // Intentionally omit Content-Length to avoid mismatches with streamed body
+    // const cl = upstream.headers.get("Content-Length");
+    // if (cl) headers.set("Content-Length", cl);
     const cr = upstream.headers.get("Content-Range");
     if (cr) headers.set("Content-Range", cr);
     const lm = upstream.headers.get("Last-Modified");
