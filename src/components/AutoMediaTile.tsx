@@ -15,9 +15,11 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [codecHint, setCodecHint] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleClick = () => {
+    if (hasError) return;
     onClick?.(media);
   };
 
@@ -58,6 +60,32 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
   const cacheBustedUrl = `${media.previewUrl}${media.previewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
 
+  useEffect(() => {
+    if (media.previewType !== 'video') return;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const res = await fetch(cacheBustedUrl, {
+          method: 'GET',
+          headers: { Range: 'bytes=0-2047' },
+          signal: controller.signal,
+        });
+        if (!(res.ok || res.status === 206)) return;
+        const buf = new Uint8Array(await res.arrayBuffer());
+        const ascii = new TextDecoder('ascii').decode(buf);
+        let hint: string | null = null;
+        if (ascii.includes('hvc1') || ascii.includes('hev1')) hint = 'HEVC (hvc1/hev1)';
+        else if (ascii.includes('av01')) hint = 'AV1 (av01)';
+        else if (ascii.includes('vp09')) hint = 'VP9 (vp09)';
+        else if (ascii.includes('avc1') || ascii.includes('isom') || ascii.includes('mp41') || ascii.includes('mp42')) hint = 'H.264/AVC (avc1)';
+        setCodecHint(hint);
+      } catch (_) {
+        // ignore
+      }
+    })();
+    return () => controller.abort();
+  }, [cacheBustedUrl, media.previewType]);
+
   return (
     <motion.div
       className="gallery-tile-wrapper video-tile cursor-pointer focus-ring"
@@ -91,10 +119,14 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         
         {/* Error State */}
         {hasError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted text-muted-foreground">
-            <div className="text-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted text-muted-foreground p-4 text-center">
+            <div>
               <div className="w-12 h-12 mx-auto mb-2 opacity-50">⚠️</div>
-              <p className="text-sm mb-2">Failed to load</p>
+              <p className="text-sm font-medium">Failed to load</p>
+              {codecHint && (
+                <p className="text-xs opacity-80 mt-1">Detected codec: {codecHint}</p>
+              )}
+              <p className="text-xs opacity-70 mt-1">If your browser doesn’t support this codec, try Safari or download the file.</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -112,10 +144,11 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                 href={cacheBustedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                download
                 className="px-3 py-1 text-xs rounded-md bg-secondary text-secondary-foreground"
                 onClick={(e) => e.stopPropagation()}
               >
-                Open source
+                Download
               </a>
             </div>
           </div>
