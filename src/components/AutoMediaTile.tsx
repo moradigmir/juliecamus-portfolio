@@ -17,6 +17,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [reloadKey, setReloadKey] = useState(0);
   const [codecHint, setCodecHint] = useState<string | null>(null);
   const [proxyMisrouted, setProxyMisrouted] = useState(false);
+  const [httpStatus, setHttpStatus] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleClick = () => {
@@ -53,6 +54,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
       if (lower.endsWith('.mov')) return 'video/quicktime';
       if (lower.endsWith('.webm')) return 'video/webm';
       if (lower.endsWith('.m4v')) return 'video/x-m4v';
+      // Fallback: if path looks like an image
+      if (lower.match(/\.(jpg|jpeg|png|gif|webp)$/)) return 'image/*';
       return 'video/mp4';
     } catch {
       return 'video/mp4';
@@ -71,6 +74,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           headers: { Range: 'bytes=0-2047' },
           signal: controller.signal,
         });
+        setHttpStatus(res.status);
         
         const contentType = res.headers.get('content-type') || '';
         
@@ -96,6 +100,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         else if (ascii.includes('vp09')) hint = 'VP9 (vp09)';
         else if (ascii.includes('avc1') || ascii.includes('isom') || ascii.includes('mp41') || ascii.includes('mp42')) hint = 'H.264/AVC (avc1)';
         setCodecHint(hint);
+        setHttpStatus(res.status);
       } catch (_) {
         // ignore
       }
@@ -201,6 +206,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                   networkState: v.networkState,
                   readyState: v.readyState,
                   error: (v as any).error || null,
+                  status: httpStatus,
                 });
               }}
               style={{ display: hasError ? 'none' : 'block' }}

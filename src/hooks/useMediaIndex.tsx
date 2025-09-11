@@ -56,12 +56,20 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       const mapHiDriveUrlToProxy = (url: string): string => {
         if (!url) return url;
         try {
-          const webdavMatch = url.match(/^https?:\/\/webdav\.hidrive\.strato\.com\/users\/[^/]+(\/.*)$/);
+          const webdavMatch = url.match(/^https?:\/\/webdav\.hidrive\.strato\.com\/users\/([^/]+)(\/.*)$/);
           if (webdavMatch) {
-            const path = webdavMatch[1];
-            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path)}`;
+            const owner = webdavMatch[1];
+            const path = webdavMatch[2];
+            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?owner=${encodeURIComponent(owner)}&path=${encodeURIComponent(path)}`;
           }
           if (url.startsWith('hidrive://')) {
+            // Optional owner prefix: hidrive://<owner>/public/...
+            const ownerMatch = url.match(/^hidrive:\/\/([^/]+)(\/.*)$/);
+            if (ownerMatch) {
+              const owner = ownerMatch[1];
+              const path = ownerMatch[2];
+              return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?owner=${encodeURIComponent(owner)}&path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
+            }
             const path = url.replace('hidrive://', '');
             return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
           }
@@ -93,7 +101,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         }
       }
 
-      // Try to heal obvious 404s: case-sensitive extensions or use fullUrl
+      // Try to heal obvious 404s: case-sensitive extension, uppercase basename, or use fullUrl
       const healedItems = await Promise.all(
         proxiedItems.map(async (it) => {
           const tryHead = async (url: string) => {
@@ -118,14 +126,32 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             const dot = path.lastIndexOf('.');
             if (dot > -1) {
               const ext = path.slice(dot);
-              const upper = ext.toUpperCase();
-              if (ext !== upper) {
-                const altPath = path.slice(0, dot) + upper;
+              const upperExt = ext.toUpperCase();
+              if (ext !== upperExt) {
+                const altPath = path.slice(0, dot) + upperExt;
                 u.searchParams.set('path', altPath);
                 const altUrl = u.toString();
                 const altCheck = await tryHead(altUrl);
                 if (altCheck.ok) {
+                  console.log('Healed preview by uppercasing extension', { altPath });
                   return { ...it, previewUrl: altUrl };
+                }
+              }
+
+              // Try uppercasing the basename as well
+              const slash = path.lastIndexOf('/');
+              if (slash > -1) {
+                const base = path.slice(slash + 1, dot);
+                const upperBase = base.toUpperCase();
+                if (base !== upperBase) {
+                  const altPath2 = path.slice(0, slash + 1) + upperBase + path.slice(dot).toUpperCase();
+                  u.searchParams.set('path', altPath2);
+                  const altUrl2 = u.toString();
+                  const altCheck2 = await tryHead(altUrl2);
+                  if (altCheck2.ok) {
+                    console.log('Healed preview by uppercasing basename+ext', { altPath: altPath2 });
+                    return { ...it, previewUrl: altUrl2 };
+                  }
                 }
               }
             }
@@ -134,6 +160,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           // Fall back to fullUrl for preview if available and valid
           const fullCheck = await tryHead(it.fullUrl);
           if (fullCheck.ok) {
+            console.log('Healed preview by using fullUrl');
             return { ...it, previewUrl: it.fullUrl, previewType: it.fullType };
           }
 

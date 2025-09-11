@@ -28,6 +28,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const pathParam = url.searchParams.get("path") || "";
+  const ownerParam = url.searchParams.get("owner") || undefined;
   if (!pathParam || !pathParam.startsWith("/")) {
     return new Response("Missing or invalid 'path' query param. Expected like /public/media/...", {
       status: 400,
@@ -51,8 +52,17 @@ Deno.serve(async (req: Request) => {
 
   // Build target URL to HiDrive WebDAV
   const base = "https://webdav.hidrive.strato.com";
+  // Determine owner: explicit query param or fallback to auth username
+  const owner = (() => {
+    const re = /^[a-zA-Z0-9._-]{1,64}$/;
+    if (ownerParam && re.test(ownerParam)) return ownerParam;
+    return Deno.env.get("HIDRIVE_USERNAME") || "";
+  })();
+  if (!owner) {
+    return new Response("HiDrive owner not configured", { status: 500, headers: { ...corsHeaders(origin) } });
+  }
   // Ensure no double slashes; encode only path segments, preserve slashes
-  const targetUrl = `${base}/users/${encodeURIComponent(username)}${pathParam}`;
+  const targetUrl = `${base}/users/${encodeURIComponent(owner)}${pathParam}`;
 
   const range = req.headers.get("Range") || undefined;
 
@@ -73,7 +83,7 @@ Deno.serve(async (req: Request) => {
 
     // Safe diagnostic log (no secrets/urls)
     try {
-      console.log("hidrive-proxy", JSON.stringify({ method: req.method, path: pathParam, range: reqRange, status: upstream.status, ct: upstream.headers.get("Content-Type"), ar: upstream.headers.get("Accept-Ranges") }));
+      console.log("hidrive-proxy", JSON.stringify({ method: req.method, owner, path: pathParam, range: reqRange, status: upstream.status, ct: upstream.headers.get("Content-Type"), ar: upstream.headers.get("Accept-Ranges") }));
     } catch (_) {}
 
 
@@ -83,6 +93,11 @@ Deno.serve(async (req: Request) => {
         status: 502,
         headers: { ...corsHeaders(origin) },
       });
+    }
+
+    // Normalize 404 with explicit message to help clients
+    if (upstream.status === 404) {
+      return new Response("Upstream file not found", { status: 404, headers });
     }
 
     // Copy relevant headers
@@ -132,6 +147,7 @@ Deno.serve(async (req: Request) => {
     if (req.method === "HEAD") {
       return new Response(null, { status: upstream.status, headers });
     }
+
     return new Response(upstream.body, { status: upstream.status, headers });
   } catch (err) {
     console.error("HiDrive proxy error", err);
