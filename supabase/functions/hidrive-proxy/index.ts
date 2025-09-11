@@ -81,14 +81,38 @@ Deno.serve(async (req: Request) => {
     const headers = new Headers();
     headers.set("Cache-Control", "public, max-age=3600");
     headers.set("Accept-Ranges", upstream.headers.get("Accept-Ranges") || "bytes");
-    const ct = upstream.headers.get("Content-Type");
-    if (ct) headers.set("Content-Type", ct);
+
+    // Determine a safe Content-Type (fallback by file extension if upstream is generic)
+    const upstreamCT = upstream.headers.get("Content-Type");
+    const lowerPath = pathParam.toLowerCase();
+    const mimeMap: Record<string, string> = {
+      ".mp4": "video/mp4",
+      ".mov": "video/quicktime",
+      ".webm": "video/webm",
+      ".m4v": "video/x-m4v",
+      ".mp3": "audio/mpeg",
+      ".m4a": "audio/mp4",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".gif": "image/gif",
+      ".webp": "image/webp"
+    };
+    const ext = Object.keys(mimeMap).find((e) => lowerPath.endsWith(e));
+    const inferredCT = ext ? mimeMap[ext] : undefined;
+    const finalCT = upstreamCT && upstreamCT !== "application/octet-stream" ? upstreamCT : (inferredCT || upstreamCT);
+    if (finalCT) headers.set("Content-Type", finalCT);
+
     const cl = upstream.headers.get("Content-Length");
     if (cl) headers.set("Content-Length", cl);
     const cr = upstream.headers.get("Content-Range");
     if (cr) headers.set("Content-Range", cr);
     const lm = upstream.headers.get("Last-Modified");
     if (lm) headers.set("Last-Modified", lm);
+
+    // Encourage inline rendering and safe cross-origin embedding
+    headers.set("Content-Disposition", "inline");
+    headers.set("Cross-Origin-Resource-Policy", "cross-origin");
 
     // CORS
     const c = corsHeaders(origin);

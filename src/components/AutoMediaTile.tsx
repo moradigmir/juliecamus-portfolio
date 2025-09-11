@@ -91,13 +91,21 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               loop
               playsInline
               preload="metadata"
+              src={media.previewUrl}
+              crossOrigin="anonymous"
               onLoadedData={() => setIsLoaded(true)}
-              onError={() => setHasError(true)}
+              onError={(e) => {
+                setHasError(true);
+                const v = e.currentTarget;
+                console.error('Video failed to load', {
+                  src: v.currentSrc,
+                  networkState: v.networkState,
+                  readyState: v.readyState,
+                  error: (v as any).error || null,
+                });
+              }}
               style={{ display: hasError ? 'none' : 'block' }}
-            >
-              <source src={media.previewUrl} type="video/mp4" />
-              Your browser does not support video playback.
-            </video>
+            />
           ) : (
             <img
               src={media.previewUrl}
