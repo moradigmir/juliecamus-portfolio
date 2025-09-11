@@ -36,9 +36,10 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Optional: restrict to public/media subtree for safety
-  if (!pathParam.startsWith("/public/")) {
-    return new Response("Access denied: path must start with /public/", { status: 403, headers: { ...corsHeaders(origin) } });
+  // Optional: restrict to allowed subtree for safety
+  const allowed = pathParam.startsWith("/public/") || pathParam.startsWith("/Common/public/");
+  if (!allowed) {
+    return new Response("Access denied: path must start with /public/ or /Common/public/", { status: 403, headers: { ...corsHeaders(origin) } });
   }
 
   const username = Deno.env.get("HIDRIVE_USERNAME");
@@ -69,23 +70,67 @@ Deno.serve(async (req: Request) => {
   try {
     const auth = "Basic " + btoa(`${username}:${password}`);
     const reqRange = range || 'none';
-    const upstream = await fetch(targetUrl, {
+
+    // Directory listing mode (returns XML from WebDAV)
+    const list = url.searchParams.get("list");
+    if (list && req.method === "GET") {
+      const listUrl = `${base}/users/${encodeURIComponent(owner)}${pathParam}`;
+      const body = `<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:displayname/><d:resourcetype/><d:getcontentlength/><d:getlastmodified/><d:getcontenttype/></d:prop></d:propfind>`;
+      const resp = await fetch(listUrl, {
+        method: "PROPFIND",
+        headers: {
+          Authorization: auth,
+          Depth: "1",
+          "Content-Type": "text/xml",
+          Accept: "*/*",
+          "User-Agent": "Lovable-HiDrive-Proxy/1.0",
+        },
+        body,
+      });
+      const text = await resp.text();
+      return new Response(text, { status: resp.status, headers: { ...corsHeaders(origin), "Content-Type": "application/xml" } });
+    }
+
+    // Stream/file mode with fallback to /Common prefix
+    let usedPath = pathParam;
+    let upstream = await fetch(`${base}/users/${encodeURIComponent(owner)}${usedPath}`, {
       method: req.method,
       headers: {
         Authorization: auth,
         Accept: "*/*",
-        // Force range for video streaming when GET has no Range
         ...(req.method === "GET" && !range ? { Range: "bytes=0-" } : {}),
         ...(range ? { Range: range } : {}),
         "User-Agent": "Lovable-HiDrive-Proxy/1.0",
       },
     });
 
-    // Safe diagnostic log (no secrets/urls)
+    // Safe diagnostic log (initial)
     try {
-      console.log("hidrive-proxy", JSON.stringify({ method: req.method, owner, path: pathParam, range: reqRange, status: upstream.status, ct: upstream.headers.get("Content-Type"), ar: upstream.headers.get("Accept-Ranges") }));
+      console.log("hidrive-proxy", JSON.stringify({ method: req.method, owner, path: usedPath, range: reqRange, status: upstream.status, ct: upstream.headers.get("Content-Type"), ar: upstream.headers.get("Accept-Ranges") }));
     } catch (_) {}
 
+    if (upstream.status === 404 && usedPath.startsWith("/public/")) {
+      const altPath = "/Common" + usedPath;
+      const alt = await fetch(`${base}/users/${encodeURIComponent(owner)}${altPath}`, {
+        method: req.method,
+        headers: {
+          Authorization: auth,
+          Accept: "*/*",
+          ...(req.method === "GET" && !range ? { Range: "bytes=0-" } : {}),
+          ...(range ? { Range: range } : {}),
+          "User-Agent": "Lovable-HiDrive-Proxy/1.0",
+        },
+      });
+      try {
+        console.log("hidrive-proxy-fallback", JSON.stringify({ owner, tried: altPath, status: alt.status }));
+      } catch (_) {}
+      if (alt.ok) {
+        upstream = alt;
+        usedPath = altPath;
+      } else {
+        return new Response("Upstream file not found", { status: 404, headers: { ...corsHeaders(origin), "Content-Type": "text/plain" } });
+      }
+    }
 
     // If unauthorized or forbidden, avoid leaking details
     if (upstream.status === 401 || upstream.status === 403) {
@@ -95,10 +140,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Normalize 404 with explicit message to help clients
-    if (upstream.status === 404) {
-      return new Response("Upstream file not found", { status: 404, headers });
-    }
+    // We will handle 404 after optional fallback attempt below
 
     // Copy relevant headers
     const headers = new Headers();

@@ -64,6 +64,22 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
   const cacheBustedUrl = `${media.previewUrl}${media.previewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
 
+  const listUrl = (() => {
+    try {
+      const u = new URL(media.previewUrl);
+      const owner = u.searchParams.get('owner') || '';
+      const path = u.searchParams.get('path') || '';
+      const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '/';
+      const list = new URL(u.origin + u.pathname);
+      list.searchParams.set('path', dir);
+      if (owner) list.searchParams.set('owner', owner);
+      list.searchParams.set('list', '1');
+      return list.toString();
+    } catch {
+      return '';
+    }
+  })();
+
   useEffect(() => {
     if (media.previewType !== 'video') return;
     const controller = new AbortController();
