@@ -58,16 +58,23 @@ Deno.serve(async (req: Request) => {
 
   try {
     const auth = "Basic " + btoa(`${username}:${password}`);
+    const reqRange = range || 'none';
     const upstream = await fetch(targetUrl, {
       method: req.method,
       headers: {
         Authorization: auth,
         Accept: "*/*",
+        // NOTE: We intentionally forward Range if present to support streaming
         ...(range ? { Range: range } : {}),
-        // Some WebDAVs require a UA
         "User-Agent": "Lovable-HiDrive-Proxy/1.0",
       },
     });
+
+    // Safe diagnostic log (no secrets/urls)
+    try {
+      console.log("hidrive-proxy", JSON.stringify({ method: req.method, path: pathParam, range: reqRange, status: upstream.status, ct: upstream.headers.get("Content-Type"), ar: upstream.headers.get("Accept-Ranges") }));
+    } catch (_) {}
+
 
     // If unauthorized or forbidden, avoid leaking details
     if (upstream.status === 401 || upstream.status === 403) {

@@ -14,6 +14,7 @@ interface AutoMediaTileProps {
 const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTileProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleClick = () => {
@@ -55,6 +56,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   })();
 
+  const cacheBustedUrl = `${media.previewUrl}${media.previewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
+
   return (
     <motion.div
       className="gallery-tile-wrapper video-tile cursor-pointer focus-ring"
@@ -88,13 +91,36 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         
         {/* Error State */}
         {hasError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted text-muted-foreground">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted text-muted-foreground">
             <div className="text-center">
               <div className="w-12 h-12 mx-auto mb-2 opacity-50">⚠️</div>
-              <p className="text-sm">Failed to load</p>
+              <p className="text-sm mb-2">Failed to load</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                className="px-3 py-1 text-xs rounded-md bg-primary text-primary-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setHasError(false);
+                  setIsLoaded(false);
+                  setReloadKey((k) => k + 1);
+                }}
+              >
+                Retry
+              </button>
+              <a
+                href={cacheBustedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1 text-xs rounded-md bg-secondary text-secondary-foreground"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Open source
+              </a>
             </div>
           </div>
         )}
+
         
         {/* Media Content */}
         <div className="relative w-full h-full">
@@ -119,7 +145,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               }}
               style={{ display: hasError ? 'none' : 'block' }}
             >
-              <source src={media.previewUrl} type={mimeType} />
+              <source src={cacheBustedUrl} type={mimeType} />
               Your browser does not support video playback.
             </video>
           ) : (
