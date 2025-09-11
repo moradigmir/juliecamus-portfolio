@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ interface HiDriveBrowserProps {
 }
 
 const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
-  const [currentPath, setCurrentPath] = useState('/public');
+  const [currentPath, setCurrentPath] = useState('/Common/public');
   const [items, setItems] = useState<HiDriveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,33 +27,48 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(xmlText, 'text/xml');
-      const responses = doc.getElementsByTagName('d:response');
+      // Prefer namespace-aware lookup
+      const ns = 'DAV:';
+      const responses = Array.from(doc.getElementsByTagNameNS(ns, 'response')).length
+        ? Array.from(doc.getElementsByTagNameNS(ns, 'response'))
+        : Array.from(doc.getElementsByTagName('response'));
+
+      const toText = (el: Element | null | undefined): string => (el?.textContent || '').trim();
       const items: HiDriveItem[] = [];
 
-      for (let i = 0; i < responses.length; i++) {
-        const response = responses[i];
-        const href = response.getElementsByTagName('d:href')[0]?.textContent || '';
-        const displayName = response.getElementsByTagName('d:displayname')[0]?.textContent || '';
-        const resourceType = response.getElementsByTagName('d:resourcetype')[0];
-        const contentLength = response.getElementsByTagName('d:getcontentlength')[0]?.textContent;
-        const lastModified = response.getElementsByTagName('d:getlastmodified')[0]?.textContent;
-        const contentType = response.getElementsByTagName('d:getcontenttype')[0]?.textContent;
+      for (const response of responses) {
+        const hrefEl = (response.getElementsByTagNameNS(ns, 'href')[0] || response.getElementsByTagName('href')[0]) as Element | undefined;
+        const href = toText(hrefEl);
+        const dispEl = (response.getElementsByTagNameNS(ns, 'displayname')[0] || response.getElementsByTagName('displayname')[0]) as Element | undefined;
+        const displayName = toText(dispEl);
+        const rtEl = (response.getElementsByTagNameNS(ns, 'resourcetype')[0] || response.getElementsByTagName('resourcetype')[0]) as Element | undefined;
+        const isDir = !!rtEl && ((rtEl.getElementsByTagNameNS(ns, 'collection')[0] || rtEl.getElementsByTagName('collection')[0]));
+        const lenEl = (response.getElementsByTagNameNS(ns, 'getcontentlength')[0] || response.getElementsByTagName('getcontentlength')[0]) as Element | undefined;
+        const modEl = (response.getElementsByTagNameNS(ns, 'getlastmodified')[0] || response.getElementsByTagName('getlastmodified')[0]) as Element | undefined;
+        const typeEl = (response.getElementsByTagNameNS(ns, 'getcontenttype')[0] || response.getElementsByTagName('getcontenttype')[0]) as Element | undefined;
+
+        // Normalize href to path
+        let decodedHref = '';
+        try {
+          decodedHref = decodeURIComponent(href);
+        } catch {
+          decodedHref = href;
+        }
 
         // Skip the current directory entry
-        if (href.endsWith(currentPath + '/') || href.endsWith(currentPath)) continue;
+        const normalizedCurrent = currentPath.endsWith('/') ? currentPath : currentPath + '/';
+        if (decodedHref.endsWith(normalizedCurrent)) continue;
 
-        const isDirectory = resourceType?.getElementsByTagName('d:collection').length > 0;
-        const name = displayName || decodeURIComponent(href.split('/').pop() || '');
+        const name = displayName || decodedHref.split('/').filter(Boolean).pop() || '';
+        if (!name || name === '.') continue;
 
-        if (name && name !== '.') {
-          items.push({
-            name,
-            type: isDirectory ? 'directory' : 'file',
-            size: contentLength ? parseInt(contentLength) : undefined,
-            modified: lastModified || undefined,
-            contentType: contentType || undefined,
-          });
-        }
+        items.push({
+          name,
+          type: isDir ? 'directory' : 'file',
+          size: lenEl ? parseInt(toText(lenEl)) : undefined,
+          modified: toText(modEl) || undefined,
+          contentType: toText(typeEl) || undefined,
+        });
       }
 
       return items.sort((a, b) => {
@@ -103,9 +118,25 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   };
 
   const navigateUp = () => {
-    if (currentPath === '/') return;
-    const parentPath = currentPath.includes('/') ? currentPath.slice(0, currentPath.lastIndexOf('/')) || '/' : '/';
-    listDirectory(parentPath);
+    // Clamp to the workspace root (e.g., /Common/public or /public)
+    const lower = currentPath.toLowerCase();
+    const root = lower.startsWith('/common/public')
+      ? '/Common/public'
+      : lower.startsWith('/public')
+      ? '/public'
+      : lower.startsWith('/personal')
+      ? '/Personal'
+      : lower.startsWith('/shared')
+      ? '/Shared'
+      : '/public';
+
+    if (currentPath === root) return;
+    const parentPath = currentPath.includes('/') ? currentPath.slice(0, currentPath.lastIndexOf('/')) || root : root;
+    if (parentPath.length < root.length) {
+      listDirectory(root);
+    } else {
+      listDirectory(parentPath);
+    }
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -156,6 +187,12 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     return <File className="w-4 h-4 text-gray-500" />;
   };
 
+  useEffect(() => {
+    // Auto-load on mount
+    listDirectory(currentPath);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
@@ -168,7 +205,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
             value={currentPath}
             onChange={(e) => setCurrentPath(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && listDirectory(currentPath)}
-            placeholder="/public"
+            placeholder="/Common/public"
             className="flex-1"
           />
           <Button onClick={() => listDirectory(currentPath)} disabled={isLoading}>

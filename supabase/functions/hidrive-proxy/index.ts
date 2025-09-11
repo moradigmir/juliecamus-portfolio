@@ -38,10 +38,11 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Allow either /public/... (user namespace) or /Common/public/... (root common area)
-  const allowed = pathParam.startsWith('/public/') || pathParam.startsWith('/Common/public/');
+  // Allow limited root prefixes: /public, /Common, /Personal or /Shared (case-insensitive)
+  const allowedPrefixes = [/^\/public(\/|$)/i, /^\/common(\/|$)/i, /^\/personal(\/|$)/i, /^\/shared(\/|$)/i];
+  const allowed = allowedPrefixes.some((re) => re.test(pathParam));
   if (!allowed) {
-    return new Response('Access denied: path must start with /public/ or /Common/public/', {
+    return new Response('Access denied: path must start with /public, /Common, /Personal or /Shared', {
       status: 403,
       headers: { ...corsHeaders(origin) },
     });

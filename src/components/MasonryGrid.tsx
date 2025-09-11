@@ -1,14 +1,12 @@
 import { motion } from 'framer-motion';
 import { useState, useCallback } from 'react';
 import ProjectTile from './ProjectTile';
-import MediaTile from './MediaTile';
 import AutoMediaTile from './AutoMediaTile';
 import { useMediaIndex, type MediaItem } from '../hooks/useMediaIndex';
-import { legacyMediaItems, convertLegacyToNew, type LegacyMediaItem } from '../lib/mediaConfig';
 import Lightbox from './Lightbox';
 import HiDriveBrowser from './HiDriveBrowser';
 import { Button } from '@/components/ui/button';
-import { Settings, Eye, EyeOff } from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 interface Project {
   slug: string;
@@ -25,7 +23,6 @@ interface MasonryGridProps {
 type GridItem = 
   | { type: 'project'; project: Project; index: number }
   | { type: 'media'; media: MediaItem; index: number }
-  | { type: 'legacy-media'; media: LegacyMediaItem; index: number }
   | { type: 'accordion'; project: Project; imageIndex: number; image: string };
 
 const MasonryGrid = ({ projects }: MasonryGridProps) => {
@@ -66,14 +63,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setLightboxOpen(true);
   }, []);
 
-  const openLegacyMediaLightbox = useCallback((media: LegacyMediaItem) => {
-    // Convert legacy media to new format for lightbox
-    const newMedia = convertLegacyToNew(media);
-    setLightboxMedia(newMedia);
-    setLightboxProject(null);
-    setLightboxImageIndex(0);
-    setLightboxOpen(true);
-  }, []);
 
   const closeLightbox = useCallback(() => {
     setLightboxOpen(false);
@@ -104,20 +93,11 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const createGridItems = useCallback((): GridItem[] => {
     const items: GridItem[] = [];
     
-    // Use auto-discovered media if available, otherwise fallback to legacy
-    const allMediaItems = autoMediaItems.length > 0 ? autoMediaItems : legacyMediaItems;
-    
-    // First, add the first media item (01 folder) as the first tile
+    // Only use auto-discovered media; no legacy fallback
     if (autoMediaItems.length > 0) {
       items.push({ 
         type: 'media', 
         media: autoMediaItems[0], 
-        index: 0 
-      });
-    } else if (legacyMediaItems.length > 0) {
-      items.push({ 
-        type: 'legacy-media', 
-        media: legacyMediaItems[0], 
         index: 0 
       });
     }
@@ -155,14 +135,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           index: items.length 
         });
       }
-    } else if (legacyMediaItems.length > 1) {
-      for (let i = 1; i < legacyMediaItems.length; i++) {
-        items.push({ 
-          type: 'legacy-media', 
-          media: legacyMediaItems[i], 
-          index: items.length 
-        });
-      }
     }
     
     return items;
@@ -190,8 +162,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             {showHiDriveBrowser ? 'Hide' : 'Show'} HiDrive Browser
           </Button>
           {(mediaError || autoMediaItems.length === 0) && (
-            <Button onClick={refetch} variant="outline" size="sm">
-              Retry Loading
+            <Button onClick={refetch} variant="outline" size="sm" disabled={mediaLoading}>
+              {mediaLoading ? 'Retrying…' : 'Retry Loading'}
             </Button>
           )}
         </div>
@@ -199,7 +171,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           {autoMediaItems.length > 0 ? (
             `${autoMediaItems.length} auto-discovered media items`
           ) : (
-            'Using fallback content'
+            'No media loaded'
           )}
         </div>
       </div>
@@ -248,17 +220,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                 onHover={() => {}}
                 onLeave={() => {}}
                 onClick={openMediaLightbox}
-              />
-            );
-          } else if (item.type === 'legacy-media') {
-            return (
-              <MediaTile
-                key={`legacy-media-${item.media.id}-${item.index}`}
-                media={item.media}
-                index={item.index}
-                onHover={() => {}}
-                onLeave={() => {}}
-                onClick={openLegacyMediaLightbox}
               />
             );
           } else if (item.type === 'accordion') {

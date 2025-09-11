@@ -168,6 +168,9 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               ) : (
                 <>
                   <p className="text-sm font-medium">Failed to load</p>
+                  {httpStatus !== null && (
+                    <p className="text-xs opacity-70 mt-1">HTTP {httpStatus}</p>
+                  )}
                   {codecHint && (
                     <p className="text-xs opacity-80 mt-1">Detected codec: {codecHint}</p>
                   )}
@@ -182,7 +185,11 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                   e.stopPropagation();
                   setHasError(false);
                   setIsLoaded(false);
+                  setHttpStatus(null);
                   setReloadKey((k) => k + 1);
+                  if (videoRef.current) {
+                    videoRef.current.load();
+                  }
                 }}
               >
                 Retry
