@@ -6,6 +6,9 @@ import AutoMediaTile from './AutoMediaTile';
 import { useMediaIndex, type MediaItem } from '../hooks/useMediaIndex';
 import { legacyMediaItems, convertLegacyToNew, type LegacyMediaItem } from '../lib/mediaConfig';
 import Lightbox from './Lightbox';
+import HiDriveBrowser from './HiDriveBrowser';
+import { Button } from '@/components/ui/button';
+import { Settings, Eye, EyeOff } from 'lucide-react';
 
 interface Project {
   slug: string;
@@ -31,9 +34,10 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [lightboxProject, setLightboxProject] = useState<Project | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<MediaItem | null>(null);
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
+  const [showHiDriveBrowser, setShowHiDriveBrowser] = useState(false);
   
   // Load auto-discovered media from HiDrive
-  const { mediaItems: autoMediaItems, isLoading: mediaLoading, error: mediaError } = useMediaIndex();
+  const { mediaItems: autoMediaItems, isLoading: mediaLoading, error: mediaError, refetch } = useMediaIndex();
 
   // Debounced hover handlers to prevent mouse chase flicker
   const handleTileHover = useCallback((index: number) => {
@@ -89,6 +93,13 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     const allImages = [lightboxProject.coverImage, ...(lightboxProject.images || [])];
     setLightboxImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
   }, [lightboxProject]);
+
+  const handlePathFound = useCallback((correctPath: string) => {
+    console.log('📍 Found correct path:', correctPath);
+    // Here you could implement auto-rewriting of manifest paths
+    // For now, just notify and suggest manual update
+    alert(`Found correct path: ${correctPath}\n\nUpdate your media.manifest.json to use this path prefix.`);
+  }, []);
 
   const createGridItems = useCallback((): GridItem[] => {
     const items: GridItem[] = [];
@@ -167,6 +178,39 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{ minHeight: '100vh' }}
     >
+      {/* Diagnostic Panel */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setShowHiDriveBrowser(!showHiDriveBrowser)}
+            variant="outline"
+            size="sm"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            {showHiDriveBrowser ? 'Hide' : 'Show'} HiDrive Browser
+          </Button>
+          {(mediaError || autoMediaItems.length === 0) && (
+            <Button onClick={refetch} variant="outline" size="sm">
+              Retry Loading
+            </Button>
+          )}
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {autoMediaItems.length > 0 ? (
+            `${autoMediaItems.length} auto-discovered media items`
+          ) : (
+            'Using fallback content'
+          )}
+        </div>
+      </div>
+
+      {/* HiDrive Browser Panel */}
+      {showHiDriveBrowser && (
+        <div className="mb-8">
+          <HiDriveBrowser onPathFound={handlePathFound} />
+        </div>
+      )}
+
       {/* Show loading or error states */}
       {mediaLoading && (
         <div className="text-center py-8">
