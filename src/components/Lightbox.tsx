@@ -151,13 +151,23 @@ const Lightbox: React.FC<LightboxProps> = ({
                 transition={{ duration: 0.3 }}
                 className="w-full max-w-4xl max-h-full"
               >
-                <iframe
-                  src={currentContent}
-                  className="w-full aspect-video rounded-lg shadow-2xl"
-                  frameBorder="0"
-                  allow="autoplay; encrypted-media; fullscreen"
-                  allowFullScreen
-                />
+                {media?.fullUrl?.includes('drive.google.com/file') ? (
+                  <iframe
+                    src={currentContent}
+                    className="w-full aspect-video rounded-lg shadow-2xl"
+                    frameBorder="0"
+                    allow="autoplay; encrypted-media; fullscreen"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video
+                    src={currentContent}
+                    className="w-full aspect-video rounded-lg shadow-2xl"
+                    controls
+                    playsInline
+                    preload="metadata"
+                  />
+                )}
               </motion.div>
             ) : (
               <motion.img

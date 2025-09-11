@@ -69,11 +69,33 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return url;
       };
       
+      // Map to proxy and probe availability (avoid 404 if Supabase edge function isn't deployed)
       const proxiedItems = sortedItems.map((item) => ({
         ...item,
         previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
         fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
       }));
+
+      const requiresProxy = proxiedItems.some(
+        (it) =>
+          it.previewUrl.startsWith('/functions/v1/hidrive-proxy') ||
+          it.fullUrl.startsWith('/functions/v1/hidrive-proxy')
+      );
+
+      if (requiresProxy && proxiedItems.length > 0) {
+        try {
+          const head = await fetch(proxiedItems[0].previewUrl, { method: 'HEAD' });
+          if (!head.ok) {
+            console.warn('HiDrive proxy not reachable (status ' + head.status + '). Falling back to legacy content.');
+            setMediaItems([]); // Trigger fallback in MasonryGrid
+            return;
+          }
+        } catch (e) {
+          console.warn('HiDrive proxy check failed, falling back to legacy content.');
+          setMediaItems([]);
+          return;
+        }
+      }
       
       setMediaItems(proxiedItems);
       console.log(`✅ Loaded ${proxiedItems.length} media items from manifest (HiDrive proxied where applicable)`);
