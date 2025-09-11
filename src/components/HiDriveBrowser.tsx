@@ -17,7 +17,7 @@ interface HiDriveBrowserProps {
 }
 
 const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
-  const [currentPath, setCurrentPath] = useState('/Common/public');
+  const [currentPath, setCurrentPath] = useState('/Common');
   const [items, setItems] = useState<HiDriveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +88,6 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     try {
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', path);
-      url.searchParams.set('owner', 'juliecamus');
       url.searchParams.set('list', '1');
 
       const response = await fetch(url.toString());
@@ -157,7 +156,6 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       const fullPath = `${currentPath}/${fileName}`;
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', fullPath);
-      url.searchParams.set('owner', 'juliecamus');
 
       const response = await fetch(url.toString(), { method: 'HEAD' });
       const contentType = response.headers.get('content-type') || '';
@@ -205,7 +203,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
             value={currentPath}
             onChange={(e) => setCurrentPath(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && listDirectory(currentPath)}
-            placeholder="/Common/public"
+            placeholder="/Common"
             className="flex-1"
           />
           <Button onClick={() => listDirectory(currentPath)} disabled={isLoading}>

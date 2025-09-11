@@ -60,7 +60,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           if (webdavMatch) {
             const owner = webdavMatch[1];
             const path = webdavMatch[2];
-            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?owner=${encodeURIComponent(owner)}&path=${encodeURIComponent(path)}`;
+            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path)}`;
           }
           if (url.startsWith('hidrive://')) {
             // Optional owner prefix: hidrive://<owner>/public/...

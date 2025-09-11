@@ -89,12 +89,45 @@ Deno.serve(async (req: Request) => {
         body,
       });
 
-      const text = await resp.text();
+      // Fallbacks for common mis-paths
+      let outResp = resp;
+      let outPath = pathParam;
+      if (resp.status === 404) {
+        const alts: string[] = [];
+        if (pathParam.toLowerCase() === '/common/public') {
+          alts.push('/Common');
+        }
+        if (pathParam.toLowerCase().startsWith('/common/public/')) {
+          alts.push('/Common/' + pathParam.slice('/Common/public/'.length));
+        }
+        if (pathParam.toLowerCase().startsWith('/public/')) {
+          alts.push('/Common' + pathParam); // /Common/public/...
+          alts.push('/Common/' + pathParam.slice('/public/'.length)); // /Common/...
+        }
+        for (const alt of alts) {
+          const { url: altUrl } = resolveUrl(alt, owner);
+          const altResp = await fetch(altUrl, {
+            method: 'PROPFIND',
+            headers: {
+              Authorization: 'Basic ' + btoa(`${username}:${password}`),
+              Depth: '1',
+              'Content-Type': 'text/xml',
+              Accept: '*/*',
+              'User-Agent': 'Lovable-HiDrive-Proxy/1.0',
+            },
+            body,
+          });
+          try { console.log('hidrive-proxy-list-fallback', JSON.stringify({ owner, tried: alt, status: altResp.status })); } catch (_) {}
+          if (altResp.ok) { outResp = altResp; outPath = alt; break; }
+        }
+      }
+
+      const text = await outResp.text();
       try {
-        console.log('hidrive-proxy-list', JSON.stringify({ owner, path: pathParam, status: resp.status }));
+        console.log('hidrive-proxy-list', JSON.stringify({ owner, path: outPath, status: outResp.status }));
       } catch (_) {}
 
-      return new Response(text, { status: resp.status, headers: { ...corsHeaders(origin), 'Content-Type': 'application/xml' } });
+      return new Response(text, { status: outResp.status, headers: { ...corsHeaders(origin), 'Content-Type': 'application/xml' } });
     } catch (err) {
       console.error('HiDrive list error', err);
       return new Response('List error', { status: 500, headers: { ...corsHeaders(origin) } });
@@ -125,23 +158,30 @@ Deno.serve(async (req: Request) => {
       console.log('hidrive-proxy', JSON.stringify({ method: req.method, owner, path: usedPath, range: reqRange, status: upstream.status, ct: upstream.headers.get('Content-Type'), ar: upstream.headers.get('Accept-Ranges') }));
     } catch (_) {}
 
-    // Fallback: if /public/... 404s, try /Common/public/... (user namespace)
-    if (upstream.status === 404 && usedPath.startsWith('/public/')) {
-      const altPath = '/Common' + usedPath;
-      const alt = await fetch(`${base}/users/${encodeURIComponent(owner)}${altPath}`, {
-        method: req.method,
-        headers: {
-          Authorization: auth,
-          Accept: '*/*',
-          ...(req.method === 'GET' && !range ? { Range: 'bytes=0-' } : {}),
-          ...(range ? { Range: range } : {}),
-          'User-Agent': 'Lovable-HiDrive-Proxy/1.0',
-        },
-      });
-      try { console.log('hidrive-proxy-fallback', JSON.stringify({ owner, tried: altPath, status: alt.status })); } catch (_) {}
-      if (alt.ok) {
-        upstream = alt;
-        usedPath = altPath;
+    // Fallbacks for common mis-paths
+    if (upstream.status === 404) {
+      const altPaths: string[] = [];
+      if (usedPath.startsWith('/public/')) {
+        altPaths.push('/Common' + usedPath); // /Common/public/...
+        altPaths.push('/Common/' + usedPath.slice('/public/'.length)); // /Common/...
+      }
+      if (usedPath.startsWith('/Common/public/')) {
+        altPaths.push('/Common/' + usedPath.slice('/Common/public/'.length));
+      }
+
+      for (const altPath of altPaths) {
+        const alt = await fetch(`${base}/users/${encodeURIComponent(owner)}${altPath}`, {
+          method: req.method,
+          headers: {
+            Authorization: auth,
+            Accept: '*/*',
+            ...(req.method === 'GET' && !range ? { Range: 'bytes=0-' } : {}),
+            ...(range ? { Range: range } : {}),
+            'User-Agent': 'Lovable-HiDrive-Proxy/1.0',
+          },
+        });
+        try { console.log('hidrive-proxy-fallback', JSON.stringify({ owner, tried: altPath, status: alt.status })); } catch (_) {}
+        if (alt.ok) { upstream = alt; usedPath = altPath; break; }
       }
     }
 
