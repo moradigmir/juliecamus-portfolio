@@ -158,30 +158,38 @@ Deno.serve(async (req: Request) => {
       console.log('hidrive-proxy', JSON.stringify({ method: req.method, owner, path: usedPath, range: reqRange, status: upstream.status, ct: upstream.headers.get('Content-Type'), ar: upstream.headers.get('Accept-Ranges') }));
     } catch (_) {}
 
-    // Fallbacks for common mis-paths
+    // Try ALL possible HiDrive WebDAV roots systematically  
     if (upstream.status === 404) {
-      const altPaths: string[] = [];
-      if (usedPath.startsWith('/public/')) {
-        altPaths.push('/Common' + usedPath); // /Common/public/...
-        altPaths.push('/Common/' + usedPath.slice('/public/'.length)); // /Common/...
-      }
-      if (usedPath.startsWith('/Common/public/')) {
-        altPaths.push('/Common/' + usedPath.slice('/Common/public/'.length));
-      }
+      const testPaths = [
+        usedPath,
+        `/users/${owner}${usedPath}`,
+        `/root${usedPath}`,
+        `${usedPath}`,
+      ];
+      
+      const testBases = [
+        base, // https://webdav.hidrive.strato.com
+        `${base}/users/${owner}`, // /users/juliecamus
+        `${base}/root`, // /root
+      ];
 
-      for (const altPath of altPaths) {
-        const alt = await fetch(`${base}/users/${encodeURIComponent(owner)}${altPath}`, {
-          method: req.method,
-          headers: {
-            Authorization: auth,
-            Accept: '*/*',
-            ...(req.method === 'GET' && !range ? { Range: 'bytes=0-' } : {}),
-            ...(range ? { Range: range } : {}),
-            'User-Agent': 'Lovable-HiDrive-Proxy/1.0',
-          },
-        });
-        try { console.log('hidrive-proxy-fallback', JSON.stringify({ owner, tried: altPath, status: alt.status })); } catch (_) {}
-        if (alt.ok) { upstream = alt; usedPath = altPath; break; }
+      for (const testBase of testBases) {
+        for (const testPath of testPaths) {
+          const testUrl = testPath.startsWith('/') ? `${testBase}${testPath}` : `${testBase}/${testPath}`;
+          const alt = await fetch(testUrl, {
+            method: req.method,
+            headers: {
+              Authorization: auth,
+              Accept: '*/*',
+              ...(req.method === 'GET' && !range ? { Range: 'bytes=0-' } : {}),
+              ...(range ? { Range: range } : {}),
+              'User-Agent': 'Lovable-HiDrive-Proxy/1.0',
+            },
+          });
+          try { console.log('hidrive-test', JSON.stringify({ base: testBase.replace('https://webdav.hidrive.strato.com', ''), path: testPath, status: alt.status, url: testUrl })); } catch (_) {}
+          if (alt.ok) { upstream = alt; usedPath = testPath; break; }
+        }
+        if (upstream.ok) break;
       }
     }
 
