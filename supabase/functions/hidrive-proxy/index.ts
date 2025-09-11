@@ -58,11 +58,9 @@ Deno.serve(async (req: Request) => {
 
   const base = 'https://webdav.hidrive.strato.com';
 
-  // Resolve target URL. Common is a root namespace (no /users/<owner> prefix)
+  // Resolve target URL. Common is under user namespace: /users/{owner}/Common/...
   const resolveUrl = (p: string, owner: string) => {
-    if (p.startsWith('/Common/')) {
-      return { url: `${base}${p}`, usedPath: p, root: 'root' as const };
-    }
+    // Both /public/... and /Common/public/... are under user namespace
     return { url: `${base}/users/${encodeURIComponent(owner)}${p}`, usedPath: p, root: 'user' as const };
   };
 
@@ -126,10 +124,10 @@ Deno.serve(async (req: Request) => {
       console.log('hidrive-proxy', JSON.stringify({ method: req.method, owner, path: usedPath, range: reqRange, status: upstream.status, ct: upstream.headers.get('Content-Type'), ar: upstream.headers.get('Accept-Ranges') }));
     } catch (_) {}
 
-    // Fallback: if /public/... 404s, try /Common/public/... (root namespace)
+    // Fallback: if /public/... 404s, try /Common/public/... (user namespace)
     if (upstream.status === 404 && usedPath.startsWith('/public/')) {
       const altPath = '/Common' + usedPath;
-      const alt = await fetch(`${base}${altPath}`, {
+      const alt = await fetch(`${base}/users/${encodeURIComponent(owner)}${altPath}`, {
         method: req.method,
         headers: {
           Authorization: auth,

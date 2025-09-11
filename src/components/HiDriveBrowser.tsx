@@ -21,6 +21,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   const [items, setItems] = useState<HiDriveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testingFile, setTestingFile] = useState<string | null>(null);
 
   const parseWebDAVResponse = (xmlText: string): HiDriveItem[] => {
     try {
@@ -119,6 +120,29 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     return `${size.toFixed(1)} ${units[unit]}`;
   };
 
+  const testFileStream = async (fileName: string) => {
+    setTestingFile(fileName);
+    try {
+      const fullPath = `${currentPath}/${fileName}`;
+      const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+      url.searchParams.set('path', fullPath);
+      url.searchParams.set('owner', 'juliecamus');
+
+      const response = await fetch(url.toString(), { method: 'HEAD' });
+      const contentType = response.headers.get('content-type') || '';
+      
+      if (response.ok && (contentType.startsWith('video/') || contentType.startsWith('image/'))) {
+        alert(`✅ File streams successfully!\nPath: ${fullPath}\nStatus: ${response.status}\nContent-Type: ${contentType}`);
+      } else {
+        alert(`❌ File test failed\nPath: ${fullPath}\nStatus: ${response.status}\nContent-Type: ${contentType}`);
+      }
+    } catch (err) {
+      alert(`❌ Test error: ${err}`);
+    } finally {
+      setTestingFile(null);
+    }
+  };
+
   const getFileIcon = (item: HiDriveItem) => {
     if (item.type === 'directory') return <Folder className="w-4 h-4 text-blue-500" />;
     
@@ -186,17 +210,30 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
                 {item.size && <span>{formatFileSize(item.size)}</span>}
                 {item.contentType && <span>{item.contentType}</span>}
                 {item.type === 'file' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const fullPath = `${currentPath}/${item.name}`;
-                      onPathFound?.(fullPath);
-                    }}
-                  >
-                    Use This Path
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        testFileStream(item.name);
+                      }}
+                      disabled={testingFile === item.name}
+                    >
+                      {testingFile === item.name ? 'Testing...' : 'Test Stream'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const fullPath = `${currentPath}/${item.name}`;
+                        onPathFound?.(fullPath);
+                      }}
+                    >
+                      Use This Path
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -223,7 +260,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
             <br />
             <strong>Items found:</strong> {items.length}
             <br />
-            <strong>Tip:</strong> Navigate to find your media files, then click "Use This Path" to fix the manifest paths.
+            <strong>Tip:</strong> Navigate to find your media files. Use "Test Stream" to verify files work, then "Use This Path" to fix manifest paths.
           </p>
         </div>
       </CardContent>
