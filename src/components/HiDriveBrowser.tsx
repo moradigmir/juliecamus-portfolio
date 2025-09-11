@@ -17,7 +17,7 @@ interface HiDriveBrowserProps {
 }
 
 const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
-  const [currentPath, setCurrentPath] = useState('/Common/public');
+  const [currentPath, setCurrentPath] = useState('/public');
   const [items, setItems] = useState<HiDriveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -168,7 +168,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
             value={currentPath}
             onChange={(e) => setCurrentPath(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && listDirectory(currentPath)}
-            placeholder="/Common/public"
+            placeholder="/public"
             className="flex-1"
           />
           <Button onClick={() => listDirectory(currentPath)} disabled={isLoading}>
@@ -178,9 +178,15 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       </CardHeader>
       <CardContent>
         {error && (
-          <div className="flex items-center gap-2 p-3 mb-4 bg-destructive/10 text-destructive rounded-md">
-            <AlertCircle className="w-4 h-4" />
-            <span className="text-sm">{error}</span>
+          <div className="flex items-center gap-2 p-4 mb-4 bg-red-50 border border-red-200 text-red-800 rounded-md">
+            <AlertCircle className="w-5 h-5" />
+            <div>
+              <div className="font-semibold">❌ Directory Access Failed</div>
+              <div className="text-sm mt-1">Error: {error}</div>
+              <div className="text-xs mt-2 text-red-600">
+                💡 Try navigating to /public instead, or check if path exists in HiDrive web interface
+              </div>
+            </div>
           </div>
         )}
 
