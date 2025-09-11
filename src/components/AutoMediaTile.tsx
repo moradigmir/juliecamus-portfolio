@@ -40,6 +40,21 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   };
 
+  const mimeType = (() => {
+    try {
+      const u = new URL(media.previewUrl, window.location.origin);
+      const p = u.searchParams.get('path') || '';
+      const lower = p.toLowerCase();
+      if (lower.endsWith('.mp4')) return 'video/mp4';
+      if (lower.endsWith('.mov')) return 'video/quicktime';
+      if (lower.endsWith('.webm')) return 'video/webm';
+      if (lower.endsWith('.m4v')) return 'video/x-m4v';
+      return 'video/mp4';
+    } catch {
+      return 'video/mp4';
+    }
+  })();
+
   return (
     <motion.div
       className="gallery-tile-wrapper video-tile cursor-pointer focus-ring"
@@ -91,8 +106,6 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               loop
               playsInline
               preload="metadata"
-              src={media.previewUrl}
-              crossOrigin="anonymous"
               onLoadedData={() => setIsLoaded(true)}
               onError={(e) => {
                 setHasError(true);
@@ -105,7 +118,10 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                 });
               }}
               style={{ display: hasError ? 'none' : 'block' }}
-            />
+            >
+              <source src={media.previewUrl} type={mimeType} />
+              Your browser does not support video playback.
+            </video>
           ) : (
             <img
               src={media.previewUrl}

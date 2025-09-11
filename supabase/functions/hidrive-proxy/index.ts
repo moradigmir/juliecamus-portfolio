@@ -117,6 +117,7 @@ Deno.serve(async (req: Request) => {
     // CORS
     const c = corsHeaders(origin);
     for (const [k, v] of Object.entries(c)) headers.set(k, v);
+    headers.set("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges, Content-Length, Content-Type");
 
     // Stream body
     if (req.method === "HEAD") {
