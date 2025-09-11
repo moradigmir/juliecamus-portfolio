@@ -2,14 +2,14 @@
   "items": [
     {
       "orderKey": "01",
-      "folder": "01",
-      "title": "Demo Content 01",
-      "previewUrl": "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=800&h=1000&fit=crop&crop=face",
-      "previewType": "image",
-      "fullUrl": "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=1200&h=1600&fit=crop&crop=face",
-      "fullType": "image"
+      "folder": "01", 
+      "title": "Dior Holiday Campaign",
+      "previewUrl": "https://my.hidrive.com/share/juliecamus/media/01/01_short.mp4",
+      "previewType": "video",
+      "fullUrl": "https://my.hidrive.com/share/juliecamus/media/01/01_DIOR_HOLIDAY_BY_ELINA_KECHICHEVA.MP4",
+      "fullType": "video"
     }
   ],
-  "generatedAt": "2024-01-01T00:00:00.000Z",
+  "generatedAt": "2024-12-11T14:34:00.000Z",
   "source": "hidrive"
 }
