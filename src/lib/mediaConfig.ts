@@ -1,5 +1,6 @@
-// Google Drive Media Configuration
-export interface MediaItem {
+// Media Configuration
+// Legacy Google Drive interface (for backward compatibility)
+export interface LegacyMediaItem {
   id: string;
   title: string;
   folder: string;
@@ -10,6 +11,19 @@ export interface MediaItem {
   year?: string;
   client?: string;
   category?: string;
+}
+
+// New auto-discovered media interface (from HiDrive manifest)
+export type MediaType = 'image' | 'video';
+
+export interface MediaItem {
+  orderKey: string;      // "01"
+  folder: string;        // "01"  
+  title: string;         // default = folder name
+  previewUrl: string;
+  previewType: MediaType;
+  fullUrl: string;
+  fullType: MediaType;
 }
 
 // Google Drive file configuration
@@ -38,8 +52,8 @@ export const getGoogleDriveUrl = (fileId: string, type: 'video' | 'image' = 'vid
   return `https://drive.google.com/uc?export=view&id=${fileId}`;
 };
 
-// Media items configuration
-export const mediaItems: MediaItem[] = [
+// Legacy media items configuration (for fallback/development)
+export const legacyMediaItems: LegacyMediaItem[] = [
   {
     id: '01',
     title: 'Behind the Scenes',
@@ -53,3 +67,14 @@ export const mediaItems: MediaItem[] = [
     category: 'Behind the Scenes'
   }
 ];
+
+// Convert legacy media item to new format for compatibility
+export const convertLegacyToNew = (legacy: LegacyMediaItem): MediaItem => ({
+  orderKey: legacy.folder,
+  folder: legacy.folder,
+  title: legacy.title,
+  previewUrl: legacy.previewUrl,
+  previewType: legacy.type,
+  fullUrl: legacy.fullUrl,
+  fullType: legacy.type
+});

@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "orderKey": "01",
+      "folder": "01",
+      "title": "Demo Content 01",
+      "previewUrl": "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=800&h=1000&fit=crop&crop=face",
+      "previewType": "image",
+      "fullUrl": "https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=1200&h=1600&fit=crop&crop=face",
+      "fullType": "image"
+    }
+  ],
+  "generatedAt": "2024-01-01T00:00:00.000Z",
+  "source": "hidrive"
+}

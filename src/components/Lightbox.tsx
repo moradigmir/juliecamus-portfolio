@@ -32,7 +32,7 @@ const Lightbox: React.FC<LightboxProps> = ({
 }) => {
   // Handle media vs project content
   const title = media ? media.title : project?.title || '';
-  const isVideo = media?.type === 'video';
+  const isVideo = media?.fullType === 'video';
   
   // Get all images/content
   let allContent: string[] = [];

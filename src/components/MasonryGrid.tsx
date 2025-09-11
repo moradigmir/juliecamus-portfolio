@@ -2,8 +2,10 @@ import { motion } from 'framer-motion';
 import { useState, useCallback } from 'react';
 import ProjectTile from './ProjectTile';
 import MediaTile from './MediaTile';
+import AutoMediaTile from './AutoMediaTile';
+import { useMediaIndex, type MediaItem } from '../hooks/useMediaIndex';
+import { legacyMediaItems, convertLegacyToNew, type LegacyMediaItem } from '../lib/mediaConfig';
 import Lightbox from './Lightbox';
-import { mediaItems, MediaItem } from '../lib/mediaConfig';
 
 interface Project {
   slug: string;
@@ -17,12 +19,11 @@ interface MasonryGridProps {
   projects: Project[];
 }
 
-type GridItem = {
-  type: 'project' | 'media' | 'accordion';
-  data: Project | MediaItem;
-  accordionImages?: string[];
-  accordionProjectSlug?: string;
-};
+type GridItem = 
+  | { type: 'project'; project: Project; index: number }
+  | { type: 'media'; media: MediaItem; index: number }
+  | { type: 'legacy-media'; media: LegacyMediaItem; index: number }
+  | { type: 'accordion'; project: Project; imageIndex: number; image: string };
 
 const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [expandedTile, setExpandedTile] = useState<number | null>(null);
@@ -30,33 +31,21 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [lightboxProject, setLightboxProject] = useState<Project | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<MediaItem | null>(null);
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
-  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Load auto-discovered media from HiDrive
+  const { mediaItems: autoMediaItems, isLoading: mediaLoading, error: mediaError } = useMediaIndex();
 
   // Debounced hover handlers to prevent mouse chase flicker
   const handleTileHover = useCallback((index: number) => {
-    if (hoverTimeout) {
-      clearTimeout(hoverTimeout);
-    }
     setExpandedTile(index);
-  }, [hoverTimeout]);
+  }, []);
 
   const handleTileLeave = useCallback(() => {
-    if (hoverTimeout) {
-      clearTimeout(hoverTimeout);
-    }
     const timeout = setTimeout(() => {
       setExpandedTile(null);
-    }, 100); // Small delay to prevent flicker when moving between related tiles
-    setHoverTimeout(timeout);
-  }, [hoverTimeout]);
-
-  // Handle accordion tile hover - maintain current expansion without changing it
-  const handleAccordionHover = useCallback(() => {
-    if (hoverTimeout) {
-      clearTimeout(hoverTimeout);
-    }
-    // Don't change expanded state, just clear any pending collapse
-  }, [hoverTimeout]);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, []);
 
   // Lightbox handlers
   const openLightbox = useCallback((project: Project, imageIndex: number = 0) => {
@@ -73,12 +62,20 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setLightboxOpen(true);
   }, []);
 
+  const openLegacyMediaLightbox = useCallback((media: LegacyMediaItem) => {
+    // Convert legacy media to new format for lightbox
+    const newMedia = convertLegacyToNew(media);
+    setLightboxMedia(newMedia);
+    setLightboxProject(null);
+    setLightboxImageIndex(0);
+    setLightboxOpen(true);
+  }, []);
+
   const closeLightbox = useCallback(() => {
     setLightboxOpen(false);
     setLightboxProject(null);
     setLightboxMedia(null);
     setLightboxImageIndex(0);
-    // Keep accordion expansion when closing lightbox
   }, []);
 
   const nextImage = useCallback(() => {
@@ -93,35 +90,72 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setLightboxImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
   }, [lightboxProject]);
 
-  // Create the grid items array with media items first, then project tiles
-  const createGridItems = () => {
-    const items: { type: 'media' | 'project' | 'accordion'; project?: Project; media?: MediaItem; originalIndex?: number; imageIndex?: number; imageSrc?: string }[] = [];
+  const createGridItems = useCallback((): GridItem[] => {
+    const items: GridItem[] = [];
     
-    // Add media items first (Google Drive content)
-    mediaItems.forEach((media) => {
-      items.push({ type: 'media', media });
-    });
+    // Use auto-discovered media if available, otherwise fallback to legacy
+    const allMediaItems = autoMediaItems.length > 0 ? autoMediaItems : legacyMediaItems;
     
-    projects.forEach((project, index) => {
-      // Add main project tile
-      items.push({ type: 'project', project, originalIndex: index });
+    // First, add the first media item (01 folder) as the first tile
+    if (autoMediaItems.length > 0) {
+      items.push({ 
+        type: 'media', 
+        media: autoMediaItems[0], 
+        index: 0 
+      });
+    } else if (legacyMediaItems.length > 0) {
+      items.push({ 
+        type: 'legacy-media', 
+        media: legacyMediaItems[0], 
+        index: 0 
+      });
+    }
+    
+    // Then add projects with accordion expansion
+    projects.forEach((project, projectIndex) => {
+      const itemIndex = items.length;
       
-      // If this project is expanded, add its images as full-sized tiles after it
-      if (expandedTile === index && project.images && project.images.length > 0) {
-        project.images.slice(0, 4).forEach((imageSrc, imageIndex) => {
+      // Add the main project tile
+      items.push({ 
+        type: 'project', 
+        project, 
+        index: itemIndex 
+      });
+      
+      // Add accordion images if this project is expanded
+      if (expandedTile === itemIndex && project.images) {
+        project.images.forEach((image, imageIndex) => {
           items.push({ 
             type: 'accordion', 
             project, 
-            originalIndex: index, 
             imageIndex, 
-            imageSrc 
+            image 
           });
         });
       }
     });
     
+    // Add remaining media items
+    if (autoMediaItems.length > 1) {
+      for (let i = 1; i < autoMediaItems.length; i++) {
+        items.push({ 
+          type: 'media', 
+          media: autoMediaItems[i], 
+          index: items.length 
+        });
+      }
+    } else if (legacyMediaItems.length > 1) {
+      for (let i = 1; i < legacyMediaItems.length; i++) {
+        items.push({ 
+          type: 'legacy-media', 
+          media: legacyMediaItems[i], 
+          index: items.length 
+        });
+      }
+    }
+    
     return items;
-  };
+  }, [projects, expandedTile, autoMediaItems]);
 
   const gridItems = createGridItems();
 
@@ -133,92 +167,75 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{ minHeight: '100vh' }}
     >
-      {/* Flexbox flowing grid that supports natural expansion */}
+      {/* Show loading or error states */}
+      {mediaLoading && (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <p className="text-muted-foreground">Loading media...</p>
+        </div>
+      )}
+      
+      {mediaError && (
+        <div className="text-center py-8">
+          <p className="text-destructive">Error loading media: {mediaError}</p>
+          <p className="text-muted-foreground text-sm">Falling back to demo content...</p>
+        </div>
+      )}
+
+      {/* Flowing grid */}
       <div className="flowing-grid">
-        {gridItems.map((item, index) => {
-          if (item.type === 'media') {
+        {gridItems.map((item, idx) => {
+          if (item.type === 'project') {
             return (
-              <motion.div
-                key={`media-${item.media!.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.6 }}
-                className="gallery-tile-wrapper"
-              >
-                <MediaTile
-                  media={item.media!}
-                  index={index}
-                  onClick={() => openMediaLightbox(item.media!)}
-                />
-              </motion.div>
+              <ProjectTile
+                key={`project-${item.project.slug}-${item.index}`}
+                project={item.project}
+                index={item.index}
+                onHover={handleTileHover}
+                onClick={() => openLightbox(item.project, 0)}
+              />
             );
-          } else if (item.type === 'project') {
+          } else if (item.type === 'media') {
             return (
-              <motion.div
-                key={`project-${item.project.slug}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: item.originalIndex! * 0.1, duration: 0.6 }}
-                className="gallery-tile-wrapper"
-                onMouseEnter={() => handleTileHover(item.originalIndex!)}
-                onMouseLeave={handleTileLeave}
-              >
-                <ProjectTile
-                  project={item.project}
-                  index={item.originalIndex!}
-                  isExpanded={expandedTile === item.originalIndex}
-                  onHover={handleTileHover}
-                  onClick={expandedTile === item.originalIndex ? () => openLightbox(item.project, 0) : undefined}
-                />
-              </motion.div>
+              <AutoMediaTile
+                key={`auto-media-${item.media.folder}-${item.index}`}
+                media={item.media}
+                index={item.index}
+                onHover={() => {}}
+                onLeave={() => {}}
+                onClick={openMediaLightbox}
+              />
             );
-          } else {
-            // Accordion image as full-sized tile
+          } else if (item.type === 'legacy-media') {
+            return (
+              <MediaTile
+                key={`legacy-media-${item.media.id}-${item.index}`}
+                media={item.media}
+                index={item.index}
+                onHover={() => {}}
+                onLeave={() => {}}
+                onClick={openLegacyMediaLightbox}
+              />
+            );
+          } else if (item.type === 'accordion') {
             return (
               <motion.div
-                key={`accordion-${item.project.slug}-${item.imageIndex}`}
+                key={`accordion-${item.project.slug}-${item.imageIndex}-${idx}`}
+                className="gallery-tile-wrapper accordion-tile"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="gallery-tile-wrapper accordion-tile"
-                onMouseEnter={handleAccordionHover}
-                onMouseLeave={handleTileLeave}
+                transition={{ duration: 0.2, delay: item.imageIndex * 0.05 }}
               >
-                <div
-                  className="gallery-tile block relative group focus:outline-none focus-ring cursor-pointer"
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`View ${item.project.title} image ${item.imageIndex! + 1}`}
-                  onClick={() => {
-                    // Open lightbox at specific image index (+ 1 to account for cover image)
-                    openLightbox(item.project, item.imageIndex! + 1);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      openLightbox(item.project, item.imageIndex! + 1);
-                    }
-                  }}
+                <div 
+                  className="gallery-tile accordion-preview cursor-pointer"
+                  onClick={() => openLightbox(item.project, item.imageIndex)}
                 >
-                  <motion.div className="relative w-full h-full rounded-lg overflow-hidden bg-card border border-border shadow-lg">
-                    <img
-                      src={item.imageSrc}
-                      alt={`${item.project.title} image ${item.imageIndex! + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-300"
-                      loading="lazy"
-                    />
-                    
-                    {/* Accordion tile overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-accent/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    
-                    {/* Image index indicator */}
-                    <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center">
-                      <span className="text-xs font-medium text-foreground">
-                        {item.imageIndex! + 1}
-                      </span>
-                    </div>
-                  </motion.div>
+                  <img
+                    src={item.image}
+                    alt={`${item.project.title} - Image ${item.imageIndex + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
                 </div>
               </motion.div>
             );

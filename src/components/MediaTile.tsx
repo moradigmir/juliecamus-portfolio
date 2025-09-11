@@ -1,13 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MediaItem } from '../lib/mediaConfig';
+import { LegacyMediaItem } from '../lib/mediaConfig';
 
 interface MediaTileProps {
-  media: MediaItem;
+  media: LegacyMediaItem;
   index: number;
   onHover?: (index: number) => void;
   onLeave?: () => void;
-  onClick?: (media: MediaItem) => void;
+  onClick?: (media: LegacyMediaItem) => void;
 }
 
 const MediaTile = ({ media, index, onHover, onLeave, onClick }: MediaTileProps) => {
