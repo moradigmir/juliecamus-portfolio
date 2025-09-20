@@ -103,69 +103,92 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
   const handleRefreshManifest = useCallback(async () => {
     setIsRefreshing(true);
-    
+
     try {
       toast({
-        title: "Checking folders...",
-        description: "Scanning folders referenced in manifest",
+        title: 'Checking media...',
+        description: 'Probing manifest URLs via proxy',
       });
 
-      // Load manifest to discover folders and owner
+      // Load manifest
       const res = await fetch('/media.manifest.json');
       if (!res.ok) throw new Error(`Failed to load manifest: ${res.status}`);
       const manifest = await res.json();
-      const items: Array<{ folder?: string; previewUrl?: string; fullUrl?: string }> = Array.isArray(manifest?.items) ? manifest.items : [];
-      const uniqueFolders = Array.from(new Set(items.map((it) => it.folder).filter(Boolean))) as string[];
+      const items: Array<{ previewUrl?: string; fullUrl?: string; orderKey?: string }> = Array.isArray(manifest?.items) ? manifest.items : [];
 
-      // Derive owner from any URL
-      const sampleUrl: string | undefined = (items[0]?.previewUrl || items[0]?.fullUrl);
-      const owner = (() => {
-        if (!sampleUrl) return 'juliecamus';
-        const m1 = sampleUrl.match(/webdav\.hidrive\.strato\.com\/users\/([^/]+)/);
-        if (m1) return m1[1];
-        const m2 = sampleUrl.match(/[?&]owner=([^&]+)/);
-        if (m2) return decodeURIComponent(m2[1]);
-        return 'juliecamus';
-      })();
+      // Map any HiDrive URLs to our proxy
+      const toProxy = (url: string | undefined): string | undefined => {
+        if (!url) return undefined;
+        try {
+          // Already proxied
+          if (url.includes('functions.supabase.co/hidrive-proxy')) return url;
+          const m = url.match(/^https?:\/\/webdav\.hidrive\.strato\.com\/users\/([^/]+)(\/.*)$/);
+          if (m) {
+            const path = m[2];
+            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path)}`;
+          }
+          if (url.startsWith('hidrive://')) {
+            const ownerMatch = url.match(/^hidrive:\/\/([^/]+)(\/.*)$/);
+            if (ownerMatch) {
+              const owner = ownerMatch[1];
+              const path = ownerMatch[2];
+              return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?owner=${encodeURIComponent(owner)}&path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
+            }
+            const path = url.replace('hidrive://', '');
+            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
+          }
+          return url;
+        } catch {
+          return url;
+        }
+      };
 
-      // If no folders in manifest, try a sane default
-      const foldersToCheck = uniqueFolders.length > 0 ? uniqueFolders : ['01'];
+      let ok = 0;
+      let fail = 0;
+      const failures: string[] = [];
 
-      let okCount = 0;
-      const checked: string[] = [];
+      // Probe each item's preview (fallback to full)
+      for (const it of items) {
+        const preview = toProxy(it.previewUrl);
+        const full = toProxy(it.fullUrl);
+        const tryHead = async (u?: string) => {
+          if (!u) return false;
+          try {
+            const r = await fetch(u, { method: 'HEAD' });
+            const ct = r.headers.get('content-type') || '';
+            return r.ok && (ct.startsWith('video/') || ct.startsWith('image/'));
+          } catch {
+            return false;
+          }
+        };
 
-      for (const folder of foldersToCheck) {
-        const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
-        url.searchParams.set('path', `/public/${folder}/`);
-        url.searchParams.set('list', '1');
-        url.searchParams.set('owner', owner);
-        const resp = await fetch(url.toString());
-        if (resp.ok) {
-          okCount++;
-          checked.push(folder);
+        const okPreview = await tryHead(preview);
+        if (okPreview) {
+          ok++;
+          continue;
+        }
+        const okFull = await tryHead(full);
+        if (okFull) {
+          ok++;
+        } else {
+          fail++;
+          failures.push(it.orderKey || '?');
         }
       }
 
-      if (okCount > 0) {
-        toast({
-          title: "Folders OK",
-          description: `Verified ${okCount} folder(s): ${checked.join(', ')}. Reloading media...`,
-        });
-        refetch();
+      if (ok > 0 && fail === 0) {
+        toast({ title: 'All good', description: `Verified ${ok} media items.` });
+      } else if (ok > 0) {
+        toast({ title: 'Partial success', description: `OK: ${ok}, Failed: ${fail} (folders: ${failures.join(', ')})`, variant: 'destructive' });
       } else {
-        toast({
-          title: "No folders accessible",
-          description: "Could not list any referenced folders. Open HiDrive Browser and navigate using /public/<folder>/",
-          variant: "destructive",
-        });
+        toast({ title: 'No media accessible', description: 'All probes failed. Open HiDrive Browser for details.', variant: 'destructive' });
       }
+
+      // Trigger media refetch to refresh any healed URLs
+      refetch();
     } catch (error) {
       console.error('Folder check failed:', error);
-      toast({
-        title: "Folder check failed",
-        description: "Unexpected error while checking folders.",
-        variant: "destructive",
-      });
+      toast({ title: 'Check failed', description: 'Unexpected error while checking media.', variant: 'destructive' });
     } finally {
       setIsRefreshing(false);
     }

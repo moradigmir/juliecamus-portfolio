@@ -108,39 +108,54 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     setIsLoading(true);
     setError(null);
 
-    try {
-      const normalized = path.endsWith('/') ? path : path + '/';
+    const normalized = path.endsWith('/') ? path : path + '/';
+    const o = ownerOverride ?? owner ?? undefined;
 
+    const fetchList = async (p: string): Promise<{ ok: boolean; xml?: string; status: number; ct: string }> => {
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
-      url.searchParams.set('path', normalized);
+      url.searchParams.set('path', p);
       url.searchParams.set('list', '1');
-      const o = ownerOverride ?? owner;
-      if (o) url.searchParams.set('owner', o);
-
-      const response = await fetch(url.toString());
-      const contentType = response.headers.get('content-type') || '';
-      
-      // Check for Supabase project pause
-      if (detectSupabaseIssueFromResponse(response.status, contentType)) {
+      if (o && !p.startsWith('/users/')) url.searchParams.set('owner', o);
+      const res = await fetch(url.toString());
+      const ct = res.headers.get('content-type') || '';
+      if (detectSupabaseIssueFromResponse(res.status, ct)) {
         setIsSupabasePaused(true);
-        throw new Error('Supabase project appears to be paused');
+        return { ok: false, status: res.status, ct };
       }
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      if (!res.ok) return { ok: false, status: res.status, ct };
+      const xml = await res.text();
+      return { ok: true, xml, status: res.status, ct };
+    };
+
+    try {
+      // Try plain path first
+      let result = await fetchList(normalized);
+
+      // Fallback: try /users/{owner}/ prefix if 404 and owner known
+      if (!result.ok && result.status === 404 && o && !normalized.startsWith('/users/')) {
+        const altPath = `/users/${o}${normalized}`.replace(/\/+/, '/');
+        result = await fetchList(altPath);
+        if (result.ok) {
+          setCurrentPath(altPath);
+        }
+      }
+
+      if (!result.ok) {
+        throw new Error(`HTTP ${result.status}: ${result.ct}`);
       }
 
       // Expect XML for directory listing
+      const contentType = result.ct;
       if (!contentType.includes('xml') && !contentType.includes('text/')) {
         throw new Error(`Expected XML response, got ${contentType}`);
       }
 
-      const xmlText = await response.text();
-      const parsedItems = parseWebDAVResponse(xmlText);
-      
+      const parsedItems = parseWebDAVResponse(result.xml || '');
       setItems(parsedItems);
-      setCurrentPath(normalized);
-      setIsSupabasePaused(false); // Reset on success
+      if (!normalized.startsWith('/users/') || !o) {
+        setCurrentPath(normalized);
+      }
+      setIsSupabasePaused(false);
       console.log(`📁 Listed ${parsedItems.length} items in ${normalized}`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
