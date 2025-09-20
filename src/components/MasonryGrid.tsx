@@ -5,6 +5,7 @@ import AutoMediaTile from './AutoMediaTile';
 import { useMediaIndex, type MediaItem } from '../hooks/useMediaIndex';
 import Lightbox from './Lightbox';
 import HiDriveBrowser from './HiDriveBrowser';
+import ProjectStatusIndicator from './ProjectStatusIndicator';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 
@@ -34,7 +35,13 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [showHiDriveBrowser, setShowHiDriveBrowser] = useState(false);
   
   // Load auto-discovered media from HiDrive
-  const { mediaItems: autoMediaItems, isLoading: mediaLoading, error: mediaError, refetch } = useMediaIndex();
+  const { 
+    mediaItems: autoMediaItems, 
+    isLoading: mediaLoading, 
+    error: mediaError, 
+    isSupabasePaused, 
+    refetch 
+  } = useMediaIndex();
 
   // Debounced hover handlers to prevent mouse chase flicker
   const handleTileHover = useCallback((index: number) => {
@@ -150,6 +157,13 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{ minHeight: '100vh' }}
     >
+      {/* Project Status Indicator for Supabase Issues */}
+      {isSupabasePaused && (
+        <div className="mb-8">
+          <ProjectStatusIndicator onRetry={refetch} />
+        </div>
+      )}
+
       {/* Diagnostic Panel */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -161,14 +175,16 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             <Settings className="w-4 h-4 mr-2" />
             {showHiDriveBrowser ? 'Hide' : 'Show'} HiDrive Browser
           </Button>
-          {(mediaError || autoMediaItems.length === 0) && (
+          {(mediaError || autoMediaItems.length === 0) && !isSupabasePaused && (
             <Button onClick={refetch} variant="outline" size="sm" disabled={mediaLoading}>
               {mediaLoading ? 'Retrying…' : 'Retry Loading'}
             </Button>
           )}
         </div>
         <div className="text-sm text-muted-foreground">
-          {autoMediaItems.length > 0 ? (
+          {isSupabasePaused ? (
+            'Backend services unavailable'
+          ) : autoMediaItems.length > 0 ? (
             `${autoMediaItems.length} auto-discovered media items`
           ) : (
             'No media loaded'
@@ -184,14 +200,14 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       )}
 
       {/* Show loading or error states */}
-      {mediaLoading && (
+      {mediaLoading && !isSupabasePaused && (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
           <p className="text-muted-foreground">Loading media...</p>
         </div>
       )}
       
-      {mediaError && (
+      {mediaError && !isSupabasePaused && (
         <div className="text-center py-8">
           <p className="text-destructive">Error loading media: {mediaError}</p>
           <p className="text-muted-foreground text-sm">Falling back to demo content...</p>

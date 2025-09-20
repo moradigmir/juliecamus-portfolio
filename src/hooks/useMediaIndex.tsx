@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
 
 export type MediaType = 'image' | 'video';
 
@@ -22,6 +23,7 @@ interface UseMediaIndexReturn {
   mediaItems: MediaItem[];
   isLoading: boolean;
   error: string | null;
+  isSupabasePaused: boolean;
   refetch: () => void;
 }
 
@@ -29,6 +31,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSupabasePaused, setIsSupabasePaused] = useState(false);
 
   const fetchMediaManifest = async () => {
     try {
@@ -38,6 +41,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       const response = await fetch('/media.manifest.json');
       
       if (!response.ok) {
+        // Check if this looks like a Supabase issue
+        const contentType = response.headers.get('content-type') || '';
+        if (detectSupabaseIssueFromResponse(response.status, contentType)) {
+          setIsSupabasePaused(true);
+        }
         throw new Error(`Failed to load media manifest: ${response.status} ${response.statusText}`);
       }
       
@@ -169,6 +177,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       );
       
       setMediaItems(healedItems);
+      setIsSupabasePaused(false); // Reset on success
       console.log(`✅ Loaded ${healedItems.length} media items from manifest (HiDrive proxied where applicable)`);
       
     } catch (err) {
@@ -193,6 +202,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
     mediaItems,
     isLoading,
     error,
+    isSupabasePaused,
     refetch
   };
 };

@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Folder, File, RefreshCw, AlertCircle } from 'lucide-react';
+import ProjectStatusIndicator from './ProjectStatusIndicator';
+import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
 
 interface HiDriveItem {
   name: string;
@@ -21,6 +23,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   const [items, setItems] = useState<HiDriveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSupabasePaused, setIsSupabasePaused] = useState(false);
   const [testingFile, setTestingFile] = useState<string | null>(null);
 
   const parseWebDAVResponse = (xmlText: string): HiDriveItem[] => {
@@ -91,9 +94,21 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       url.searchParams.set('list', '1');
 
       const response = await fetch(url.toString());
+      const contentType = response.headers.get('content-type') || '';
+      
+      // Check for Supabase project pause
+      if (detectSupabaseIssueFromResponse(response.status, contentType)) {
+        setIsSupabasePaused(true);
+        throw new Error('Supabase project appears to be paused');
+      }
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Expect XML for directory listing
+      if (!contentType.includes('xml') && !contentType.includes('text/')) {
+        throw new Error(`Expected XML response, got ${contentType}`);
       }
 
       const xmlText = await response.text();
@@ -101,6 +116,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       
       setItems(parsedItems);
       setCurrentPath(path);
+      setIsSupabasePaused(false); // Reset on success
       console.log(`📁 Listed ${parsedItems.length} items in ${path}`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -212,7 +228,14 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
         </div>
       </CardHeader>
       <CardContent>
-        {error && (
+        {/* Project Status Indicator */}
+        {isSupabasePaused && (
+          <div className="mb-4">
+            <ProjectStatusIndicator onRetry={() => listDirectory(currentPath)} />
+          </div>
+        )}
+
+        {error && !isSupabasePaused && (
           <div className="flex items-center gap-2 p-4 mb-4 bg-red-50 border border-red-200 text-red-800 rounded-md">
             <AlertCircle className="w-5 h-5" />
             <div>

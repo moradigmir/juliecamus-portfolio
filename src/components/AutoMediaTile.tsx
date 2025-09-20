@@ -17,6 +17,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [reloadKey, setReloadKey] = useState(0);
   const [codecHint, setCodecHint] = useState<string | null>(null);
   const [proxyMisrouted, setProxyMisrouted] = useState(false);
+  const [supabasePaused, setSupabasePaused] = useState(false);
   const [httpStatus, setHttpStatus] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -94,6 +95,12 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         
         const contentType = res.headers.get('content-type') || '';
         
+        // Check if Supabase project is paused (404 + HTML response)
+        if (res.status === 404 && contentType.includes('text/html')) {
+          setSupabasePaused(true);
+          return;
+        }
+        
         // Check if proxy returned HTML (misrouted)
         if (contentType.includes('text/html')) {
           setProxyMisrouted(true);
@@ -160,7 +167,13 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted text-muted-foreground p-4 text-center">
             <div>
               <div className="w-12 h-12 mx-auto mb-2 opacity-50">⚠️</div>
-              {proxyMisrouted ? (
+              {supabasePaused ? (
+                <>
+                  <p className="text-sm font-medium text-destructive">Supabase Project Paused</p>
+                  <p className="text-xs opacity-70 mt-1">Backend services are unavailable. The project may be paused.</p>
+                  <p className="text-xs opacity-80 mt-1">Go to Supabase dashboard to resume the project.</p>
+                </>
+              ) : proxyMisrouted ? (
                 <>
                   <p className="text-sm font-medium">Proxy misrouted</p>
                   <p className="text-xs opacity-70 mt-1">The proxy returned HTML instead of media. Check function deployment.</p>
@@ -179,21 +192,35 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button
-                className="px-3 py-1 text-xs rounded-md bg-primary text-primary-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setHasError(false);
-                  setIsLoaded(false);
-                  setHttpStatus(null);
-                  setReloadKey((k) => k + 1);
-                  if (videoRef.current) {
-                    videoRef.current.load();
-                  }
-                }}
-              >
-                Retry
-              </button>
+              {supabasePaused ? (
+                <a
+                  href="https://supabase.com/dashboard/project/fvrgjyyflojdiklqepqt"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1 text-xs rounded-md bg-primary text-primary-foreground"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Resume Project
+                </a>
+              ) : (
+                <button
+                  className="px-3 py-1 text-xs rounded-md bg-primary text-primary-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setHasError(false);
+                    setIsLoaded(false);
+                    setHttpStatus(null);
+                    setSupabasePaused(false);
+                    setProxyMisrouted(false);
+                    setReloadKey((k) => k + 1);
+                    if (videoRef.current) {
+                      videoRef.current.load();
+                    }
+                  }}
+                >
+                  Retry
+                </button>
+              )}
               <a
                 href={cacheBustedUrl}
                 target="_blank"
