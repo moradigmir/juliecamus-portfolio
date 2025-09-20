@@ -46,62 +46,72 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     }
   };
 
-  const parseWebDAVResponse = (xmlText: string): HiDriveItem[] => {
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlText, 'text/xml');
-      // Prefer namespace-aware lookup
-      const ns = 'DAV:';
-      const responses = Array.from(doc.getElementsByTagNameNS(ns, 'response')).length
-        ? Array.from(doc.getElementsByTagNameNS(ns, 'response'))
-        : Array.from(doc.getElementsByTagName('response'));
-
-      const toText = (el: Element | null | undefined): string => (el?.textContent || '').trim();
-      const items: HiDriveItem[] = [];
-
-      for (const response of responses) {
-        const hrefEl = (response.getElementsByTagNameNS(ns, 'href')[0] || response.getElementsByTagName('href')[0]) as Element | undefined;
-        const href = toText(hrefEl);
-        const dispEl = (response.getElementsByTagNameNS(ns, 'displayname')[0] || response.getElementsByTagName('displayname')[0]) as Element | undefined;
-        const displayName = toText(dispEl);
-        const rtEl = (response.getElementsByTagNameNS(ns, 'resourcetype')[0] || response.getElementsByTagName('resourcetype')[0]) as Element | undefined;
-        const isDir = !!rtEl && ((rtEl.getElementsByTagNameNS(ns, 'collection')[0] || rtEl.getElementsByTagName('collection')[0]));
-        const lenEl = (response.getElementsByTagNameNS(ns, 'getcontentlength')[0] || response.getElementsByTagName('getcontentlength')[0]) as Element | undefined;
-        const modEl = (response.getElementsByTagNameNS(ns, 'getlastmodified')[0] || response.getElementsByTagName('getlastmodified')[0]) as Element | undefined;
-        const typeEl = (response.getElementsByTagNameNS(ns, 'getcontenttype')[0] || response.getElementsByTagName('getcontenttype')[0]) as Element | undefined;
-
-        // Normalize href to path
-        let decodedHref = '';
-        try {
-          decodedHref = decodeURIComponent(href);
-        } catch {
-          decodedHref = href;
-        }
-
-        // Skip the current directory entry
-        const normalizedCurrent = currentPath.endsWith('/') ? currentPath : currentPath + '/';
-        if (decodedHref.endsWith(normalizedCurrent)) continue;
-
-        const name = displayName || decodedHref.split('/').filter(Boolean).pop() || '';
-        if (!name || name === '.') continue;
-
-        items.push({
-          name,
-          type: isDir ? 'directory' : 'file',
-          size: lenEl ? parseInt(toText(lenEl)) : undefined,
-          modified: toText(modEl) || undefined,
-          contentType: toText(typeEl) || undefined,
-        });
-      }
-
-      return items.sort((a, b) => {
-        if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      });
-    } catch (e) {
-      console.error('Failed to parse WebDAV response:', e);
-      return [];
+  // HiDrive public shares often block WebDAV PROPFIND listings.
+  // Instead of parsing XML directory listings, we probe known paths via the proxy.
+  const proxyHead = async (p: string): Promise<{ ok: boolean; status: number; ct: string }> => {
+    const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+    url.searchParams.set('path', p);
+    const res = await fetch(url.toString(), { method: 'HEAD' });
+    const ct = res.headers.get('content-type') || '';
+    if (detectSupabaseIssueFromResponse(res.status, ct)) {
+      setIsSupabasePaused(true);
+      return { ok: false, status: res.status, ct };
     }
+    return { ok: res.ok, status: res.status, ct };
+  };
+
+  const isMediaContentType = (ct: string) => ct.startsWith('video/') || ct.startsWith('image/');
+
+  // Probe /public for two-digit numbered folders (01-50) using common filename patterns
+  const scanNumberedFolders = async (): Promise<string[]> => {
+    const candidates: string[] = Array.from({ length: 50 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+    const found: string[] = [];
+
+    await Promise.all(
+      candidates.map(async (nn) => {
+        // Try a few common filename patterns inside each folder
+        const fileCandidates = [
+          `${nn}_short.mp4`, `${nn}.mp4`, `${nn}_SHORT.MP4`, `${nn}.MP4`,
+          `${nn}_short.mov`, `${nn}.mov`, `${nn}.MOV`,
+          `${nn}.jpg`, `${nn}.jpeg`, `${nn}.JPG`, `${nn}.PNG`, `${nn}.png`,
+        ];
+        for (const fname of fileCandidates) {
+          const path = `/public/${nn}/${fname}`;
+          const r = await proxyHead(path);
+          if (r.ok && isMediaContentType(r.ct)) {
+            found.push(nn);
+            return; // Folder confirmed, move to next candidate
+          }
+        }
+      })
+    );
+
+    // De-duplicate and sort numerically
+    return Array.from(new Set(found)).sort((a, b) => parseInt(a) - parseInt(b));
+  };
+
+  // Given a folder like "01", probe for typical media files and return items
+  const probeFolderFiles = async (nn: string): Promise<HiDriveItem[]> => {
+    const fileCandidates = [
+      `${nn}_short.mp4`, `${nn}.mp4`, `${nn}_SHORT.MP4`, `${nn}.MP4`,
+      `${nn}_short.mov`, `${nn}.mov`, `${nn}.MOV`,
+      `${nn}.jpg`, `${nn}.jpeg`, `${nn}.JPG`, `${nn}.PNG`, `${nn}.png`,
+    ];
+
+    const results = await Promise.all(
+      fileCandidates.map(async (name) => {
+        const r = await proxyHead(`/public/${nn}/${name}`);
+        return { name, ok: r.ok && isMediaContentType(r.ct), ct: r.ct };
+      })
+    );
+
+    const items: HiDriveItem[] = results
+      .filter((r) => r.ok)
+      .map((r) => ({ name: r.name, type: 'file', contentType: r.ct }));
+
+    // De-duplicate by name
+    const unique = new Map(items.map((i) => [i.name.toLowerCase(), i]));
+    return Array.from(unique.values());
   };
 
   const listDirectory = async (path: string) => {
@@ -110,42 +120,31 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
 
     const normalized = path.endsWith('/') ? path : path + '/';
 
-    const fetchList = async (p: string): Promise<{ ok: boolean; xml?: string; status: number; ct: string }> => {
-      const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
-      url.searchParams.set('path', p);
-      url.searchParams.set('list', '1');
-      const res = await fetch(url.toString());
-      const ct = res.headers.get('content-type') || '';
-      if (detectSupabaseIssueFromResponse(res.status, ct)) {
-        setIsSupabasePaused(true);
-        return { ok: false, status: res.status, ct };
-      }
-      if (!res.ok) return { ok: false, status: res.status, ct };
-      const xml = await res.text();
-      return { ok: true, xml, status: res.status, ct };
-    };
-
     try {
-      // Try plain path first
-      let result = await fetchList(normalized);
-
-      // No owner-based fallback; rely on proxy's internal resolution
-
-      if (!result.ok) {
-        throw new Error(`HTTP ${result.status}: ${result.ct}`);
-      }
-
-      // Expect XML for directory listing
-      const contentType = result.ct;
-      if (!contentType.includes('xml') && !contentType.includes('text/')) {
-        throw new Error(`Expected XML response, got ${contentType}`);
-      }
-
-      const parsedItems = parseWebDAVResponse(result.xml || '');
-      setItems(parsedItems);
-      setCurrentPath(normalized);
       setIsSupabasePaused(false);
-      console.log(`📁 Listed ${parsedItems.length} items in ${normalized}`);
+
+      if (normalized.toLowerCase() === '/public/') {
+        // Probe-based scan for numbered folders (01-50)
+        const folders = await scanNumberedFolders();
+        const dirItems: HiDriveItem[] = folders.map((name) => ({ name, type: 'directory' }));
+        setItems(dirItems);
+        setCurrentPath('/public/');
+        console.log(`📁 Probed ${folders.length} numbered folders in /public`);
+      } else {
+        // Support /public/<NN>/ only
+        const match = normalized.match(/^\/public\/(\d{2})\/$/);
+        if (match) {
+          const nn = match[1];
+          const files = await probeFolderFiles(nn);
+          setItems(files);
+          setCurrentPath(`/public/${nn}/`);
+          console.log(`📄 Probed ${files.length} files in /public/${nn}/`);
+        } else {
+          setItems([]);
+          setCurrentPath(normalized);
+          setError('Only /public and /public/<NN>/ are supported.');
+        }
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMsg);
@@ -198,7 +197,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   const testFileStream = async (fileName: string) => {
     setTestingFile(fileName);
     try {
-      const fullPath = `${currentPath}/${fileName}`;
+      const fullPath = `${currentPath.replace(/\/$/, '')}/${fileName}`;
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', fullPath);
 
