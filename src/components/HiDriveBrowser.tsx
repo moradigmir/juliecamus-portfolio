@@ -228,11 +228,20 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   };
 
   useEffect(() => {
-    // Auto-load on mount with owner resolution
+    // Auto-load on mount with owner and best-start path
     (async () => {
       const o = await resolveOwnerFromManifest();
       if (o) setOwner(o);
-      await listDirectory(currentPath, o || undefined);
+      let startPath = '/public/';
+      try {
+        const res = await fetch('/media.manifest.json');
+        if (res.ok) {
+          const manifest = await res.json();
+          const firstFolder = manifest?.items?.[0]?.folder;
+          if (firstFolder) startPath = `/public/${firstFolder}/`;
+        }
+      } catch {}
+      await listDirectory(startPath, o || undefined);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

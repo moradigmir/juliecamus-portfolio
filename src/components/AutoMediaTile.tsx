@@ -35,26 +35,11 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
   const handleMouseEnter = useCallback(() => {
     onHover?.(index);
-    
-    // Auto-play video on hover for desktop only
-    if (media.previewType === 'video' && videoRef.current && !isMobile && isLoaded) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().then(() => {
-        setIsPlaying(true);
-      }).catch(console.error);
-    }
-  }, [index, onHover, media.previewType, isMobile, isLoaded]);
+  }, [index, onHover]);
 
   const handleMouseLeave = useCallback(() => {
     onLeave?.();
-    
-    // Reset and pause video on leave for desktop only
-    if (media.previewType === 'video' && videoRef.current && !isMobile) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      setIsPlaying(false);
-    }
-  }, [onLeave, media.previewType, isMobile]);
+  }, [onLeave]);
 
   const mimeType = (() => {
     try {
@@ -160,9 +145,9 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   }, []);
 
-  // Mobile intersection observer for autoplay
+  // Viewport-based autoplay (same behavior on mobile and desktop)
   useEffect(() => {
-    if (!isMobile || media.previewType !== 'video' || !videoRef.current || !tileRef.current || !isLoaded) {
+    if (media.previewType !== 'video' || !videoRef.current || !tileRef.current) {
       return;
     }
 
@@ -173,33 +158,19 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            // Start mobile autoplay when 50% visible
             if (!isPlaying) {
               video.currentTime = 0;
               video.play().then(() => {
                 setIsPlaying(true);
-                
-                // Auto-pause after 10 seconds
-                const timeout = setTimeout(() => {
-                  video.pause();
-                  video.currentTime = 0;
-                  setIsPlaying(false);
-                }, 10000);
-                
-                setAutoPlayTimeout(timeout);
-              }).catch(console.error);
+              }).catch(() => {
+                // Ignore autoplay errors
+              });
             }
           } else {
-            // Pause and reset when leaving viewport
             if (isPlaying) {
               video.pause();
               video.currentTime = 0;
               setIsPlaying(false);
-              
-              if (autoPlayTimeout) {
-                clearTimeout(autoPlayTimeout);
-                setAutoPlayTimeout(null);
-              }
             }
           }
         });
@@ -211,12 +182,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
     return () => {
       observer.disconnect();
-      if (autoPlayTimeout) {
-        clearTimeout(autoPlayTimeout);
-        setAutoPlayTimeout(null);
-      }
     };
-  }, [isMobile, media.previewType, isLoaded, isPlaying, autoPlayTimeout]);
+  }, [media.previewType, isPlaying]);
 
   // Generate thumbnail when video is ready (fallback for missing thumbnailUrl)
   useEffect(() => {

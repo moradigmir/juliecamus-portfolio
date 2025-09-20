@@ -107,79 +107,63 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     try {
       toast({
         title: "Checking folders...",
-        description: "Scanning /public directory for media folders",
+        description: "Scanning folders referenced in manifest",
       });
 
-      // Derive HiDrive owner from manifest
-      const getOwner = async (): Promise<string | null> => {
-        try {
-          const res = await fetch('/media.manifest.json');
-          if (!res.ok) return null;
-          const manifest = await res.json();
-          const first = manifest?.items?.[0];
-          const anyUrl = (first?.previewUrl || first?.fullUrl) as string | undefined;
-          if (typeof anyUrl === 'string') {
-            const m1 = anyUrl.match(/webdav\.hidrive\.strato\.com\/users\/([^/]+)/);
-            if (m1) return m1[1];
-            const m2 = anyUrl.match(/[?&]owner=([^&]+)/);
-            if (m2) return decodeURIComponent(m2[1]);
-          }
-          return 'juliecamus';
-        } catch {
-          return null;
+      // Load manifest to discover folders and owner
+      const res = await fetch('/media.manifest.json');
+      if (!res.ok) throw new Error(`Failed to load manifest: ${res.status}`);
+      const manifest = await res.json();
+      const items: Array<{ folder?: string; previewUrl?: string; fullUrl?: string }> = Array.isArray(manifest?.items) ? manifest.items : [];
+      const uniqueFolders = Array.from(new Set(items.map((it) => it.folder).filter(Boolean))) as string[];
+
+      // Derive owner from any URL
+      const sampleUrl: string | undefined = (items[0]?.previewUrl || items[0]?.fullUrl);
+      const owner = (() => {
+        if (!sampleUrl) return 'juliecamus';
+        const m1 = sampleUrl.match(/webdav\.hidrive\.strato\.com\/users\/([^/]+)/);
+        if (m1) return m1[1];
+        const m2 = sampleUrl.match(/[?&]owner=([^&]+)/);
+        if (m2) return decodeURIComponent(m2[1]);
+        return 'juliecamus';
+      })();
+
+      // If no folders in manifest, try a sane default
+      const foldersToCheck = uniqueFolders.length > 0 ? uniqueFolders : ['01'];
+
+      let okCount = 0;
+      const checked: string[] = [];
+
+      for (const folder of foldersToCheck) {
+        const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+        url.searchParams.set('path', `/public/${folder}/`);
+        url.searchParams.set('list', '1');
+        url.searchParams.set('owner', owner);
+        const resp = await fetch(url.toString());
+        if (resp.ok) {
+          okCount++;
+          checked.push(folder);
         }
-      };
-
-      const owner = await getOwner();
-
-      // Check if /public directory exists and has folders
-      const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
-      url.searchParams.set('path', '/public/');
-      url.searchParams.set('list', '1');
-      if (owner) url.searchParams.set('owner', owner);
-
-      const response = await fetch(url.toString());
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const xmlText = await response.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(xmlText, 'text/xml');
-      const folders = Array.from(doc.getElementsByTagName('response'))
-        .map(response => {
-          const href = response.getElementsByTagName('href')[0]?.textContent || '';
-          const isDir = response.getElementsByTagName('collection')[0];
-          if (isDir && href.includes('/public/')) {
-            const parts = href.split('/').filter(Boolean);
-            const folderName = parts[parts.length - 1];
-            return folderName;
-          }
-          return null;
-        })
-        .filter(Boolean) as string[];
-
-      if (folders.length > 0) {
+      if (okCount > 0) {
         toast({
-          title: "Folders found!",
-          description: `Found ${folders.length} folders: ${folders.join(', ')}. Refreshing media...`,
+          title: "Folders OK",
+          description: `Verified ${okCount} folder(s): ${checked.join(', ')}. Reloading media...`,
         });
-        // Trigger media refetch to pick up any changes
         refetch();
       } else {
         toast({
-          title: "No media folders found",
-          description: "No numbered folders (01, 02, etc.) found in /public directory",
+          title: "No folders accessible",
+          description: "Could not list any referenced folders. Open HiDrive Browser and navigate using /public/<folder>/",
           variant: "destructive",
         });
       }
-      
     } catch (error) {
       console.error('Folder check failed:', error);
       toast({
         title: "Folder check failed",
-        description: "Could not access /public directory. Use HiDrive Browser to verify your folder structure.",
+        description: "Unexpected error while checking folders.",
         variant: "destructive",
       });
     } finally {
