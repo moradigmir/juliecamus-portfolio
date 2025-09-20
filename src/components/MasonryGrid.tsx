@@ -106,20 +106,56 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     
     try {
       toast({
-        title: "Scanning HiDrive...",
-        description: "This feature needs the backend script. Use the HiDrive Browser below to check your folders.",
+        title: "Checking folders...",
+        description: "Scanning /public directory for media folders",
       });
 
-      // For now, just trigger a refetch since the backend script should be used
-      setTimeout(() => {
+      // Check if /public directory exists and has folders
+      const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+      url.searchParams.set('path', '/public');
+      url.searchParams.set('list', '1');
+
+      const response = await fetch(url.toString());
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const xmlText = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, 'text/xml');
+      const folders = Array.from(doc.getElementsByTagName('response'))
+        .map(response => {
+          const href = response.getElementsByTagName('href')[0]?.textContent || '';
+          const isDir = response.getElementsByTagName('collection')[0];
+          if (isDir && href.includes('/public/')) {
+            const folderName = href.split('/').filter(Boolean).pop();
+            return folderName;
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      if (folders.length > 0) {
+        toast({
+          title: "Folders found!",
+          description: `Found ${folders.length} folders: ${folders.join(', ')}. Refresh manifest to load them.`,
+        });
+        // Trigger media refetch to pick up any changes
         refetch();
-      }, 1000);
+      } else {
+        toast({
+          title: "No media folders found",
+          description: "No numbered folders (01, 02, etc.) found in /public directory",
+          variant: "destructive",
+        });
+      }
       
     } catch (error) {
-      console.error('Refresh failed:', error);
+      console.error('Folder check failed:', error);
       toast({
-        title: "Manual refresh needed",
-        description: "Please run the build script: cd scripts && npm run build-media",
+        title: "Folder check failed",
+        description: "Could not access /public directory. Use HiDrive Browser to verify your folder structure.",
         variant: "destructive",
       });
     } finally {

@@ -19,7 +19,7 @@ interface HiDriveBrowserProps {
 }
 
 const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
-  const [currentPath, setCurrentPath] = useState('/Common');
+  const [currentPath, setCurrentPath] = useState('/public');
   const [items, setItems] = useState<HiDriveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -219,7 +219,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
             value={currentPath}
             onChange={(e) => setCurrentPath(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && listDirectory(currentPath)}
-            placeholder="/Common"
+            placeholder="/public"
             className="flex-1"
           />
           <Button onClick={() => listDirectory(currentPath)} disabled={isLoading}>
