@@ -110,10 +110,33 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
         description: "Scanning /public directory for media folders",
       });
 
+      // Derive HiDrive owner from manifest
+      const getOwner = async (): Promise<string | null> => {
+        try {
+          const res = await fetch('/media.manifest.json');
+          if (!res.ok) return null;
+          const manifest = await res.json();
+          const first = manifest?.items?.[0];
+          const anyUrl = (first?.previewUrl || first?.fullUrl) as string | undefined;
+          if (typeof anyUrl === 'string') {
+            const m1 = anyUrl.match(/webdav\.hidrive\.strato\.com\/users\/([^/]+)/);
+            if (m1) return m1[1];
+            const m2 = anyUrl.match(/[?&]owner=([^&]+)/);
+            if (m2) return decodeURIComponent(m2[1]);
+          }
+          return 'juliecamus';
+        } catch {
+          return null;
+        }
+      };
+
+      const owner = await getOwner();
+
       // Check if /public directory exists and has folders
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', '/public');
       url.searchParams.set('list', '1');
+      if (owner) url.searchParams.set('owner', owner);
 
       const response = await fetch(url.toString());
       
@@ -129,17 +152,18 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           const href = response.getElementsByTagName('href')[0]?.textContent || '';
           const isDir = response.getElementsByTagName('collection')[0];
           if (isDir && href.includes('/public/')) {
-            const folderName = href.split('/').filter(Boolean).pop();
+            const parts = href.split('/').filter(Boolean);
+            const folderName = parts[parts.length - 1];
             return folderName;
           }
           return null;
         })
-        .filter(Boolean);
+        .filter(Boolean) as string[];
 
       if (folders.length > 0) {
         toast({
           title: "Folders found!",
-          description: `Found ${folders.length} folders: ${folders.join(', ')}. Refresh manifest to load them.`,
+          description: `Found ${folders.length} folders: ${folders.join(', ')}. Refreshing media...`,
         });
         // Trigger media refetch to pick up any changes
         refetch();

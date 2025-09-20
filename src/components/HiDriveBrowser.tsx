@@ -25,6 +25,26 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   const [error, setError] = useState<string | null>(null);
   const [isSupabasePaused, setIsSupabasePaused] = useState(false);
   const [testingFile, setTestingFile] = useState<string | null>(null);
+  const [owner, setOwner] = useState<string | null>(null);
+
+  const resolveOwnerFromManifest = async (): Promise<string | null> => {
+    try {
+      const res = await fetch('/media.manifest.json');
+      if (!res.ok) return null;
+      const manifest = await res.json();
+      const first = manifest?.items?.[0];
+      const anyUrl: string | undefined = first?.previewUrl || first?.fullUrl;
+      if (typeof anyUrl === 'string') {
+        const m1 = anyUrl.match(/webdav\.hidrive\.strato\.com\/users\/([^/]+)/);
+        if (m1) return m1[1];
+        const m2 = anyUrl.match(/[?&]owner=([^&]+)/);
+        if (m2) return decodeURIComponent(m2[1]);
+      }
+      return 'juliecamus';
+    } catch {
+      return null;
+    }
+  };
 
   const parseWebDAVResponse = (xmlText: string): HiDriveItem[] => {
     try {
@@ -84,7 +104,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     }
   };
 
-  const listDirectory = async (path: string) => {
+  const listDirectory = async (path: string, ownerOverride?: string) => {
     setIsLoading(true);
     setError(null);
 
@@ -92,6 +112,8 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', path);
       url.searchParams.set('list', '1');
+      const o = ownerOverride ?? owner;
+      if (o) url.searchParams.set('owner', o);
 
       const response = await fetch(url.toString());
       const contentType = response.headers.get('content-type') || '';
@@ -172,6 +194,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       const fullPath = `${currentPath}/${fileName}`;
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', fullPath);
+      if (owner) url.searchParams.set('owner', owner);
 
       const response = await fetch(url.toString(), { method: 'HEAD' });
       const contentType = response.headers.get('content-type') || '';
@@ -202,8 +225,12 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   };
 
   useEffect(() => {
-    // Auto-load on mount
-    listDirectory(currentPath);
+    // Auto-load on mount with owner resolution
+    (async () => {
+      const o = await resolveOwnerFromManifest();
+      if (o) setOwner(o);
+      await listDirectory(currentPath, o || undefined);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
