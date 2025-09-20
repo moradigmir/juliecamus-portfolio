@@ -354,8 +354,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               muted
               loop
               playsInline
-              preload={isMobile ? "metadata" : "metadata"}
-              poster={media.thumbnailUrl || "/placeholder.svg"}
+              preload="metadata"
+              poster={media.thumbnailUrl || media.previewUrl}
               onLoadedData={() => setIsLoaded(true)}
               onError={(e) => {
                 setHasError(true);
@@ -382,6 +382,13 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               onError={() => setHasError(true)}
               style={{ display: hasError ? 'none' : 'block' }}
             />
+          )}
+          
+          {/* Loading State - Show while video loads */}
+          {!isLoaded && !hasError && (
+            <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
           )}
           
           {/* Video Indicator */}
