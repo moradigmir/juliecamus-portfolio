@@ -91,6 +91,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   })();
 
+  // Video analysis effect
   useEffect(() => {
     if (media.previewType !== 'video') return;
     const controller = new AbortController();
@@ -344,7 +345,6 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           </div>
         )}
 
-        
         {/* Media Content */}
         <div className="relative w-full h-full">
           {media.previewType === 'video' ? (
@@ -354,8 +354,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               muted
               loop
               playsInline
-              preload="metadata"
-              poster="/placeholder.svg"
+              preload={isMobile ? "metadata" : "metadata"}
+              poster={media.thumbnailUrl || "/placeholder.svg"}
               onLoadedData={() => setIsLoaded(true)}
               onError={(e) => {
                 setHasError(true);
