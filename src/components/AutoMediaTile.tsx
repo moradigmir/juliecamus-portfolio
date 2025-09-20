@@ -355,7 +355,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               loop
               playsInline
               preload="metadata"
-              poster={media.thumbnailUrl || media.previewUrl}
+              poster={media.thumbnailUrl}
               onLoadedData={() => setIsLoaded(true)}
               onError={(e) => {
                 setHasError(true);
