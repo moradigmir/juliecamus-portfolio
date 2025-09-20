@@ -134,7 +134,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
       // Check if /public directory exists and has folders
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
-      url.searchParams.set('path', '/public');
+      url.searchParams.set('path', '/public/');
       url.searchParams.set('list', '1');
       if (owner) url.searchParams.set('owner', owner);
 

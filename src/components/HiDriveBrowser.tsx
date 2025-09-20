@@ -109,8 +109,10 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     setError(null);
 
     try {
+      const normalized = path.endsWith('/') ? path : path + '/';
+
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
-      url.searchParams.set('path', path);
+      url.searchParams.set('path', normalized);
       url.searchParams.set('list', '1');
       const o = ownerOverride ?? owner;
       if (o) url.searchParams.set('owner', o);
@@ -137,9 +139,9 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       const parsedItems = parseWebDAVResponse(xmlText);
       
       setItems(parsedItems);
-      setCurrentPath(path);
+      setCurrentPath(normalized);
       setIsSupabasePaused(false); // Reset on success
-      console.log(`📁 Listed ${parsedItems.length} items in ${path}`);
+      console.log(`📁 Listed ${parsedItems.length} items in ${normalized}`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMsg);
@@ -150,7 +152,8 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   };
 
   const navigateToFolder = (folderName: string) => {
-    const newPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
+    const base = currentPath.endsWith('/') ? currentPath : currentPath + '/';
+    const newPath = base === '/' ? `/${folderName}/` : `${base}${folderName}/`;
     listDirectory(newPath);
   };
 
@@ -245,11 +248,11 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
           <Input
             value={currentPath}
             onChange={(e) => setCurrentPath(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && listDirectory(currentPath)}
+            onKeyDown={(e) => e.key === 'Enter' && listDirectory(currentPath.endsWith('/') ? currentPath : currentPath + '/')}
             placeholder="/public"
             className="flex-1"
           />
-          <Button onClick={() => listDirectory(currentPath)} disabled={isLoading}>
+          <Button onClick={() => listDirectory(currentPath.endsWith('/') ? currentPath : currentPath + '/')} disabled={isLoading}>
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
