@@ -8,6 +8,8 @@ import HiDriveBrowser from './HiDriveBrowser';
 import ProjectStatusIndicator from './ProjectStatusIndicator';
 import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
+import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
+import { useToast } from '@/hooks/use-toast';
 
 interface Project {
   slug: string;
@@ -33,6 +35,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [lightboxMedia, setLightboxMedia] = useState<MediaItem | null>(null);
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
   const [showHiDriveBrowser, setShowHiDriveBrowser] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { toast } = useToast();
   
   // Load auto-discovered media from HiDrive
   const { 
@@ -96,6 +100,45 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     // For now, just notify and suggest manual update
     alert(`Found correct path: ${correctPath}\n\nUpdate your media.manifest.json to use this path prefix.`);
   }, []);
+
+  const handleRefreshManifest = useCallback(async () => {
+    setIsRefreshing(true);
+    
+    try {
+      // Get credentials (in production this would come from secure storage)
+      const password = prompt('Enter your HiDrive password to refresh the media manifest:');
+      if (!password) {
+        setIsRefreshing(false);
+        return;
+      }
+
+      const generator = new MediaManifestGenerator();
+      const newManifest = await generator.generateManifest('juliecamus', password);
+      
+      // Show the new manifest in console for now
+      console.log('New manifest generated:', newManifest);
+      
+      toast({
+        title: "Media manifest refreshed!",
+        description: `Found ${newManifest.items.length} media folders. Check console for details.`,
+      });
+      
+      // Trigger a refetch of the media index
+      setTimeout(() => {
+        refetch();
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Failed to refresh manifest:', error);
+      toast({
+        title: "Failed to refresh manifest",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refetch, toast]);
 
   const createGridItems = useCallback((): GridItem[] => {
     const items: GridItem[] = [];
@@ -180,6 +223,14 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               {mediaLoading ? 'Retrying…' : 'Retry Loading'}
             </Button>
           )}
+          <Button 
+            onClick={handleRefreshManifest} 
+            variant="outline" 
+            size="sm" 
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? 'Refreshing...' : 'Refresh Manifest'}
+          </Button>
         </div>
         <div className="text-sm text-muted-foreground">
           {isSupabasePaused ? (
