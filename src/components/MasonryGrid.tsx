@@ -105,34 +105,21 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setIsRefreshing(true);
     
     try {
-      // Get credentials (in production this would come from secure storage)
-      const password = prompt('Enter your HiDrive password to refresh the media manifest:');
-      if (!password) {
-        setIsRefreshing(false);
-        return;
-      }
-
-      const generator = new MediaManifestGenerator();
-      const newManifest = await generator.generateManifest('juliecamus', password);
-      
-      // Show the new manifest in console for now
-      console.log('New manifest generated:', newManifest);
-      
       toast({
-        title: "Media manifest refreshed!",
-        description: `Found ${newManifest.items.length} media folders. Check console for details.`,
+        title: "Scanning HiDrive...",
+        description: "This feature needs the backend script. Use the HiDrive Browser below to check your folders.",
       });
-      
-      // Trigger a refetch of the media index
+
+      // For now, just trigger a refetch since the backend script should be used
       setTimeout(() => {
         refetch();
       }, 1000);
       
     } catch (error) {
-      console.error('Failed to refresh manifest:', error);
+      console.error('Refresh failed:', error);
       toast({
-        title: "Failed to refresh manifest",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
+        title: "Manual refresh needed",
+        description: "Please run the build script: cd scripts && npm run build-media",
         variant: "destructive",
       });
     } finally {
@@ -228,8 +215,9 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             variant="outline" 
             size="sm" 
             disabled={isRefreshing}
+            className="text-xs"
           >
-            {isRefreshing ? 'Refreshing...' : 'Refresh Manifest'}
+            {isRefreshing ? 'Checking...' : 'Check Folders'}
           </Button>
         </div>
         <div className="text-sm text-muted-foreground">
