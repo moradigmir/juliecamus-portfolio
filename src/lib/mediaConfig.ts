@@ -24,6 +24,7 @@ export interface MediaItem {
   previewType: MediaType;
   fullUrl: string;
   fullType: MediaType;
+  thumbnailUrl?: string; // WebP thumbnail for video previews
 }
 
 // Google Drive file configuration

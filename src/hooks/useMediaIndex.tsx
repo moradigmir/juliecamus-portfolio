@@ -11,6 +11,7 @@ export interface MediaItem {
   previewType: MediaType;
   fullUrl: string;
   fullType: MediaType;
+  thumbnailUrl?: string;
 }
 
 export interface MediaManifest {
@@ -90,6 +91,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         ...item,
         previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
         fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
+        // thumbnailUrl is already a relative path, no need to proxy
       }));
 
       const requiresProxy = proxiedItems.some(

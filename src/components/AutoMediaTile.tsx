@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
 import type { MediaItem } from '../hooks/useMediaIndex';
+import { useIsMobile } from '../hooks/use-mobile';
 
 interface AutoMediaTileProps {
   media: MediaItem;
@@ -19,32 +20,41 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [proxyMisrouted, setProxyMisrouted] = useState(false);
   const [supabasePaused, setSupabasePaused] = useState(false);
   const [httpStatus, setHttpStatus] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [autoPlayTimeout, setAutoPlayTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
+  const tileRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   const handleClick = () => {
     if (hasError) return;
     onClick?.(media);
   };
 
-  const handleMouseEnter = () => {
+  const handleMouseEnter = useCallback(() => {
     onHover?.(index);
     
-    // Auto-play video on hover for video previews
-    if (media.previewType === 'video' && videoRef.current) {
+    // Auto-play video on hover for desktop only
+    if (media.previewType === 'video' && videoRef.current && !isMobile && isLoaded) {
       videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(console.error);
+      videoRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(console.error);
     }
-  };
+  }, [index, onHover, media.previewType, isMobile, isLoaded]);
 
-  const handleMouseLeave = () => {
+  const handleMouseLeave = useCallback(() => {
     onLeave?.();
     
-    // Reset and pause video on leave
-    if (media.previewType === 'video' && videoRef.current) {
+    // Reset and pause video on leave for desktop only
+    if (media.previewType === 'video' && videoRef.current && !isMobile) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
+      setIsPlaying(false);
     }
-  };
+  }, [onLeave, media.previewType, isMobile]);
 
   const mimeType = (() => {
     try {
@@ -131,8 +141,107 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     return () => controller.abort();
   }, [cacheBustedUrl, media.previewType]);
 
+  // Generate thumbnail dynamically if not provided and it's a video
+  const generateThumbnailFromVideo = useCallback((video: HTMLVideoElement): string | null => {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      canvas.width = 320;
+      canvas.height = 240;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      return canvas.toDataURL('image/webp', 0.8);
+    } catch (error) {
+      console.warn('Failed to generate video thumbnail:', error);
+      return null;
+    }
+  }, []);
+
+  // Mobile intersection observer for autoplay
+  useEffect(() => {
+    if (!isMobile || media.previewType !== 'video' || !videoRef.current || !tileRef.current || !isLoaded) {
+      return;
+    }
+
+    const video = videoRef.current;
+    const tile = tileRef.current;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            // Start mobile autoplay when 50% visible
+            if (!isPlaying) {
+              video.currentTime = 0;
+              video.play().then(() => {
+                setIsPlaying(true);
+                
+                // Auto-pause after 10 seconds
+                const timeout = setTimeout(() => {
+                  video.pause();
+                  video.currentTime = 0;
+                  setIsPlaying(false);
+                }, 10000);
+                
+                setAutoPlayTimeout(timeout);
+              }).catch(console.error);
+            }
+          } else {
+            // Pause and reset when leaving viewport
+            if (isPlaying) {
+              video.pause();
+              video.currentTime = 0;
+              setIsPlaying(false);
+              
+              if (autoPlayTimeout) {
+                clearTimeout(autoPlayTimeout);
+                setAutoPlayTimeout(null);
+              }
+            }
+          }
+        });
+      },
+      { threshold: [0, 0.5, 1] }
+    );
+
+    observer.observe(tile);
+
+    return () => {
+      observer.disconnect();
+      if (autoPlayTimeout) {
+        clearTimeout(autoPlayTimeout);
+        setAutoPlayTimeout(null);
+      }
+    };
+  }, [isMobile, media.previewType, isLoaded, isPlaying, autoPlayTimeout]);
+
+  // Generate thumbnail when video is ready (fallback for missing thumbnailUrl)
+  useEffect(() => {
+    if (media.previewType === 'video' && !media.thumbnailUrl && videoRef.current && isLoaded && !thumbnailGenerated) {
+      const video = videoRef.current;
+      
+      // Wait a bit for video to be fully loaded
+      const generateThumbnail = () => {
+        const thumbnailDataUrl = generateThumbnailFromVideo(video);
+        if (thumbnailDataUrl) {
+          video.poster = thumbnailDataUrl;
+          setThumbnailGenerated(true);
+        }
+      };
+
+      if (video.readyState >= 2) {
+        generateThumbnail();
+      } else {
+        video.addEventListener('loadeddata', generateThumbnail, { once: true });
+      }
+    }
+  }, [media.previewType, media.thumbnailUrl, isLoaded, thumbnailGenerated, generateThumbnailFromVideo]);
+
   return (
     <motion.div
+      ref={tileRef}
       className="gallery-tile-wrapper video-tile cursor-pointer focus-ring"
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
@@ -278,7 +387,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           {/* Video Indicator */}
           {media.fullType === 'video' && (
             <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full p-1.5">
-              <Play className="w-3 h-3 text-foreground" />
+              <Play className={`w-3 h-3 text-foreground ${isPlaying ? 'animate-pulse' : ''}`} />
             </div>
           )}
           

@@ -2,6 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 // Types for the manifest
 export type MediaType = 'image' | 'video';
@@ -14,6 +15,7 @@ export interface MediaItem {
   previewType: MediaType;
   fullUrl: string;
   fullType: MediaType;
+  thumbnailUrl?: string;
 }
 
 export interface MediaManifest {
@@ -197,8 +199,17 @@ class MediaManifestBuilder {
           const previewUrl = this.client.getPublicUrl(preview.path);
           const fullUrl = this.client.getPublicUrl((full || preview).path);
           
+          // Generate thumbnail for videos
+          let thumbnailUrl: string | undefined;
+          if (this.getMediaType(preview.name) === 'video') {
+            thumbnailUrl = await this.generateVideoThumbnail(previewUrl, dir.name);
+          }
+          
           console.log(`  ✅ Preview: ${preview.name} -> ${previewUrl}`);
           console.log(`  ✅ Full: ${(full || preview).name} -> ${fullUrl}`);
+          if (thumbnailUrl) {
+            console.log(`  🖼️  Thumbnail: ${thumbnailUrl}`);
+          }
           
           items.push({
             orderKey: dir.name,
@@ -207,7 +218,8 @@ class MediaManifestBuilder {
             previewUrl,
             previewType: this.getMediaType(preview.name),
             fullUrl,
-            fullType: this.getMediaType((full || preview).name)
+            fullType: this.getMediaType((full || preview).name),
+            thumbnailUrl
           });
           
         } catch (error) {
@@ -327,6 +339,50 @@ class MediaManifestBuilder {
     const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
     const ext = path.extname(filename).toLowerCase();
     return videoExtensions.includes(ext) ? 'video' : 'image';
+  }
+
+  private async generateVideoThumbnail(videoUrl: string, folderName: string): Promise<string | undefined> {
+    try {
+      // Create thumbnails directory if it doesn't exist
+      const publicDir = path.join(process.cwd(), '..', 'public');
+      const thumbnailsDir = path.join(publicDir, 'thumbnails');
+      const folderThumbnailsDir = path.join(thumbnailsDir, folderName);
+      
+      if (!fs.existsSync(folderThumbnailsDir)) {
+        fs.mkdirSync(folderThumbnailsDir, { recursive: true });
+      }
+      
+      const thumbnailPath = path.join(folderThumbnailsDir, `${folderName}_thumb.webp`);
+      const relativeThumbnailPath = `/thumbnails/${folderName}/${folderName}_thumb.webp`;
+      
+      // Check if thumbnail already exists
+      if (fs.existsSync(thumbnailPath)) {
+        console.log(`    ♻️  Using existing thumbnail: ${relativeThumbnailPath}`);
+        return relativeThumbnailPath;
+      }
+      
+      console.log(`    🎬 Generating thumbnail for video: ${videoUrl}`);
+      
+      // Use ffmpeg to extract first frame as WebP thumbnail (requires ffmpeg to be installed)
+      try {
+        execSync(`ffmpeg -i "${videoUrl}" -vf "scale=320:240:force_original_aspect_ratio=increase,crop=320:240" -frames:v 1 -f webp "${thumbnailPath}" -y`, {
+          stdio: 'pipe',
+          timeout: 30000 // 30 second timeout
+        });
+        
+        if (fs.existsSync(thumbnailPath)) {
+          console.log(`    ✅ Generated thumbnail: ${relativeThumbnailPath}`);
+          return relativeThumbnailPath;
+        }
+      } catch (ffmpegError) {
+        console.warn(`    ⚠️  FFmpeg failed, thumbnail generation skipped: ${ffmpegError}`);
+      }
+      
+    } catch (error) {
+      console.warn(`    ⚠️  Thumbnail generation failed: ${error}`);
+    }
+    
+    return undefined;
   }
 }
 
