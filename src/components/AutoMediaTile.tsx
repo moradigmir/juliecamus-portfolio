@@ -185,27 +185,12 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     };
   }, [media.previewType, isPlaying]);
 
-  // Generate thumbnail when video is ready (fallback for missing thumbnailUrl)
+  // Ensure poster is visible immediately if provided (avoid blocking overlay)
   useEffect(() => {
-    if (media.previewType === 'video' && !media.thumbnailUrl && videoRef.current && isLoaded && !thumbnailGenerated) {
-      const video = videoRef.current;
-      
-      // Wait a bit for video to be fully loaded
-      const generateThumbnail = () => {
-        const thumbnailDataUrl = generateThumbnailFromVideo(video);
-        if (thumbnailDataUrl) {
-          video.poster = thumbnailDataUrl;
-          setThumbnailGenerated(true);
-        }
-      };
-
-      if (video.readyState >= 2) {
-        generateThumbnail();
-      } else {
-        video.addEventListener('loadeddata', generateThumbnail, { once: true });
-      }
+    if (media.previewType === 'video' && media.thumbnailUrl) {
+      setIsLoaded(true);
     }
-  }, [media.previewType, media.thumbnailUrl, isLoaded, thumbnailGenerated, generateThumbnailFromVideo]);
+  }, [media.previewType, media.thumbnailUrl]);
 
   return (
     <motion.div
@@ -323,6 +308,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               playsInline
               preload="metadata"
               poster={media.thumbnailUrl || '/placeholder.svg'}
+              onLoadedMetadata={() => setIsLoaded(true)}
               onLoadedData={() => setIsLoaded(true)}
               onError={(e) => {
                 setHasError(true);
@@ -352,7 +338,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           )}
           
           {/* Loading State - Show while video loads */}
-          {!isLoaded && !hasError && (
+          {!isLoaded && !hasError && !media.thumbnailUrl && (
             <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>

@@ -131,8 +131,8 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       // Try plain path first
       let result = await fetchList(normalized);
 
-      // Fallback: try /users/{owner}/ prefix if 404 and owner known
-      if (!result.ok && result.status === 404 && o && !normalized.startsWith('/users/')) {
+      // Fallback: try /users/{owner}/ prefix if not ok and owner known
+      if (!result.ok && o && !normalized.startsWith('/users/')) {
         const altPath = `/users/${o}${normalized}`.replace(/\/+/, '/');
         result = await fetchList(altPath);
         if (result.ok) {
