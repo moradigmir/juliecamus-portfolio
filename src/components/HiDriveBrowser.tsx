@@ -104,18 +104,16 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     }
   };
 
-  const listDirectory = async (path: string, ownerOverride?: string) => {
+  const listDirectory = async (path: string) => {
     setIsLoading(true);
     setError(null);
 
     const normalized = path.endsWith('/') ? path : path + '/';
-    const o = ownerOverride ?? owner ?? undefined;
 
     const fetchList = async (p: string): Promise<{ ok: boolean; xml?: string; status: number; ct: string }> => {
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', p);
       url.searchParams.set('list', '1');
-      if (o && !p.startsWith('/users/')) url.searchParams.set('owner', o);
       const res = await fetch(url.toString());
       const ct = res.headers.get('content-type') || '';
       if (detectSupabaseIssueFromResponse(res.status, ct)) {
@@ -131,14 +129,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       // Try plain path first
       let result = await fetchList(normalized);
 
-      // Fallback: try /users/{owner}/ prefix if not ok and owner known
-      if (!result.ok && o && !normalized.startsWith('/users/')) {
-        const altPath = `/users/${o}${normalized}`.replace(/\/+/, '/');
-        result = await fetchList(altPath);
-        if (result.ok) {
-          setCurrentPath(altPath);
-        }
-      }
+      // No owner-based fallback; rely on proxy's internal resolution
 
       if (!result.ok) {
         throw new Error(`HTTP ${result.status}: ${result.ct}`);
@@ -152,9 +143,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
 
       const parsedItems = parseWebDAVResponse(result.xml || '');
       setItems(parsedItems);
-      if (!normalized.startsWith('/users/') || !o) {
-        setCurrentPath(normalized);
-      }
+      setCurrentPath(normalized);
       setIsSupabasePaused(false);
       console.log(`📁 Listed ${parsedItems.length} items in ${normalized}`);
     } catch (err) {
@@ -212,7 +201,6 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       const fullPath = `${currentPath}/${fileName}`;
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', fullPath);
-      if (owner) url.searchParams.set('owner', owner);
 
       const response = await fetch(url.toString(), { method: 'HEAD' });
       const contentType = response.headers.get('content-type') || '';
@@ -256,7 +244,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
           if (firstFolder) startPath = `/public/${firstFolder}/`;
         }
       } catch {}
-      await listDirectory(startPath, o || undefined);
+      await listDirectory(startPath);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

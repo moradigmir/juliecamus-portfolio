@@ -105,61 +105,93 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setIsRefreshing(true);
 
     try {
-      toast({ title: 'Checking folders...', description: 'Scanning /public for numbered folders' });
+      toast({ title: 'Checking folders...', description: 'Validating folders from manifest' });
 
-      // Derive owner from manifest
       const res = await fetch('/media.manifest.json');
       if (!res.ok) throw new Error(`Failed to load manifest: ${res.status}`);
       const manifest = await res.json();
-      const first = manifest?.items?.[0];
-      const anyUrl: string | undefined = first?.previewUrl || first?.fullUrl;
-      const owner = (() => {
-        if (typeof anyUrl === 'string') {
-          const m1 = anyUrl.match(/webdav\.hidrive\.strato\.com\/users\/([^/]+)/);
-          if (m1) return m1[1];
-          const m2 = anyUrl.match(/[?&]owner=([^&]+)/);
-          if (m2) return decodeURIComponent(m2[1]);
-        }
-        return 'juliecamus';
-      })();
+      const items: Array<{ folder?: string; previewUrl?: string; fullUrl?: string }> = Array.isArray(manifest?.items) ? manifest.items : [];
+      const folders = Array.from(new Set(items.map((it) => it.folder).filter(Boolean))) as string[];
 
-      const listDirs = async (basePath: string): Promise<string[] | null> => {
-        const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
-        url.searchParams.set('path', basePath.endsWith('/') ? basePath : basePath + '/');
-        url.searchParams.set('list', '1');
-        if (owner) url.searchParams.set('owner', owner);
-        const response = await fetch(url.toString());
-        const ct = response.headers.get('content-type') || '';
-        if (!response.ok || (!ct.includes('xml') && !ct.includes('text/'))) return null;
-        const xmlText = await response.text();
-        const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
-        const responses = Array.from(doc.getElementsByTagNameNS('DAV:', 'response')).length
-          ? Array.from(doc.getElementsByTagNameNS('DAV:', 'response'))
-          : Array.from(doc.getElementsByTagName('response'));
-        const dirs: string[] = [];
-        responses.forEach((r) => {
-          const disp = (r.getElementsByTagNameNS('DAV:', 'displayname')[0] || r.getElementsByTagName('displayname')[0]);
-          const rt = (r.getElementsByTagNameNS('DAV:', 'resourcetype')[0] || r.getElementsByTagName('resourcetype')[0]);
-          const isDir = !!rt && (rt.getElementsByTagNameNS('DAV:', 'collection')[0] || rt.getElementsByTagName('collection')[0]);
-          const name = (disp?.textContent || '').trim();
-          if (isDir && name && name !== '.' && name !== 'public') dirs.push(name);
-        });
-        return dirs;
+      if (folders.length === 0) {
+        toast({ title: 'No folders in manifest', description: 'Nothing to check', variant: 'destructive' });
+        return;
+      }
+
+      const mapToProxy = (url?: string): string | undefined => {
+        if (!url) return undefined;
+        try {
+          if (url.includes('functions.supabase.co/hidrive-proxy')) return url;
+          const m = url.match(/^https?:\/\/webdav\.hidrive\.strato\.com\/users\/([^/]+)(\/.*)$/);
+          if (m) {
+            const path = m[2];
+            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path)}`;
+          }
+          if (url.startsWith('hidrive://')) {
+            const ownerMatch = url.match(/^hidrive:\/\/([^/]+)(\/.*)$/);
+            if (ownerMatch) {
+              const owner = ownerMatch[1];
+              const path = ownerMatch[2];
+              return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?owner=${encodeURIComponent(owner)}&path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
+            }
+            const path = url.replace('hidrive://', '');
+            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
+          }
+        } catch {}
+        return url;
       };
 
-      let folders = (await listDirs('/public/')) || [];
-      if (folders.length === 0) {
-        folders = (await listDirs(`/users/${owner}/public/`)) || [];
+      const tryHead = async (u?: string) => {
+        if (!u) return false;
+        try {
+          const r = await fetch(u, { method: 'HEAD' });
+          const ct = r.headers.get('content-type') || '';
+          return r.ok && (ct.startsWith('video/') || ct.startsWith('image/'));
+        } catch {
+          return false;
+        }
+      };
+
+      const probeFolder = async (folder: string) => {
+        const normalized = `/public/${folder}/`;
+        let listed = false;
+        try {
+          const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+          url.searchParams.set('path', normalized);
+          url.searchParams.set('list', '1');
+          const r = await fetch(url.toString());
+          if (r.ok) {
+            const ct = r.headers.get('content-type') || '';
+            if (ct.includes('xml') || ct.includes('text/')) {
+              const xml = await r.text();
+              const doc = new DOMParser().parseFromString(xml, 'text/xml');
+              const responses = Array.from(doc.getElementsByTagName('response'));
+              listed = responses.length > 0;
+            }
+          }
+        } catch {}
+
+        if (listed) return { folder, ok: true } as const;
+
+        const sample = items.find((it) => it.folder === folder);
+        const ok = (await tryHead(mapToProxy(sample?.previewUrl))) || (await tryHead(mapToProxy(sample?.fullUrl)));
+        return { folder, ok } as const;
+      };
+
+      const results = [] as Array<{ folder: string; ok: boolean }>;
+      for (const f of folders) {
+        results.push(await probeFolder(f as string));
       }
 
-      const numbered = folders.filter((f) => /^\d{2}$/.test(f));
-
-      if (numbered.length > 0) {
-        toast({ title: 'Folders found', description: `Found: ${numbered.join(', ')}` });
-        refetch();
+      const okCount = results.filter((r) => r.ok).length;
+      if (okCount === folders.length) {
+        toast({ title: 'All folders OK', description: `Verified ${okCount}/${folders.length}: ${folders.join(', ')}` });
       } else {
-        toast({ title: 'No numbered folders', description: 'Could not find 2-digit folders in /public', variant: 'destructive' });
+        const bad = results.filter((r) => !r.ok).map((r) => r.folder);
+        toast({ title: 'Some folders failed', description: `OK ${okCount}/${folders.length}. Failed: ${bad.join(', ')}`, variant: 'destructive' });
       }
+
+      refetch();
     } catch (error) {
       console.error('Folder check failed:', error);
       toast({ title: 'Check failed', description: 'Unexpected error while checking folders', variant: 'destructive' });
