@@ -59,9 +59,13 @@ Deno.serve(async (req: Request) => {
 
   const base = 'https://webdav.hidrive.strato.com';
 
-  // Resolve target URL. Common is under user namespace: /users/{owner}/Common/...
   const resolveUrl = (p: string, owner: string) => {
-    // Both /public/... and /Common/public/... are under user namespace
+    const lower = p.toLowerCase();
+    // Public shares live at the root, not under /users/{owner}
+    if (lower.startsWith('/public/')) {
+      return { url: `${base}${p}`, usedPath: p, root: 'public' as const };
+    }
+    // Workspace paths (/Common, /Personal, /Shared) are under the user namespace
     return { url: `${base}/users/${encodeURIComponent(owner)}${p}`, usedPath: p, root: 'user' as const };
   };
 
