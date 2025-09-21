@@ -90,8 +90,53 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     return Array.from(new Set(found)).sort((a, b) => parseInt(a) - parseInt(b));
   };
 
-  // Given a folder like "01", probe for typical media files and return items
+  // Given a folder like "01", list media files via PROPFIND; fallback to candidate probes
   const probeFolderFiles = async (nn: string): Promise<HiDriveItem[]> => {
+    // 1) Try PROPFIND on /public/<NN>/ to get real file names (not just NN.*)
+    try {
+      const listUrl = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+      listUrl.searchParams.set('path', `/public/${nn}/`);
+      const res = await fetch(listUrl.toString(), { method: 'PROPFIND', headers: { Depth: '1' } });
+      const ct = res.headers.get('content-type') || '';
+      if (detectSupabaseIssueFromResponse(res.status, ct)) {
+        setIsSupabasePaused(true);
+        return [];
+      }
+      if (res.ok || res.status === 207) {
+        const xml = await res.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(xml, 'application/xml');
+        const responses = Array.from(doc.getElementsByTagNameNS('*', 'response'));
+        const out: HiDriveItem[] = [];
+        for (const r of responses) {
+          const hrefEl = r.getElementsByTagNameNS('*', 'href')[0];
+          if (!hrefEl) continue;
+          let href = hrefEl.textContent || '';
+          try { href = decodeURIComponent(href); } catch {}
+          const pathOnly = href.replace(/^https?:\/\/[^/]+/, '');
+          if (!pathOnly) continue;
+          // Skip the folder itself
+          if (pathOnly.replace(/\/$/, '') === `/public/${nn}`) continue;
+          const name = pathOnly.split('/').filter(Boolean).pop() || '';
+          const isDir = r.getElementsByTagNameNS('*', 'collection').length > 0;
+          if (isDir) continue;
+          const typeEl = r.getElementsByTagNameNS('*', 'getcontenttype')[0];
+          const contentType = (typeEl?.textContent || '').toLowerCase();
+          if (!contentType || isMediaContentType(contentType)) {
+            out.push({ name, type: 'file', contentType });
+          }
+        }
+        if (out.length) {
+          // De-dupe by name
+          const unique = new Map(out.map((i) => [i.name.toLowerCase(), i]));
+          return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+        }
+      }
+    } catch (_) {
+      // ignore and fallback
+    }
+
+    // 2) Fallback to candidate-name probes (legacy behavior)
     const fileCandidates = [
       `${nn}_short.mp4`, `${nn}.mp4`, `${nn}_SHORT.MP4`, `${nn}.MP4`,
       `${nn}_short.mov`, `${nn}.mov`, `${nn}.MOV`,
@@ -109,7 +154,6 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       .filter((r) => r.ok)
       .map((r) => ({ name: r.name, type: 'file', contentType: r.ct }));
 
-    // De-duplicate by name
     const unique = new Map(items.map((i) => [i.name.toLowerCase(), i]));
     return Array.from(unique.values());
   };
