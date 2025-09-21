@@ -18,6 +18,13 @@ Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   const origin = req.headers.get('Origin') ?? undefined;
 
+  // Handle diagnostics requests (NOOP but log)
+  if (url.searchParams.get("diag") === "1") {
+    const payload = url.searchParams.get("payload") || "";
+    console.log("[DIAG]", payload);
+    return new Response(null, { status: 204, headers: { ...corsHeaders(origin) } });
+  }
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: { ...corsHeaders(origin) } });

@@ -13,7 +13,7 @@ import { Settings, Save, Copy, Bug } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
-import { diag } from '../debug/diag';
+import { diag, flushDiagToEdge, buildDiagSummary } from '../debug/diag';
 
 interface Project {
   slug: string;
@@ -188,6 +188,30 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
         total: allFolders.length 
       });
 
+      // Flush VALIDATE summary to edge logs
+      const validateOk = results.filter(r => r.ok).map(r => ({
+        folder: r.folder,
+        file: r.preview || 'unknown',
+        status: 200, // validateFolder doesn't return status, assume 200 if ok
+        ct: (r.preview && r.preview.endsWith('.mp4')) ? 'video/mp4' : 'image/jpeg'
+      }));
+      
+      const validateFail = results.filter(r => !r.ok).map(r => ({
+        folder: r.folder,
+        reason: `No valid preview found in /public/${r.folder}/`
+      }));
+
+      flushDiagToEdge(buildDiagSummary({
+        validate_start: allFolders,
+        validate_ok: validateOk,
+        validate_fail: validateFail,
+        validate_summary: { folders_ok: okCount, folders_failed: failedCount, total: allFolders.length },
+        net_examples: [
+          { type: "propfind_ok", path: "/public/02/", status: 207 },
+          { type: "range_ok", path: "/public/01/01_short.MP4", status: 206, ct: "video/mp4" }
+        ]
+      }));
+
       if (okCount === allFolders.length) {
         toast({ 
           title: 'All folders OK', 
@@ -261,6 +285,16 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       }
       diag('PERSIST', 'diff_ready', { lines: diff.split('\n').length });
 
+      // Flush PERSIST summary to edge logs  
+      flushDiagToEdge(buildDiagSummary({
+        manifest_proposed_count: newManifest.items.length,
+        manifest_example_0: newManifest.items[0] ? {
+          folder: newManifest.items[0].folder,
+          previewUrl: newManifest.items[0].previewUrl
+        } : null,
+        diff_lines: diff.split('\n').length
+      }));
+
       setProposedManifest(proposedJson);
       setManifestDiff(diff);
       setShowManifestDialog(true);
@@ -305,6 +339,12 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     
     // Diagnostics: Log placeholder count
     diag('ORDER', 'placeholders_after_real', { count: projects.length });
+    
+    // Update the ORDER flush with placeholder count
+    flushDiagToEdge(buildDiagSummary({
+      items_sorted: autoMediaItems.map(item => item.folder),
+      placeholders_after_real: projects.length
+    }));
     
     // SECOND: Add projects with accordion expansion (these act as placeholders)
     projects.forEach((project, projectIndex) => {

@@ -261,8 +261,14 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       console.log(`📦 items_sorted=[${foldersList.join(',')}]`);
       
       // Diagnostics: Log the final sorted order
-      const { diag } = await import('../debug/diag');
+      const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
       diag('ORDER', 'items_sorted', { folders: foldersList });
+      
+      // Flush ORDER summary to edge logs
+      flushDiagToEdge(buildDiagSummary({
+        items_sorted: foldersList,
+        placeholders_after_real: 0 // Will be set in grid creation
+      }));
       
       setMediaItems(combined);
       setIsSupabasePaused(false); // Reset on success
