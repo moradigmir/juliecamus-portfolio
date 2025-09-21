@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
+import { findPreviewForFolder, probeStream } from '@/lib/hidrive';
 
 export type MediaType = 'image' | 'video';
 
@@ -195,19 +196,22 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       };
 
       const probePublicFirstMedia = async (nn: string): Promise<string | null> => {
-        const candidates = [
-          `${nn}_short.mp4`, `${nn}.mp4`, `${nn}_SHORT.MP4`, `${nn}.MP4`,
-          `${nn}_short.mov`, `${nn}.mov`, `${nn}.MOV`,
-          `${nn}.jpg`, `${nn}.jpeg`, `${nn}.JPG`, `${nn}.PNG`, `${nn}.png`,
-        ];
-        for (const name of candidates) {
-          const path = `/public/${nn}/${name}`;
-          const r = await headRangePath(path);
-          if (r.ok) {
-            console.log('✅ discovered public media', { path });
-            return path;
+        const folderPath = `/public/${nn}/`;
+        console.log(`🔍 Discovering media in folder: ${folderPath}`);
+        
+        // Use shared helper to find media in the folder
+        const previewUrl = await findPreviewForFolder(folderPath);
+        if (previewUrl) {
+          // Extract the path from the proxy URL for return
+          const match = previewUrl.match(/path=([^&]+)/);
+          if (match) {
+            const decodedPath = decodeURIComponent(match[1]);
+            console.log(`✅ discovered public media: ${decodedPath}`);
+            return decodedPath;
           }
         }
+        
+        console.log(`❌ No media found in folder: ${folderPath}`);
         return null;
       };
 

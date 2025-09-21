@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
+import { listDir, probeStream, findPreviewForFolder, isMediaContentType } from '@/lib/hidrive';
 
 interface Project {
   slug: string;
@@ -105,7 +106,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setIsRefreshing(true);
 
     try {
-      toast({ title: 'Checking folders...', description: 'Validating folders from manifest' });
+      toast({ title: 'Checking folders...', description: 'Validating folders from manifest using shared HiDrive logic' });
 
       const res = await fetch('/media.manifest.json');
       if (!res.ok) throw new Error(`Failed to load manifest: ${res.status}`);
@@ -141,36 +142,46 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
         return url;
       };
 
-       const tryHead = async (u?: string) => {
-        if (!u) return false;
-        try {
-          const r = await fetch(u, { method: 'GET', headers: { Range: 'bytes=0-0' } });
-          const ct = r.headers.get('content-type') || '';
-          return (r.ok || r.status === 206) && (ct.startsWith('video/') || ct.startsWith('image/'));
-        } catch {
-          return false;
-        }
-      };
-
       const probeFolder = async (folder: string) => {
-        // Prefer direct streaming checks via proxy using GET+Range
+        console.log(`🔍 Checking folder: ${folder}`);
+        
+        // First try manifest URLs using shared probeStream helper
         const sample = items.find((it) => it.folder === folder);
-        const okSample = (await tryHead(mapToProxy(sample?.previewUrl))) || (await tryHead(mapToProxy(sample?.fullUrl)));
-        if (okSample) return { folder, ok: true } as const;
-
-        // If numeric folder like "01", probe common filenames under /public/<NN>/
-        if (/^\d{2}$/.test(folder)) {
-          const candidates = [
-            `${folder}_short.mp4`, `${folder}.mp4`, `${folder}_SHORT.MP4`, `${folder}.MP4`,
-            `${folder}_short.mov`, `${folder}.mov`, `${folder}.MOV`,
-            `${folder}.jpg`, `${folder}.jpeg`, `${folder}.JPG`, `${folder}.PNG`, `${folder}.png`,
-          ];
-          for (const name of candidates) {
-            const u = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(`/public/${folder}/${name}`)}`;
-            if (await tryHead(u)) return { folder, ok: true } as const;
+        if (sample?.previewUrl) {
+          const proxyUrl = mapToProxy(sample.previewUrl);
+          if (proxyUrl) {
+            const result = await probeStream(proxyUrl);
+            if (result.ok) {
+              console.log(`✅ Folder ${folder} validated via manifest previewUrl`);
+              return { folder, ok: true } as const;
+            }
+          }
+        }
+        if (sample?.fullUrl) {
+          const proxyUrl = mapToProxy(sample.fullUrl);
+          if (proxyUrl) {
+            const result = await probeStream(proxyUrl);
+            if (result.ok) {
+              console.log(`✅ Folder ${folder} validated via manifest fullUrl`);
+              return { folder, ok: true } as const;
+            }
           }
         }
 
+        // For numeric folders, use shared findPreviewForFolder helper
+        if (/^\d{2}$/.test(folder)) {
+          const folderPath = `/public/${folder}/`;
+          const previewUrl = await findPreviewForFolder(folderPath);
+          if (previewUrl) {
+            const result = await probeStream(previewUrl);
+            if (result.ok) {
+              console.log(`✅ Folder ${folder} validated via directory discovery: ${previewUrl}`);
+              return { folder, ok: true } as const;
+            }
+          }
+        }
+
+        console.log(`❌ Folder ${folder} failed validation`);
         return { folder, ok: false } as const;
       };
 
