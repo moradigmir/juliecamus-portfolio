@@ -51,13 +51,14 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   const proxyHead = async (p: string): Promise<{ ok: boolean; status: number; ct: string }> => {
     const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
     url.searchParams.set('path', p);
-    const res = await fetch(url.toString(), { method: 'HEAD' });
+    const res = await fetch(url.toString(), { method: 'GET', headers: { Range: 'bytes=0-0' } });
     const ct = res.headers.get('content-type') || '';
     if (detectSupabaseIssueFromResponse(res.status, ct)) {
       setIsSupabasePaused(true);
       return { ok: false, status: res.status, ct };
     }
-    return { ok: res.ok, status: res.status, ct };
+    const ok = res.ok || res.status === 206;
+    return { ok, status: res.status, ct };
   };
 
   const isMediaContentType = (ct: string) => ct.startsWith('video/') || ct.startsWith('image/');
@@ -178,7 +179,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
         setIsSupabasePaused(true);
         throw new Error(`Supabase paused (${res.status})`);
       }
-      if (!res.ok) {
+      if (!(res.ok || res.status === 207)) {
         throw new Error(`HTTP ${res.status}: ${ct}`);
       }
       const xml = await res.text();
@@ -370,16 +371,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     (async () => {
       const o = await resolveOwnerFromManifest();
       if (o) setOwner(o);
-      let startPath = '/public/';
-      try {
-        const res = await fetch('/media.manifest.json');
-        if (res.ok) {
-          const manifest = await res.json();
-          const firstFolder = manifest?.items?.[0]?.folder;
-          if (firstFolder) startPath = `/public/${firstFolder}/`;
-        }
-      } catch {}
-      await listDirectory(startPath);
+      await listDirectory('/public/');
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
