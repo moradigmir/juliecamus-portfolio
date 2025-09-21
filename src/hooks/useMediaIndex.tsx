@@ -177,10 +177,90 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           return it; // Keep as-is; tile will show clear error
         })
       );
+
+      // Auto-discover additional numbered folders (01-50) not present in the manifest
+      const proxyBase = 'https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy';
+
+      const propfindFiles = async (folderPath: string): Promise<Array<{ name: string; ct: string }>> => {
+        try {
+          const u = new URL(proxyBase);
+          u.searchParams.set('path', folderPath);
+          const res = await fetch(u.toString(), { method: 'PROPFIND', headers: { Depth: '1' } });
+          if (!(res.ok || res.status === 207)) return [];
+          const xml = await res.text();
+          const doc = new DOMParser().parseFromString(xml, 'application/xml');
+          const responses = Array.from(doc.getElementsByTagNameNS('*', 'response'));
+          const files: Array<{ name: string; ct: string }> = [];
+          for (const r of responses) {
+            const isDir = r.getElementsByTagNameNS('*', 'collection').length > 0;
+            if (isDir) continue;
+            const hrefEl = r.getElementsByTagNameNS('*', 'href')[0];
+            if (!hrefEl) continue;
+            let href = hrefEl.textContent || '';
+            try { href = decodeURIComponent(href); } catch {}
+            const name = href.split('/').filter(Boolean).pop() || '';
+            const ct = (r.getElementsByTagNameNS('*', 'getcontenttype')[0]?.textContent || '').toLowerCase();
+            files.push({ name, ct });
+          }
+          return files;
+        } catch {
+          return [];
+        }
+      };
+
+      const findFirstImageIn = async (folder: string): Promise<string | null> => {
+        const bases = ['/public', '/Common'];
+        for (const base of bases) {
+          const folderPath = `${base}/${folder}/`;
+          const files = await propfindFiles(folderPath);
+          if (files.length) {
+            const candidates = files
+              .filter((f) => !f.ct || f.ct.startsWith('image/') || /\.(jpg|jpeg|png|gif)$/i.test(f.name))
+              .sort((a, b) => a.name.localeCompare(b.name));
+            if (candidates.length) {
+              return `${base}/${folder}/${candidates[0].name}`;
+            }
+          }
+        }
+        return null;
+      };
+
+      const manifestFolders = new Set(sortedItems.map((it) => it.folder));
+      const candidates = Array.from({ length: 50 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+      const missing = candidates.filter((nn) => !manifestFolders.has(nn));
+
+      const discoveredRaw = await Promise.all(
+        missing.map(async (nn) => {
+          const firstImagePath = await findFirstImageIn(nn);
+          if (!firstImagePath) return null;
+          const proxied = `${proxyBase}?path=${encodeURIComponent(firstImagePath)}`;
+          const extra: MediaItem = {
+            orderKey: nn,
+            folder: nn,
+            title: `Folder ${nn}`,
+            previewUrl: proxied,
+            previewType: 'image',
+            fullUrl: proxied,
+            fullType: 'image',
+          };
+          return extra;
+        })
+      );
+
+      const discovered = discoveredRaw.filter(Boolean) as MediaItem[];
+
+      // Merge and sort by orderKey
+      const combined = [...healedItems];
+      const existingFolders = new Set(combined.map((i) => i.folder));
+      for (const d of discovered) {
+        if (!existingFolders.has(d.folder)) combined.push(d);
+      }
+      combined.sort((a, b) => a.orderKey.localeCompare(b.orderKey, undefined, { numeric: true }));
       
-      setMediaItems(healedItems);
+      setMediaItems(combined);
       setIsSupabasePaused(false); // Reset on success
-      console.log(`✅ Loaded ${healedItems.length} media items from manifest (HiDrive proxied where applicable)`);
+      console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
+
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error loading media manifest';

@@ -153,26 +153,33 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       };
 
       const probeFolder = async (folder: string) => {
-        const normalized = `/public/${folder}/`;
-        let listed = false;
-        try {
-          const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
-          url.searchParams.set('path', normalized);
-          url.searchParams.set('list', '1');
-          const r = await fetch(url.toString());
-          if (r.ok) {
-            const ct = r.headers.get('content-type') || '';
-            if (ct.includes('xml') || ct.includes('text/')) {
+        const bases = ['/public', '/Common'];
+
+        // Try WebDAV PROPFIND on both bases to verify folder and detect media files
+        for (const base of bases) {
+          try {
+            const p = `${base}/${folder}/`;
+            const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+            url.searchParams.set('path', p);
+            const r = await fetch(url.toString(), { method: 'PROPFIND', headers: { Depth: '1' } });
+            if (r.ok || r.status === 207) {
               const xml = await r.text();
-              const doc = new DOMParser().parseFromString(xml, 'text/xml');
-              const responses = Array.from(doc.getElementsByTagName('response'));
-              listed = responses.length > 0;
+              const doc = new DOMParser().parseFromString(xml, 'application/xml');
+              const responses = Array.from(doc.getElementsByTagNameNS('*', 'response'));
+              const files = responses.filter((resp) => resp.getElementsByTagNameNS('*', 'collection').length === 0);
+              // If at least one file has media content-type or no type (some servers omit it), mark OK
+              const hasMedia = files.some((resp) => {
+                const ct = (resp.getElementsByTagNameNS('*', 'getcontenttype')[0]?.textContent || '').toLowerCase();
+                return !ct || ct.startsWith('image/') || ct.startsWith('video/');
+              });
+              if (responses.length > 0 && hasMedia) {
+                return { folder, ok: true } as const;
+              }
             }
-          }
-        } catch {}
+          } catch {}
+        }
 
-        if (listed) return { folder, ok: true } as const;
-
+        // Fallback: HEAD the sample manifest URLs mapped to proxy
         const sample = items.find((it) => it.folder === folder);
         const ok = (await tryHead(mapToProxy(sample?.previewUrl))) || (await tryHead(mapToProxy(sample?.fullUrl)));
         return { folder, ok } as const;
