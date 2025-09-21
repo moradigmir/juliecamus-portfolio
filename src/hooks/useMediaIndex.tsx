@@ -185,8 +185,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         try {
           const u = new URL(proxyBase);
           u.searchParams.set('path', folderPath);
-          const res = await fetch(u.toString(), { method: 'PROPFIND', headers: { Depth: '1' } });
-          if (!(res.ok || res.status === 207)) return [];
+          u.searchParams.set('list', '1');
+          const res = await fetch(u.toString(), { method: 'GET' });
+          if (!res.ok) return [];
           const xml = await res.text();
           const doc = new DOMParser().parseFromString(xml, 'application/xml');
           const responses = Array.from(doc.getElementsByTagNameNS('*', 'response'));

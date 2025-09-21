@@ -96,13 +96,14 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     try {
       const listUrl = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       listUrl.searchParams.set('path', `/public/${nn}/`);
-      const res = await fetch(listUrl.toString(), { method: 'PROPFIND', headers: { Depth: '1' } });
+      listUrl.searchParams.set('list', '1');
+      const res = await fetch(listUrl.toString(), { method: 'GET' });
       const ct = res.headers.get('content-type') || '';
       if (detectSupabaseIssueFromResponse(res.status, ct)) {
         setIsSupabasePaused(true);
         return [];
       }
-      if (res.ok || res.status === 207) {
+      if (res.ok) {
         const xml = await res.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(xml, 'application/xml');
@@ -168,10 +169,8 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
     const propfindList = async (p: string): Promise<HiDriveItem[]> => {
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', p);
-      const res = await fetch(url.toString(), {
-        method: 'PROPFIND',
-        headers: { Depth: '1' },
-      });
+      url.searchParams.set('list', '1');
+      const res = await fetch(url.toString(), { method: 'GET' });
       const ct = res.headers.get('content-type') || '';
       if (detectSupabaseIssueFromResponse(res.status, ct)) {
         setIsSupabasePaused(true);

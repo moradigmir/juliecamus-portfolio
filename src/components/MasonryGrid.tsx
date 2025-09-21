@@ -161,8 +161,9 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             const p = `${base}/${folder}/`;
             const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
             url.searchParams.set('path', p);
-            const r = await fetch(url.toString(), { method: 'PROPFIND', headers: { Depth: '1' } });
-            if (r.ok || r.status === 207) {
+            url.searchParams.set('list', '1');
+            const r = await fetch(url.toString(), { method: 'GET' });
+            if (r.ok) {
               const xml = await r.text();
               const doc = new DOMParser().parseFromString(xml, 'application/xml');
               const responses = Array.from(doc.getElementsByTagNameNS('*', 'response'));
