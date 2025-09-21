@@ -169,3 +169,37 @@ export const findPreviewForFolder = async (path: string): Promise<string | null>
     return null;
   }
 };
+
+export interface ValidateResult {
+  ok: boolean;
+  preview?: string;
+}
+
+/**
+ * Validate a folder by finding its preview and testing if it streams properly.
+ * Returns {ok:true, preview:file} if valid, {ok:false} otherwise.
+ */
+export const validateFolder = async (folderPath: string): Promise<ValidateResult> => {
+  try {
+    const previewUrl = await findPreviewForFolder(folderPath);
+    if (!previewUrl) {
+      console.log('❌ Folder FAIL', { folder: folderPath, reason: 'No preview found' });
+      return { ok: false };
+    }
+
+    const probeResult = await probeStream(previewUrl);
+    if (probeResult.ok) {
+      // Extract filename from URL for logging
+      const match = previewUrl.match(/path=([^&]+)/);
+      const filename = match ? decodeURIComponent(match[1]).split('/').pop() : 'unknown';
+      console.log('✅ Folder OK', { folder: folderPath, file: filename });
+      return { ok: true, preview: filename };
+    } else {
+      console.log('❌ Folder FAIL', { folder: folderPath, reason: `Probe failed: ${probeResult.status}` });
+      return { ok: false };
+    }
+  } catch (error) {
+    console.log('❌ Folder FAIL', { folder: folderPath, reason: error instanceof Error ? error.message : 'Unknown error' });
+    return { ok: false };
+  }
+};

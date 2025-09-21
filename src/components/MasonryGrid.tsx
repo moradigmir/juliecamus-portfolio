@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Settings } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
-import { listDir, probeStream, findPreviewForFolder, isMediaContentType } from '@/lib/hidrive';
+import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
 
 interface Project {
   slug: string;
@@ -106,96 +106,58 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setIsRefreshing(true);
 
     try {
-      toast({ title: 'Checking folders...', description: 'Validating folders from manifest using shared HiDrive logic' });
+      toast({ title: 'Checking folders...', description: 'Validating all folders in the grid' });
 
+      // Build validation list = manifest items + discovered items already in state
       const res = await fetch('/media.manifest.json');
       if (!res.ok) throw new Error(`Failed to load manifest: ${res.status}`);
       const manifest = await res.json();
-      const items: Array<{ folder?: string; previewUrl?: string; fullUrl?: string }> = Array.isArray(manifest?.items) ? manifest.items : [];
-      const folders = Array.from(new Set(items.map((it) => it.folder).filter(Boolean))) as string[];
-
-      if (folders.length === 0) {
-        toast({ title: 'No folders in manifest', description: 'Nothing to check', variant: 'destructive' });
+      const manifestItems: Array<{ folder?: string; previewUrl?: string; fullUrl?: string }> = Array.isArray(manifest?.items) ? manifest.items : [];
+      const manifestFolders = Array.from(new Set(manifestItems.map((it) => it.folder).filter(Boolean))) as string[];
+      
+      // Get discovered folders from auto-discovered media items
+      const discoveredFolders = Array.from(new Set(autoMediaItems.map(item => item.folder)));
+      
+      // Combine all folders (manifest + discovered)
+      const allFolders = Array.from(new Set([...manifestFolders, ...discoveredFolders]));
+      
+      if (allFolders.length === 0) {
+        toast({ title: 'No folders found', description: 'Nothing to check', variant: 'destructive' });
         return;
       }
 
-      const mapToProxy = (url?: string): string | undefined => {
-        if (!url) return undefined;
-        try {
-          if (url.includes('functions.supabase.co/hidrive-proxy')) return url;
-          const m = url.match(/^https?:\/\/webdav\.hidrive\.strato\.com\/users\/([^/]+)(\/.*)$/);
-          if (m) {
-            const path = m[2];
-            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path)}`;
-          }
-          if (url.startsWith('hidrive://')) {
-            const ownerMatch = url.match(/^hidrive:\/\/([^/]+)(\/.*)$/);
-            if (ownerMatch) {
-              const owner = ownerMatch[1];
-              const path = ownerMatch[2];
-              return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?owner=${encodeURIComponent(owner)}&path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
-            }
-            const path = url.replace('hidrive://', '');
-            return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path.startsWith('/') ? path : '/' + path)}`;
-          }
-        } catch {}
-        return url;
-      };
+      console.log(`🔍 Validating ${allFolders.length} folders: ${allFolders.join(', ')}`);
 
-      const probeFolder = async (folder: string) => {
-        console.log(`🔍 Checking folder: ${folder}`);
-        
-        // First try manifest URLs using shared probeStream helper
-        const sample = items.find((it) => it.folder === folder);
-        if (sample?.previewUrl) {
-          const proxyUrl = mapToProxy(sample.previewUrl);
-          if (proxyUrl) {
-            const result = await probeStream(proxyUrl);
-            if (result.ok) {
-              console.log(`✅ Folder ${folder} validated via manifest previewUrl`);
-              return { folder, ok: true } as const;
-            }
-          }
-        }
-        if (sample?.fullUrl) {
-          const proxyUrl = mapToProxy(sample.fullUrl);
-          if (proxyUrl) {
-            const result = await probeStream(proxyUrl);
-            if (result.ok) {
-              console.log(`✅ Folder ${folder} validated via manifest fullUrl`);
-              return { folder, ok: true } as const;
-            }
-          }
-        }
-
-        // For numeric folders, use shared findPreviewForFolder helper
-        if (/^\d{2}$/.test(folder)) {
+      // Validate each folder using shared validateFolder helper
+      const results = await Promise.all(
+        allFolders.map(async (folder) => {
           const folderPath = `/public/${folder}/`;
-          const previewUrl = await findPreviewForFolder(folderPath);
-          if (previewUrl) {
-            const result = await probeStream(previewUrl);
-            if (result.ok) {
-              console.log(`✅ Folder ${folder} validated via directory discovery: ${previewUrl}`);
-              return { folder, ok: true } as const;
-            }
-          }
-        }
-
-        console.log(`❌ Folder ${folder} failed validation`);
-        return { folder, ok: false } as const;
-      };
-
-      const results = [] as Array<{ folder: string; ok: boolean }>;
-      for (const f of folders) {
-        results.push(await probeFolder(f as string));
-      }
+          const result = await validateFolder(folderPath);
+          return { folder, ok: result.ok, preview: result.preview };
+        })
+      );
 
       const okCount = results.filter((r) => r.ok).length;
-      if (okCount === folders.length) {
-        toast({ title: 'All folders OK', description: `Verified ${okCount}/${folders.length}: ${folders.join(', ')}` });
+      const failedCount = results.filter((r) => !r.ok).length;
+      
+      console.log(`📊 Validation summary:`, { 
+        folders_ok: okCount, 
+        folders_failed: failedCount, 
+        total: allFolders.length 
+      });
+
+      if (okCount === allFolders.length) {
+        toast({ 
+          title: 'All folders OK', 
+          description: `Verified ${okCount}/${allFolders.length}: ${allFolders.join(', ')}` 
+        });
       } else {
-        const bad = results.filter((r) => !r.ok).map((r) => r.folder);
-        toast({ title: 'Some folders failed', description: `OK ${okCount}/${folders.length}. Failed: ${bad.join(', ')}`, variant: 'destructive' });
+        const failed = results.filter((r) => !r.ok).map((r) => r.folder);
+        toast({ 
+          title: `Verified ${okCount}/${allFolders.length}`, 
+          description: `Failed: ${failed.join(', ')}`, 
+          variant: 'destructive' 
+        });
       }
 
       refetch();
@@ -205,7 +167,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [refetch, toast]);
+  }, [autoMediaItems, refetch, toast]);
 
   const createGridItems = useCallback((): GridItem[] => {
     const items: GridItem[] = [];
