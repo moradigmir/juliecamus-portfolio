@@ -9,7 +9,10 @@ import ProjectStatusIndicator from './ProjectStatusIndicator';
 import { DiagnosticsModal } from '../debug/DiagnosticsModal';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Settings, Save, Copy, Bug } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
+import { Settings, Save, Copy, Bug, ToggleLeft } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
@@ -42,15 +45,31 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showManifestDialog, setShowManifestDialog] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [clearPlaceholders, setClearPlaceholders] = useState(false);
   const [proposedManifest, setProposedManifest] = useState<string>('');
   const [manifestDiff, setManifestDiff] = useState<string>('');
   const { toast } = useToast();
+
+  // Check if in dev mode or debug URL param  
+  const isDevMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
+  const showDevControls = isDevMode;
 
   // Auto-open diagnostics if ?debug=1 in URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('debug') === '1') {
       setShowDiagnostics(true);
+    }
+
+    // Read clear placeholders setting from sessionStorage and URL override
+    const storedClearPlaceholders = sessionStorage.getItem('hidrive:clearPlaceholders') === '1';
+    const urlNoPlaceholders = params.get('noplaceholders') === '1';
+    
+    if (urlNoPlaceholders) {
+      sessionStorage.setItem('hidrive:clearPlaceholders', '1');
+      setClearPlaceholders(true);
+    } else {
+      setClearPlaceholders(storedClearPlaceholders);
     }
   }, []);
   
@@ -322,6 +341,23 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }
   }, [toast]);
 
+  const handleClearPlaceholdersToggle = useCallback((checked: boolean) => {
+    setClearPlaceholders(checked);
+    sessionStorage.setItem('hidrive:clearPlaceholders', checked ? '1' : '0');
+    
+    // Diagnostics: Log toggle change
+    diag('ORDER', 'clear_placeholders_toggled', { on: checked });
+    
+    // Flush to edge with current state
+    const currentFolders = autoMediaItems.map(item => item.folder);
+    const placeholdersCount = checked ? 0 : projects.length;
+    
+    flushDiagToEdge(buildDiagSummary({
+      items_sorted: currentFolders,
+      placeholders_after_real: placeholdersCount
+    }));
+  }, [autoMediaItems, projects.length]);
+
   const createGridItems = useCallback((): GridItem[] => {
     const items: GridItem[] = [];
     
@@ -334,44 +370,48 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       });
     });
     
-    // Count placeholders after real items
-    console.log(`🧩 placeholders_after_real={count: ${projects.length}}`);
+    // SECOND: Add projects with accordion expansion (these act as placeholders)
+    // Only add if clearPlaceholders is false
+    if (!clearPlaceholders) {
+      projects.forEach((project, projectIndex) => {
+        const itemIndex = items.length;
+        
+        // Add the main project tile
+        items.push({ 
+          type: 'project', 
+          project, 
+          index: itemIndex 
+        });
+        
+        // Add accordion images if this project is expanded
+        if (expandedTile === itemIndex && project.images) {
+          project.images.forEach((image, imageIndex) => {
+            items.push({ 
+              type: 'accordion', 
+              project, 
+              imageIndex, 
+              image 
+            });
+          });
+        }
+      });
+    }
+
+    // Diagnostics: Log current state after item creation
+    const currentFolders = autoMediaItems.map(item => item.folder);
+    const placeholdersCount = clearPlaceholders ? 0 : projects.length;
     
-    // Diagnostics: Log placeholder count
-    diag('ORDER', 'placeholders_after_real', { count: projects.length });
+    diag('ORDER', 'items_sorted', { folders: currentFolders });
+    diag('ORDER', 'placeholders_after_real', { count: placeholdersCount });
     
-    // Update the ORDER flush with placeholder count
+    // Flush current state to edge (only if not from toggle - avoid double flush)
     flushDiagToEdge(buildDiagSummary({
-      items_sorted: autoMediaItems.map(item => item.folder),
-      placeholders_after_real: projects.length
+      items_sorted: currentFolders,
+      placeholders_after_real: placeholdersCount
     }));
     
-    // SECOND: Add projects with accordion expansion (these act as placeholders)
-    projects.forEach((project, projectIndex) => {
-      const itemIndex = items.length;
-      
-      // Add the main project tile
-      items.push({ 
-        type: 'project', 
-        project, 
-        index: itemIndex 
-      });
-      
-      // Add accordion images if this project is expanded
-      if (expandedTile === itemIndex && project.images) {
-        project.images.forEach((image, imageIndex) => {
-          items.push({ 
-            type: 'accordion', 
-            project, 
-            imageIndex, 
-            image 
-          });
-        });
-      }
-    });
-    
     return items;
-  }, [projects, expandedTile, autoMediaItems]);
+  }, [projects, expandedTile, autoMediaItems, clearPlaceholders]);
 
   const gridItems = createGridItems();
 
@@ -393,6 +433,28 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       {/* Diagnostic Panel */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
+          {showDevControls && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-2 px-3 py-1 border rounded">
+                    <Switch
+                      id="clear-placeholders"
+                      checked={clearPlaceholders}
+                      onCheckedChange={handleClearPlaceholdersToggle}
+                      className="scale-75"
+                    />
+                    <label htmlFor="clear-placeholders" className="text-xs cursor-pointer">
+                      Clear placeholders
+                    </label>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Hide placeholder projects so only real HiDrive folders are shown</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           <Button
             onClick={() => setShowHiDriveBrowser(!showHiDriveBrowser)}
             variant="outline"
@@ -470,14 +532,21 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             Diagnostics
           </Button>
         </div>
-        <div className="text-sm text-muted-foreground">
-          {isSupabasePaused ? (
-            'Backend services unavailable'
-          ) : autoMediaItems.length > 0 ? (
-            `${autoMediaItems.length} auto-discovered media items`
-          ) : (
-            'No media loaded'
+        <div className="flex items-center gap-2">
+          {showDevControls && (
+            <Badge variant="outline" className="text-xs">
+              Placeholders: {clearPlaceholders ? 'OFF' : 'ON'}
+            </Badge>
           )}
+          <div className="text-sm text-muted-foreground">
+            {isSupabasePaused ? (
+              'Backend services unavailable'
+            ) : autoMediaItems.length > 0 ? (
+              `${autoMediaItems.length} auto-discovered media items`
+            ) : (
+              'No media loaded'
+            )}
+          </div>
         </div>
       </div>
 
