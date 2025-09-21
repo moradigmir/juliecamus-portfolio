@@ -120,31 +120,122 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
 
     const normalized = path.endsWith('/') ? path : path + '/';
 
+    // Local helper: WebDAV PROPFIND via our proxy, parse XML, return files/dirs
+    const propfindList = async (p: string): Promise<HiDriveItem[]> => {
+      const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+      url.searchParams.set('path', p);
+      const res = await fetch(url.toString(), {
+        method: 'PROPFIND',
+        headers: { Depth: '1' },
+      });
+      const ct = res.headers.get('content-type') || '';
+      if (detectSupabaseIssueFromResponse(res.status, ct)) {
+        setIsSupabasePaused(true);
+        throw new Error(`Supabase paused (${res.status})`);
+      }
+      // WebDAV typically returns 207 for PROPFIND
+      if (!(res.ok || res.status === 207)) {
+        throw new Error(`HTTP ${res.status}: ${ct}`);
+      }
+      const xml = await res.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xml, 'application/xml');
+      const responses = Array.from(doc.getElementsByTagNameNS('*', 'response'));
+
+      const items: HiDriveItem[] = [];
+      for (const r of responses) {
+        const hrefEl = r.getElementsByTagNameNS('*', 'href')[0];
+        if (!hrefEl) continue;
+        let href = hrefEl.textContent || '';
+        try { href = decodeURIComponent(href); } catch {}
+        // Get path part (strip domain if present)
+        const pathOnly = href.replace(/^https?:\/\/[^/]+/, '');
+        if (!pathOnly) continue;
+        // Skip the directory itself
+        const normNoSlash = normalized.replace(/\/$/, '');
+        const pathNoSlash = pathOnly.replace(/\/$/, '');
+        if (pathNoSlash === normNoSlash) continue;
+
+        const segments = pathOnly.split('/').filter(Boolean);
+        const name = segments.pop() || '';
+
+        const isDir = r.getElementsByTagNameNS('*', 'collection').length > 0;
+        const typeEl = r.getElementsByTagNameNS('*', 'getcontenttype')[0];
+        const sizeEl = r.getElementsByTagNameNS('*', 'getcontentlength')[0];
+        const modEl = r.getElementsByTagNameNS('*', 'getlastmodified')[0];
+        const contentType = (typeEl?.textContent || '').toLowerCase();
+        const size = sizeEl ? parseInt(sizeEl.textContent || '0', 10) : undefined;
+        const modified = modEl?.textContent || undefined;
+
+        if (isDir) {
+          items.push({ name, type: 'directory' });
+        } else {
+          // If content-type missing, keep it; otherwise filter to media
+          if (!contentType || isMediaContentType(contentType)) {
+            items.push({ name, type: 'file', size, modified, contentType });
+          }
+        }
+      }
+      // De-dupe & sort
+      const unique = new Map<string, HiDriveItem>();
+      for (const it of items) unique.set(it.name.toLowerCase(), it);
+      return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+    };
+
     try {
       setIsSupabasePaused(false);
 
+      // 1) Workspaces that our credentials can list: /Common, /Shared, /Personal
+      if (/^\/(common|shared|personal)\/$/i.test(normalized)) {
+        const entries = await propfindList(normalized);
+        setItems(entries.filter((e) => e.type === 'directory'));
+        setCurrentPath(normalized);
+        return;
+      }
+
+      // 2) Files inside a workspace folder, e.g. /Common/02/
+      if (/^\/(common|shared|personal)\/[^/]+\/$/i.test(normalized)) {
+        const entries = await propfindList(normalized);
+        setItems(entries.filter((e) => e.type === 'file'));
+        setCurrentPath(normalized);
+        return;
+      }
+
+      // 3) Public area: try PROPFIND first, then fallback to probe
       if (normalized.toLowerCase() === '/public/') {
-        // Probe-based scan for numbered folders (01-50)
+        let entries: HiDriveItem[] = [];
+        try {
+          entries = await propfindList(normalized);
+        } catch {}
+        if (entries.length) {
+          setItems(entries.filter((e) => e.type === 'directory'));
+          setCurrentPath('/public/');
+          return;
+        }
+        // Fallback: probe-based scan for numbered folders (01-50)
         const folders = await scanNumberedFolders();
         const dirItems: HiDriveItem[] = folders.map((name) => ({ name, type: 'directory' }));
         setItems(dirItems);
         setCurrentPath('/public/');
         console.log(`📁 Probed ${folders.length} numbered folders in /public`);
-      } else {
-        // Support /public/<NN>/ only
-        const match = normalized.match(/^\/public\/(\d{2})\/$/);
-        if (match) {
-          const nn = match[1];
-          const files = await probeFolderFiles(nn);
-          setItems(files);
-          setCurrentPath(`/public/${nn}/`);
-          console.log(`📄 Probed ${files.length} files in /public/${nn}/`);
-        } else {
-          setItems([]);
-          setCurrentPath(normalized);
-          setError('Only /public and /public/<NN>/ are supported.');
-        }
+        return;
       }
+
+      // 4) Public numbered folder: keep previous probe logic
+      const match = normalized.match(/^\/public\/(\d{2})\/$/);
+      if (match) {
+        const nn = match[1];
+        const files = await probeFolderFiles(nn);
+        setItems(files);
+        setCurrentPath(`/public/${nn}/`);
+        console.log(`📄 Probed ${files.length} files in /public/${nn}/`);
+        return;
+      }
+
+      // Fallback error
+      setItems([]);
+      setCurrentPath(normalized);
+      setError('Path not supported. Try /public, /public/<NN>/ or browse via /Common, /Shared, /Personal.');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMsg);
@@ -161,10 +252,10 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
   };
 
   const navigateUp = () => {
-    // Clamp to the workspace root (e.g., /Common/public or /public)
+    // Clamp to the workspace root (e.g., /Common or /public)
     const lower = currentPath.toLowerCase();
-    const root = lower.startsWith('/common/public')
-      ? '/Common/public'
+    const root = lower.startsWith('/common')
+      ? '/Common'
       : lower.startsWith('/public')
       ? '/public'
       : lower.startsWith('/personal')
@@ -174,7 +265,8 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       : '/public';
 
     if (currentPath === root) return;
-    const parentPath = currentPath.includes('/') ? currentPath.slice(0, currentPath.lastIndexOf('/')) || root : root;
+    const trimmed = currentPath.replace(/\/$/, '');
+    const parentPath = trimmed.includes('/') ? trimmed.slice(0, trimmed.lastIndexOf('/')) || root : root;
     if (parentPath.length < root.length) {
       listDirectory(root);
     } else {
