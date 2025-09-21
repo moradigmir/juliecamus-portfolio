@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Save, Copy, Bug, ToggleLeft } from 'lucide-react';
+import { Settings, Save, Copy, Bug, ToggleLeft, Download } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
@@ -341,6 +341,30 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }
   }, [toast]);
 
+  const downloadManifest = useCallback((proposed: string) => {
+    try {
+      const proposedObject = JSON.parse(proposed);
+      const json = JSON.stringify(proposedObject, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "media.manifest.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      
+      // Diagnostics: Log download action
+      diag('PERSIST', 'download_manifest_clicked', { count: proposedObject.items?.length || 0 });
+      flushDiagToEdge(buildDiagSummary({ manifest_proposed_count: proposedObject.items?.length || 0 }));
+      
+      toast({ title: 'Downloaded', description: 'Manifest saved as media.manifest.json' });
+    } catch (error) {
+      toast({ title: 'Download failed', description: 'Could not download manifest', variant: 'destructive' });
+    }
+  }, [toast]);
+
   const handleClearPlaceholdersToggle = useCallback((checked: boolean) => {
     setClearPlaceholders(checked);
     sessionStorage.setItem('hidrive:clearPlaceholders', checked ? '1' : '0');
@@ -511,6 +535,14 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                     >
                       <Copy className="w-3 h-3 mr-1" />
                       Copy Diff
+                    </Button>
+                    <Button 
+                      onClick={() => downloadManifest(proposedManifest)}
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <Download className="w-3 h-3 mr-1" />
+                      Download JSON
                     </Button>
                   </div>
                   <div className="overflow-auto max-h-[60vh]">
