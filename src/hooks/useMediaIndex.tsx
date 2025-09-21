@@ -260,6 +260,10 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       const foldersList = combined.map(item => item.folder);
       console.log(`📦 items_sorted=[${foldersList.join(',')}]`);
       
+      // Diagnostics: Log the final sorted order
+      const { diag } = await import('../debug/diag');
+      diag('ORDER', 'items_sorted', { folders: foldersList });
+      
       setMediaItems(combined);
       setIsSupabasePaused(false); // Reset on success
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);

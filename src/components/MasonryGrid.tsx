@@ -1,17 +1,19 @@
 import { motion } from 'framer-motion';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import ProjectTile from './ProjectTile';
 import AutoMediaTile from './AutoMediaTile';
 import { useMediaIndex, type MediaItem, type MediaManifest } from '../hooks/useMediaIndex';
 import Lightbox from './Lightbox';
 import HiDriveBrowser from './HiDriveBrowser';
 import ProjectStatusIndicator from './ProjectStatusIndicator';
+import { DiagnosticsModal } from '../debug/DiagnosticsModal';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Settings, Save, Copy } from 'lucide-react';
+import { Settings, Save, Copy, Bug } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
+import { diag } from '../debug/diag';
 
 interface Project {
   slug: string;
@@ -39,9 +41,18 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [showHiDriveBrowser, setShowHiDriveBrowser] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showManifestDialog, setShowManifestDialog] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [proposedManifest, setProposedManifest] = useState<string>('');
   const [manifestDiff, setManifestDiff] = useState<string>('');
   const { toast } = useToast();
+
+  // Auto-open diagnostics if ?debug=1 in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('debug') === '1') {
+      setShowDiagnostics(true);
+    }
+  }, []);
   
   // Load auto-discovered media from HiDrive
   const { 
@@ -131,12 +142,32 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       }
 
       console.log(`🔍 Validating ${allFolders.length} folders: ${allFolders.join(', ')}`);
+      
+      // Diagnostics: Log validation start
+      diag('VALIDATE', 'start', { folders: allFolders });
 
       // Validate each folder using shared validateFolder helper
       const results = await Promise.all(
         allFolders.map(async (folder) => {
           const folderPath = `/public/${folder}/`;
           const result = await validateFolder(folderPath);
+          
+          if (result.ok && result.preview) {
+            // Diagnostics: Log successful validation
+            diag('VALIDATE', 'folder_ok', { 
+              folder, 
+              file: result.preview, 
+              status: 200, // validateFolder doesn't return status, assume 200 if ok
+              ct: result.preview.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg'
+            });
+          } else {
+            // Diagnostics: Log failed validation
+            diag('VALIDATE', 'folder_fail', { 
+              folder, 
+              reason: `No valid preview found in ${folderPath}` 
+            });
+          }
+          
           return { folder, ok: result.ok, preview: result.preview };
         })
       );
@@ -145,6 +176,13 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       const failedCount = results.filter((r) => !r.ok).length;
       
       console.log(`📊 Validation summary:`, { 
+        folders_ok: okCount, 
+        folders_failed: failedCount, 
+        total: allFolders.length 
+      });
+
+      // Diagnostics: Log validation summary
+      diag('VALIDATE', 'summary', { 
         folders_ok: okCount, 
         folders_failed: failedCount, 
         total: allFolders.length 
@@ -211,6 +249,18 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       console.log(`📝 manifest.example[0]=${JSON.stringify(newManifest.items[0] || {})}`);
       console.log(`📝 manifest.diff_ready=true lines=${diff.split('\n').length}`);
 
+      // Diagnostics: Log persist operations
+      diag('PERSIST', 'manifest_proposed_count', { count: newManifest.items.length });
+      if (newManifest.items[0]) {
+        diag('PERSIST', 'manifest_example_0', { 
+          item: { 
+            folder: newManifest.items[0].folder, 
+            previewUrl: newManifest.items[0].previewUrl 
+          } 
+        });
+      }
+      diag('PERSIST', 'diff_ready', { lines: diff.split('\n').length });
+
       setProposedManifest(proposedJson);
       setManifestDiff(diff);
       setShowManifestDialog(true);
@@ -252,6 +302,9 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     
     // Count placeholders after real items
     console.log(`🧩 placeholders_after_real={count: ${projects.length}}`);
+    
+    // Diagnostics: Log placeholder count
+    diag('ORDER', 'placeholders_after_real', { count: projects.length });
     
     // SECOND: Add projects with accordion expansion (these act as placeholders)
     projects.forEach((project, projectIndex) => {
@@ -367,6 +420,15 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               </DialogContent>
             </Dialog>
           )}
+          <Button 
+            onClick={() => setShowDiagnostics(!showDiagnostics)}
+            variant="outline" 
+            size="sm"
+            className="text-xs"
+          >
+            <Bug className="w-3 h-3 mr-1" />
+            Diagnostics
+          </Button>
         </div>
         <div className="text-sm text-muted-foreground">
           {isSupabasePaused ? (
@@ -460,6 +522,12 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
         onClose={closeLightbox}
         onNext={nextImage}
         onPrev={prevImage}
+      />
+
+      {/* Diagnostics Modal */}
+      <DiagnosticsModal 
+        open={showDiagnostics} 
+        onOpenChange={setShowDiagnostics}
       />
     </motion.div>
   );

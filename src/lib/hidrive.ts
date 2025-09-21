@@ -43,6 +43,12 @@ export const listDir = async (path: string): Promise<HiDriveItem[]> => {
   
   console.log('📂 hidrive listDir', { path: normalized, status: res.status, ct });
   
+  // Diagnostics: Log successful PROPFIND operations
+  if (res.status === 207) {
+    const { diag } = await import('../debug/diag');
+    diag('NET', 'propfind_ok', { path: normalized, status: 207 });
+  }
+  
   if (detectSupabaseIssueFromResponse(res.status, ct)) {
     throw new Error(`Supabase paused (${res.status})`);
   }
@@ -117,6 +123,15 @@ export const probeStream = async (url: string): Promise<ProbeResult> => {
     const ok = (res.ok || status === 206) && isMediaContentType(contentType);
     
     console.log('🔍 hidrive probe', { url, status, contentType, ok });
+    
+    // Diagnostics: Log successful range requests
+    if (status === 206 && isMediaContentType(contentType)) {
+      const { diag } = await import('../debug/diag');
+      // Extract path from proxy URL for logging
+      const pathMatch = url.match(/path=([^&]+)/);
+      const path = pathMatch ? decodeURIComponent(pathMatch[1]) : url;
+      diag('NET', 'range_ok', { path, status: 206, ct: contentType });
+    }
     
     return { ok, status, contentType };
   } catch (error) {
