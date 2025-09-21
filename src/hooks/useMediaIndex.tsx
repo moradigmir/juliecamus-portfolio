@@ -103,9 +103,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       // Optional probe (non-blocking)
       if (requiresProxy && proxiedItems.length > 0) {
         try {
-          const head = await fetch(proxiedItems[0].previewUrl, { method: 'HEAD' });
-          const contentType = head.headers.get('content-type') || '';
-          console.log('HiDrive proxy probe', { status: head.status, contentType });
+          const res = await fetch(proxiedItems[0].previewUrl, { method: 'GET', headers: { Range: 'bytes=0-0' } });
+          const contentType = res.headers.get('content-type') || '';
+          console.log('HiDrive proxy probe', { status: res.status, contentType });
         } catch (e) {
           console.warn('HiDrive proxy probe failed:', e);
         }
@@ -181,50 +181,31 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       // Auto-discover additional numbered folders (01-50) not present in the manifest
       const proxyBase = 'https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy';
 
-      const propfindFiles = async (folderPath: string): Promise<Array<{ name: string; ct: string }>> => {
+      const headRangePath = async (p: string): Promise<{ ok: boolean; ct: string }> => {
         try {
           const u = new URL(proxyBase);
-          u.searchParams.set('path', folderPath);
-          u.searchParams.set('list', '1');
-          const res = await fetch(u.toString(), { method: 'GET' });
-          console.log('📂 proxy list', { path: folderPath, status: res.status, ct: res.headers.get('content-type') });
-          if (!res.ok) return [];
-          const xml = await res.text();
-          const doc = new DOMParser().parseFromString(xml, 'application/xml');
-          const responses = Array.from(doc.getElementsByTagNameNS('*', 'response'));
-          const files: Array<{ name: string; ct: string }> = [];
-          for (const r of responses) {
-            const isDir = r.getElementsByTagNameNS('*', 'collection').length > 0;
-            if (isDir) continue;
-            const hrefEl = r.getElementsByTagNameNS('*', 'href')[0];
-            if (!hrefEl) continue;
-            let href = hrefEl.textContent || '';
-            try { href = decodeURIComponent(href); } catch {}
-            const name = href.split('/').filter(Boolean).pop() || '';
-            const ct = (r.getElementsByTagNameNS('*', 'getcontenttype')[0]?.textContent || '').toLowerCase();
-            files.push({ name, ct });
-          }
-          return files;
+          u.searchParams.set('path', p);
+          const r = await fetch(u.toString(), { method: 'GET', headers: { Range: 'bytes=0-0' } });
+          const ct = (r.headers.get('content-type') || '').toLowerCase();
+          const ok = (r.ok || r.status === 206) && (ct.startsWith('image/') || ct.startsWith('video/'));
+          return { ok, ct };
         } catch {
-          return [];
+          return { ok: false, ct: '' };
         }
       };
 
-      const findFirstImageIn = async (folder: string): Promise<string | null> => {
-        const bases = ['/public', '/Common'];
-        for (const base of bases) {
-          const folderPath = `${base}/${folder}/`;
-          const files = await propfindFiles(folderPath);
-          console.log('🔎 scanning folder for first image', { folder: folderPath, files: files.length });
-          if (files.length) {
-            const candidates = files
-              .filter((f) => !f.ct || f.ct.startsWith('image/') || /\.(jpg|jpeg|png|gif)$/i.test(f.name))
-              .sort((a, b) => a.name.localeCompare(b.name));
-            if (candidates.length) {
-              const picked = `${base}/${folder}/${candidates[0].name}`;
-              console.log('✅ first image candidate', { picked });
-              return picked;
-            }
+      const probePublicFirstMedia = async (nn: string): Promise<string | null> => {
+        const candidates = [
+          `${nn}_short.mp4`, `${nn}.mp4`, `${nn}_SHORT.MP4`, `${nn}.MP4`,
+          `${nn}_short.mov`, `${nn}.mov`, `${nn}.MOV`,
+          `${nn}.jpg`, `${nn}.jpeg`, `${nn}.JPG`, `${nn}.PNG`, `${nn}.png`,
+        ];
+        for (const name of candidates) {
+          const path = `/public/${nn}/${name}`;
+          const r = await headRangePath(path);
+          if (r.ok) {
+            console.log('✅ discovered public media', { path });
+            return path;
           }
         }
         return null;
@@ -236,17 +217,18 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 
       const discoveredRaw = await Promise.all(
         missing.map(async (nn) => {
-          const firstImagePath = await findFirstImageIn(nn);
-          if (!firstImagePath) return null;
-          const proxied = `${proxyBase}?path=${encodeURIComponent(firstImagePath)}`;
+          const firstPath = await probePublicFirstMedia(nn);
+          if (!firstPath) return null;
+          const proxied = `${proxyBase}?path=${encodeURIComponent(firstPath)}`;
+          const isVideo = /\.(mp4|mov)$/i.test(firstPath);
           const extra: MediaItem = {
             orderKey: nn,
             folder: nn,
             title: `Folder ${nn}`,
             previewUrl: proxied,
-            previewType: 'image',
+            previewType: isVideo ? 'video' : 'image',
             fullUrl: proxied,
-            fullType: 'image',
+            fullType: isVideo ? 'video' : 'image',
           };
           return extra;
         })

@@ -153,39 +153,25 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       };
 
       const probeFolder = async (folder: string) => {
-        const bases = ['/public', '/Common'];
+        // Prefer direct streaming checks via proxy using GET+Range
+        const sample = items.find((it) => it.folder === folder);
+        const okSample = (await tryHead(mapToProxy(sample?.previewUrl))) || (await tryHead(mapToProxy(sample?.fullUrl)));
+        if (okSample) return { folder, ok: true } as const;
 
-        // Try WebDAV PROPFIND on both bases to verify folder and detect media files
-        for (const base of bases) {
-          try {
-            const p = `${base}/${folder}/`;
-            const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
-            url.searchParams.set('path', p);
-            url.searchParams.set('list', '1');
-            const r = await fetch(url.toString(), { method: 'GET' });
-            console.log('📂 check-folders list', { path: p, status: r.status, ct: r.headers.get('content-type') });
-            if (r.ok) {
-              const xml = await r.text();
-              const doc = new DOMParser().parseFromString(xml, 'application/xml');
-              const responses = Array.from(doc.getElementsByTagNameNS('*', 'response'));
-              const files = responses.filter((resp) => resp.getElementsByTagNameNS('*', 'collection').length === 0);
-              // If at least one file has media content-type or no type (some servers omit it), mark OK
-              const hasMedia = files.some((resp) => {
-                const ct = (resp.getElementsByTagNameNS('*', 'getcontenttype')[0]?.textContent || '').toLowerCase();
-                return !ct || ct.startsWith('image/') || ct.startsWith('video/');
-              });
-              console.log('📊 check-folders parsed', { path: p, responses: responses.length, hasMedia });
-              if (responses.length > 0 && hasMedia) {
-                return { folder, ok: true } as const;
-              }
-            }
-          } catch {}
+        // If numeric folder like "01", probe common filenames under /public/<NN>/
+        if (/^\d{2}$/.test(folder)) {
+          const candidates = [
+            `${folder}_short.mp4`, `${folder}.mp4`, `${folder}_SHORT.MP4`, `${folder}.MP4`,
+            `${folder}_short.mov`, `${folder}.mov`, `${folder}.MOV`,
+            `${folder}.jpg`, `${folder}.jpeg`, `${folder}.JPG`, `${folder}.PNG`, `${folder}.png`,
+          ];
+          for (const name of candidates) {
+            const u = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(`/public/${folder}/${name}`)}`;
+            if (await tryHead(u)) return { folder, ok: true } as const;
+          }
         }
 
-        // Fallback: HEAD the sample manifest URLs mapped to proxy
-        const sample = items.find((it) => it.folder === folder);
-        const ok = (await tryHead(mapToProxy(sample?.previewUrl))) || (await tryHead(mapToProxy(sample?.fullUrl)));
-        return { folder, ok } as const;
+        return { folder, ok: false } as const;
       };
 
       const results = [] as Array<{ folder: string; ok: boolean }>;

@@ -338,10 +338,12 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
       url.searchParams.set('path', fullPath);
 
-      const response = await fetch(url.toString(), { method: 'HEAD' });
+      const response = await fetch(url.toString(), { method: 'GET', headers: { Range: 'bytes=0-0' } });
       const contentType = response.headers.get('content-type') || '';
+      const ok = response.ok || response.status === 206;
+      const isMedia = contentType.startsWith('video/') || contentType.startsWith('image/');
       
-      if (response.ok && (contentType.startsWith('video/') || contentType.startsWith('image/'))) {
+      if (ok && isMedia) {
         alert(`✅ File streams successfully!\nPath: ${fullPath}\nStatus: ${response.status}\nContent-Type: ${contentType}`);
       } else {
         alert(`❌ File test failed\nPath: ${fullPath}\nStatus: ${response.status}\nContent-Type: ${contentType}`);
