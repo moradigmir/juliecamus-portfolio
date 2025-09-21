@@ -2,12 +2,13 @@ import { motion } from 'framer-motion';
 import { useState, useCallback } from 'react';
 import ProjectTile from './ProjectTile';
 import AutoMediaTile from './AutoMediaTile';
-import { useMediaIndex, type MediaItem } from '../hooks/useMediaIndex';
+import { useMediaIndex, type MediaItem, type MediaManifest } from '../hooks/useMediaIndex';
 import Lightbox from './Lightbox';
 import HiDriveBrowser from './HiDriveBrowser';
 import ProjectStatusIndicator from './ProjectStatusIndicator';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Settings, Save, Copy } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
@@ -37,6 +38,9 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
   const [showHiDriveBrowser, setShowHiDriveBrowser] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showManifestDialog, setShowManifestDialog] = useState(false);
+  const [proposedManifest, setProposedManifest] = useState<string>('');
+  const [manifestDiff, setManifestDiff] = useState<string>('');
   const { toast } = useToast();
   
   // Load auto-discovered media from HiDrive
@@ -169,19 +173,87 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }
   }, [autoMediaItems, refetch, toast]);
 
+  const handleWriteToManifest = useCallback(async () => {
+    try {
+      // Build a new manifest object from all real items in sorted order
+      const newManifest: MediaManifest = {
+        items: autoMediaItems.map(item => ({
+          orderKey: item.folder,
+          folder: item.folder,
+          title: item.title,
+          previewUrl: item.previewUrl,
+          previewType: item.previewType,
+          fullUrl: item.fullUrl,
+          fullType: item.fullType
+        })),
+        generatedAt: new Date().toISOString(),
+        source: 'hidrive' as const
+      };
+
+      const proposedJson = JSON.stringify(newManifest, null, 2);
+      
+      // Get current manifest for diff
+      let currentJson = '{}';
+      try {
+        const response = await fetch('/media.manifest.json');
+        if (response.ok) {
+          const current = await response.json();
+          currentJson = JSON.stringify(current, null, 2);
+        }
+      } catch (e) {
+        console.warn('Could not load current manifest for diff');
+      }
+
+      // Create simple diff (just show both for now)
+      const diff = `--- Current manifest\n+++ Proposed manifest\n\n${currentJson}\n\n--- BECOMES ---\n\n${proposedJson}`;
+      
+      console.log(`📝 manifest.proposed_count=${newManifest.items.length}`);
+      console.log(`📝 manifest.example[0]=${JSON.stringify(newManifest.items[0] || {})}`);
+      console.log(`📝 manifest.diff_ready=true lines=${diff.split('\n').length}`);
+
+      setProposedManifest(proposedJson);
+      setManifestDiff(diff);
+      setShowManifestDialog(true);
+      
+      toast({ 
+        title: 'Manifest ready', 
+        description: `Generated manifest with ${newManifest.items.length} items` 
+      });
+    } catch (error) {
+      console.error('Failed to generate manifest:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to generate manifest', 
+        variant: 'destructive' 
+      });
+    }
+  }, [autoMediaItems, toast]);
+
+  const copyToClipboard = useCallback(async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: 'Copied', description: `${label} copied to clipboard` });
+    } catch (error) {
+      toast({ title: 'Copy failed', description: 'Could not copy to clipboard', variant: 'destructive' });
+    }
+  }, [toast]);
+
   const createGridItems = useCallback((): GridItem[] => {
     const items: GridItem[] = [];
     
-    // Only use auto-discovered media; no legacy fallback
-    if (autoMediaItems.length > 0) {
+    // FIRST: Add all real media items (sorted numerically by folder)
+    autoMediaItems.forEach((media, index) => {
       items.push({ 
         type: 'media', 
-        media: autoMediaItems[0], 
-        index: 0 
+        media, 
+        index: items.length 
       });
-    }
+    });
     
-    // Then add projects with accordion expansion
+    // Count placeholders after real items
+    console.log(`🧩 placeholders_after_real={count: ${projects.length}}`);
+    
+    // SECOND: Add projects with accordion expansion (these act as placeholders)
     projects.forEach((project, projectIndex) => {
       const itemIndex = items.length;
       
@@ -204,17 +276,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
         });
       }
     });
-    
-    // Add remaining media items
-    if (autoMediaItems.length > 1) {
-      for (let i = 1; i < autoMediaItems.length; i++) {
-        items.push({ 
-          type: 'media', 
-          media: autoMediaItems[i], 
-          index: items.length 
-        });
-      }
-    }
     
     return items;
   }, [projects, expandedTile, autoMediaItems]);
@@ -261,6 +322,51 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           >
             {isRefreshing ? 'Checking...' : 'Check Folders'}
           </Button>
+          {autoMediaItems.length > 0 && (
+            <Dialog open={showManifestDialog} onOpenChange={setShowManifestDialog}>
+              <DialogTrigger asChild>
+                <Button 
+                  onClick={handleWriteToManifest}
+                  variant="outline" 
+                  size="sm"
+                  className="text-xs"
+                >
+                  <Save className="w-3 h-3 mr-1" />
+                  Write to manifest
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+                <DialogHeader>
+                  <DialogTitle>Proposed Manifest Update</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => copyToClipboard(proposedManifest, 'JSON')}
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy JSON
+                    </Button>
+                    <Button 
+                      onClick={() => copyToClipboard(manifestDiff, 'Diff')}
+                      variant="outline" 
+                      size="sm"
+                    >
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy Diff
+                    </Button>
+                  </div>
+                  <div className="overflow-auto max-h-[60vh]">
+                    <pre className="text-xs bg-muted p-4 rounded whitespace-pre-wrap">
+                      {manifestDiff}
+                    </pre>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
         <div className="text-sm text-muted-foreground">
           {isSupabasePaused ? (
@@ -311,7 +417,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           } else if (item.type === 'media') {
             return (
               <AutoMediaTile
-                key={`auto-media-${item.media.folder}-${item.index}`}
+                key={`media-${item.media.folder}`}
                 media={item.media}
                 index={item.index}
                 onHover={() => {}}

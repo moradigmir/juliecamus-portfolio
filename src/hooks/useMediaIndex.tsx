@@ -240,13 +240,25 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 
       const discovered = discoveredRaw.filter(Boolean) as MediaItem[];
 
-      // Merge and sort by orderKey
+      // Merge and sort by orderKey numerically
       const combined = [...healedItems];
       const existingFolders = new Set(combined.map((i) => i.folder));
+      
+      // Add discovered items (de-duplicate by folder)
       for (const d of discovered) {
         if (!existingFolders.has(d.folder)) combined.push(d);
       }
-      combined.sort((a, b) => a.orderKey.localeCompare(b.orderKey, undefined, { numeric: true }));
+      
+      // Sort strictly by numeric folder value ascending
+      combined.sort((a, b) => {
+        const numA = parseInt(a.folder, 10);
+        const numB = parseInt(b.folder, 10);
+        return numA - numB;
+      });
+      
+      // Log sorted items for debugging
+      const foldersList = combined.map(item => item.folder);
+      console.log(`📦 items_sorted=[${foldersList.join(',')}]`);
       
       setMediaItems(combined);
       setIsSupabasePaused(false); // Reset on success
