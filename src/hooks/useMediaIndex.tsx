@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
-import { findPreviewForFolder, probeStream } from '@/lib/hidrive';
+import { findPreviewForFolder, probeStream, getFolderMetadata } from '@/lib/hidrive';
 
 export type MediaType = 'image' | 'video';
 
@@ -13,6 +13,11 @@ export interface MediaItem {
   fullUrl: string;
   fullType: MediaType;
   thumbnailUrl?: string;
+  meta?: {
+    title?: string;
+    description?: string;
+    tags?: string[];
+  };
 }
 
 export interface MediaManifest {
@@ -87,12 +92,18 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return url;
       };
       
-      // Map to proxy
-      const proxiedItems = sortedItems.map((item) => ({
-        ...item,
-        previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
-        fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
-        // thumbnailUrl is already a relative path, no need to proxy
+      // Map to proxy and fetch metadata
+      const proxiedItems = await Promise.all(sortedItems.map(async (item) => {
+        const folderPath = `/public/${item.folder}/`;
+        const metadata = await getFolderMetadata(folderPath);
+        
+        return {
+          ...item,
+          previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
+          fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
+          // thumbnailUrl is already a relative path, no need to proxy
+          meta: metadata,
+        };
       }));
 
       const requiresProxy = proxiedItems.some(
@@ -225,14 +236,20 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           if (!firstPath) return null;
           const proxied = `${proxyBase}?path=${encodeURIComponent(firstPath)}`;
           const isVideo = /\.(mp4|mov)$/i.test(firstPath);
+          
+          // Get metadata for discovered folders
+          const folderPath = `/public/${nn}/`;
+          const metadata = await getFolderMetadata(folderPath);
+          
           const extra: MediaItem = {
             orderKey: nn,
             folder: nn,
-            title: `Folder ${nn}`,
+            title: metadata.title || `Folder ${nn}`,
             previewUrl: proxied,
             previewType: isVideo ? 'video' : 'image',
             fullUrl: proxied,
             fullType: isVideo ? 'video' : 'image',
+            meta: metadata,
           };
           return extra;
         })
@@ -246,7 +263,13 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       
       // Add discovered items (de-duplicate by folder)
       for (const d of discovered) {
-        if (!existingFolders.has(d.folder)) combined.push(d);
+        if (!existingFolders.has(d.folder)) {
+          // Ensure discovered items have the same structure as healed items
+          combined.push({
+            ...d,
+            meta: d.meta || {}
+          });
+        }
       }
       
       // Sort strictly by numeric folder value ascending

@@ -194,6 +194,163 @@ export interface ValidateResult {
  * Validate a folder by finding its preview and testing if it streams properly.
  * Returns {ok:true, preview:file} if valid, {ok:false} otherwise.
  */
+/**
+ * Fetch text content from a path using the HiDrive proxy.
+ */
+export const fetchText = async (path: string): Promise<string | null> => {
+  try {
+    const url = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path)}`;
+    const res = await fetch(url, { method: 'GET' });
+    
+    if (!res.ok) {
+      return null;
+    }
+    
+    const text = await res.text();
+    return text;
+  } catch (error) {
+    console.error('❌ Failed to fetch text', { path, error });
+    return null;
+  }
+};
+
+/**
+ * Find and fetch MANIFEST.md file in a folder (case-insensitive).
+ */
+export const findManifestMarkdown = async (folderPath: string): Promise<string | null> => {
+  try {
+    const items = await listDir(folderPath);
+    const manifestVariants = ['MANIFEST.md', 'Manifest.md', 'manifest.md'];
+    
+    // Find any case variant of MANIFEST.md
+    const manifestFile = items.find(item => 
+      item.type === 'file' && 
+      manifestVariants.some(variant => item.name.toLowerCase() === variant.toLowerCase())
+    );
+    
+    if (!manifestFile) {
+      return null;
+    }
+    
+    const manifestPath = folderPath + manifestFile.name;
+    const content = await fetchText(manifestPath);
+    return content;
+  } catch (error) {
+    console.error('❌ Failed to find manifest markdown', { folderPath, error });
+    return null;
+  }
+};
+
+/**
+ * Parse MANIFEST.md content for metadata.
+ * Supports YAML front-matter or plain markdown.
+ */
+export const parseManifestMarkdown = (md: string): { title?: string; description?: string; tags?: string[] } => {
+  try {
+    // Check for YAML front-matter
+    if (md.startsWith('---')) {
+      const endIndex = md.indexOf('---', 3);
+      if (endIndex > 3) {
+        const yamlContent = md.slice(3, endIndex).trim();
+        const restContent = md.slice(endIndex + 3).trim();
+        
+        // Simple YAML parsing for our supported fields
+        const result: { title?: string; description?: string; tags?: string[] } = {};
+        
+        const lines = yamlContent.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('title:')) {
+            result.title = trimmed.slice(6).trim().replace(/^["']|["']$/g, '');
+          } else if (trimmed.startsWith('description:') || trimmed.startsWith('subtitle:')) {
+            const key = trimmed.startsWith('description:') ? 'description:' : 'subtitle:';
+            result.description = trimmed.slice(key.length).trim().replace(/^["']|["']$/g, '');
+          } else if (trimmed.startsWith('tags:')) {
+            const tagsStr = trimmed.slice(5).trim();
+            if (tagsStr.startsWith('[') && tagsStr.endsWith(']')) {
+              try {
+                result.tags = JSON.parse(tagsStr);
+              } catch {
+                // Fallback: split by comma
+                result.tags = tagsStr.slice(1, -1).split(',').map(t => t.trim().replace(/^["']|["']$/g, ''));
+              }
+            }
+          }
+        }
+        
+        return result;
+      }
+    }
+    
+    // Plain markdown fallback
+    const lines = md.split('\n').map(l => l.trim()).filter(l => l);
+    const result: { title?: string; description?: string; tags?: string[] } = {};
+    
+    // Find first H1
+    const h1Line = lines.find(line => line.startsWith('# '));
+    if (h1Line) {
+      result.title = h1Line.slice(2).trim();
+    }
+    
+    // Find first non-empty paragraph (not starting with #)
+    const paragraph = lines.find(line => line && !line.startsWith('#') && line.length > 10);
+    if (paragraph) {
+      result.description = paragraph;
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('❌ Failed to parse manifest markdown', error);
+    return {};
+  }
+};
+
+/**
+ * Get folder metadata by finding and parsing MANIFEST.md.
+ */
+export const getFolderMetadata = async (folderPath: string): Promise<{ title?: string; description?: string; tags?: string[] }> => {
+  try {
+    const markdownContent = await findManifestMarkdown(folderPath);
+    if (!markdownContent) {
+      // Emit diagnostics for missing manifest
+      const { diag } = await import('../debug/diag');
+      const folderNum = folderPath.replace(/\/public\/(\d+)\/.*/, '$1');
+      diag('MANIFEST', 'manifest_md_missing', { folder: folderNum });
+      return {};
+    }
+    
+    const metadata = parseManifestMarkdown(markdownContent);
+    
+    // Emit diagnostics for successful parsing
+    if (metadata.title || metadata.description) {
+      const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
+      const folderNum = folderPath.replace(/\/public\/(\d+)\/.*/, '$1');
+      
+      diag('MANIFEST', 'manifest_md_ok', { 
+        folder: folderNum, 
+        file: 'MANIFEST.md', 
+        title: metadata.title,
+        descriptionLen: metadata.description?.length || 0
+      });
+      
+      flushDiagToEdge(buildDiagSummary({ 
+        manifest_example_0: { folder: folderNum, title: metadata.title }
+      }));
+    }
+    
+    return metadata;
+  } catch (error) {
+    // Emit diagnostics for parse errors
+    const { diag } = await import('../debug/diag');
+    const folderNum = folderPath.replace(/\/public\/(\d+)\/.*/, '$1');
+    diag('MANIFEST', 'manifest_md_error', { 
+      folder: folderNum, 
+      reason: error instanceof Error ? error.message : 'Unknown error'
+    });
+    return {};
+  }
+};
+
 export const validateFolder = async (folderPath: string): Promise<ValidateResult> => {
   try {
     const previewUrl = await findPreviewForFolder(folderPath);

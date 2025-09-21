@@ -619,14 +619,26 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             );
           } else if (item.type === 'media') {
             return (
-              <AutoMediaTile
-                key={`media-${item.media.folder}`}
-                media={item.media}
-                index={item.index}
-                onHover={() => {}}
-                onLeave={() => {}}
-                onClick={openMediaLightbox}
-              />
+              <div key={`media-${item.media.folder}`} className="relative">
+                <AutoMediaTile
+                  media={item.media}
+                  index={item.index}
+                  onHover={() => {}}
+                  onLeave={() => {}}
+                  onClick={openMediaLightbox}
+                />
+                {/* Show metadata description if available */}
+                {item.media.meta?.description && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 rounded-b-lg opacity-0 hover:opacity-100 transition-opacity">
+                    <p className="truncate" title={item.media.meta.description}>
+                      {item.media.meta.description.length > 120 
+                        ? item.media.meta.description.slice(0, 120) + '...'
+                        : item.media.meta.description
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
             );
           } else if (item.type === 'accordion') {
             return (
