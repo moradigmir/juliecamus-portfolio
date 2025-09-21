@@ -99,6 +99,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       listUrl.searchParams.set('list', '1');
       const res = await fetch(listUrl.toString(), { method: 'GET' });
       const ct = res.headers.get('content-type') || '';
+      console.log('📂 browser probe folder list', { path: `/public/${nn}/`, status: res.status, ct });
       if (detectSupabaseIssueFromResponse(res.status, ct)) {
         setIsSupabasePaused(true);
         return [];
@@ -172,12 +173,12 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
       url.searchParams.set('list', '1');
       const res = await fetch(url.toString(), { method: 'GET' });
       const ct = res.headers.get('content-type') || '';
+      console.log('📂 browser list', { path: p, status: res.status, ct });
       if (detectSupabaseIssueFromResponse(res.status, ct)) {
         setIsSupabasePaused(true);
         throw new Error(`Supabase paused (${res.status})`);
       }
-      // WebDAV typically returns 207 for PROPFIND
-      if (!(res.ok || res.status === 207)) {
+      if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${ct}`);
       }
       const xml = await res.text();

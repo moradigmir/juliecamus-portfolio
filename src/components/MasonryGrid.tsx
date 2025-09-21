@@ -141,12 +141,12 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
         return url;
       };
 
-      const tryHead = async (u?: string) => {
+       const tryHead = async (u?: string) => {
         if (!u) return false;
         try {
-          const r = await fetch(u, { method: 'HEAD' });
+          const r = await fetch(u, { method: 'GET', headers: { Range: 'bytes=0-0' } });
           const ct = r.headers.get('content-type') || '';
-          return r.ok && (ct.startsWith('video/') || ct.startsWith('image/'));
+          return (r.ok || r.status === 206) && (ct.startsWith('video/') || ct.startsWith('image/'));
         } catch {
           return false;
         }
@@ -163,6 +163,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             url.searchParams.set('path', p);
             url.searchParams.set('list', '1');
             const r = await fetch(url.toString(), { method: 'GET' });
+            console.log('📂 check-folders list', { path: p, status: r.status, ct: r.headers.get('content-type') });
             if (r.ok) {
               const xml = await r.text();
               const doc = new DOMParser().parseFromString(xml, 'application/xml');
@@ -173,6 +174,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                 const ct = (resp.getElementsByTagNameNS('*', 'getcontenttype')[0]?.textContent || '').toLowerCase();
                 return !ct || ct.startsWith('image/') || ct.startsWith('video/');
               });
+              console.log('📊 check-folders parsed', { path: p, responses: responses.length, hasMedia });
               if (responses.length > 0 && hasMedia) {
                 return { folder, ok: true } as const;
               }

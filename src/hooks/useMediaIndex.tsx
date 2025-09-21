@@ -116,10 +116,10 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         proxiedItems.map(async (it) => {
           const tryHead = async (url: string) => {
             try {
-              const res = await fetch(url, { method: 'HEAD' });
+              const res = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' } });
               const ct = res.headers.get('content-type') || '';
               const isMedia = ct.startsWith('video/') || ct.startsWith('image/');
-              return { ok: res.ok && isMedia, status: res.status, ct };
+              return { ok: (res.ok || res.status === 206) && isMedia, status: res.status, ct };
             } catch (e) {
               return { ok: false, status: 0, ct: '' };
             }
@@ -187,6 +187,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           u.searchParams.set('path', folderPath);
           u.searchParams.set('list', '1');
           const res = await fetch(u.toString(), { method: 'GET' });
+          console.log('📂 proxy list', { path: folderPath, status: res.status, ct: res.headers.get('content-type') });
           if (!res.ok) return [];
           const xml = await res.text();
           const doc = new DOMParser().parseFromString(xml, 'application/xml');
@@ -214,12 +215,15 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         for (const base of bases) {
           const folderPath = `${base}/${folder}/`;
           const files = await propfindFiles(folderPath);
+          console.log('🔎 scanning folder for first image', { folder: folderPath, files: files.length });
           if (files.length) {
             const candidates = files
               .filter((f) => !f.ct || f.ct.startsWith('image/') || /\.(jpg|jpeg|png|gif)$/i.test(f.name))
               .sort((a, b) => a.name.localeCompare(b.name));
             if (candidates.length) {
-              return `${base}/${folder}/${candidates[0].name}`;
+              const picked = `${base}/${folder}/${candidates[0].name}`;
+              console.log('✅ first image candidate', { picked });
+              return picked;
             }
           }
         }
