@@ -92,19 +92,27 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return url;
       };
       
-      // Map to proxy and fetch metadata
-      const proxiedItems = await Promise.all(sortedItems.map(async (item) => {
-        const folderPath = `/public/${item.folder}/`;
-        const metadata = await getFolderMetadata(folderPath);
-        
-        return {
-          ...item,
-          previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
-          fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
-          // thumbnailUrl is already a relative path, no need to proxy
-          meta: metadata,
-        };
+      // Map to proxy URLs - use cached meta from manifest if available
+      const proxiedItems = sortedItems.map((item) => ({
+        ...item,
+        previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
+        fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
+        // thumbnailUrl is already a relative path, no need to proxy
+        // Keep existing meta from build-time if present
+        meta: item.meta || {},
       }));
+
+      // Log cached metadata for diagnostics
+      const { diag: diagImport } = await import('../debug/diag');
+      proxiedItems.forEach(item => {
+        if (item.meta && (item.meta.title || item.meta.description)) {
+          diagImport('MANIFEST', 'manifest_meta_cached', {
+            folder: item.folder,
+            title: item.meta.title || '',
+            descriptionLen: item.meta.description?.length || 0
+          });
+        }
+      });
 
       const requiresProxy = proxiedItems.some(
         (it) =>
@@ -237,19 +245,15 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           const proxied = `${proxyBase}?path=${encodeURIComponent(firstPath)}`;
           const isVideo = /\.(mp4|mov)$/i.test(firstPath);
           
-          // Get metadata for discovered folders
-          const folderPath = `/public/${nn}/`;
-          const metadata = await getFolderMetadata(folderPath);
-          
           const extra: MediaItem = {
             orderKey: nn,
             folder: nn,
-            title: metadata.title || `Folder ${nn}`,
+            title: `Folder ${nn}`,
             previewUrl: proxied,
             previewType: isVideo ? 'video' : 'image',
             fullUrl: proxied,
             fullType: isVideo ? 'video' : 'image',
-            meta: metadata,
+            meta: {}, // Will be populated by background check
           };
           return extra;
         })
@@ -297,6 +301,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       setIsSupabasePaused(false); // Reset on success
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
+      // Background task: Check for MANIFEST.md updates after grid loads
+      setTimeout(async () => {
+        await backgroundManifestCheck(combined, setMediaItems);
+      }, 1000);
+
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error loading media manifest';
@@ -323,4 +332,71 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
     isSupabasePaused,
     refetch
   };
+};
+
+// Background task to check for MANIFEST.md updates
+const backgroundManifestCheck = async (
+  items: MediaItem[], 
+  setMediaItems: (items: MediaItem[]) => void
+) => {
+  try {
+    const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
+    let hasUpdates = false;
+    const updatedItems = [...items];
+
+    for (let i = 0; i < updatedItems.length; i++) {
+      const item = updatedItems[i];
+      const folderPath = `/public/${item.folder}/`;
+      
+      try {
+        // Fetch current MANIFEST.md metadata
+        const currentMeta = await getFolderMetadata(folderPath);
+        
+        // Compare with cached metadata
+        const cachedMeta = item.meta || {};
+        const hasChanges = (
+          currentMeta.title !== cachedMeta.title ||
+          currentMeta.description !== cachedMeta.description ||
+          JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])
+        );
+        
+        if (hasChanges && (currentMeta.title || currentMeta.description)) {
+          // Update item with new metadata
+          const changedKeys = [];
+          if (currentMeta.title !== cachedMeta.title) changedKeys.push('title');
+          if (currentMeta.description !== cachedMeta.description) changedKeys.push('description');
+          if (JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])) changedKeys.push('tags');
+          
+          updatedItems[i] = {
+            ...item,
+            title: currentMeta.title || item.title,
+            meta: currentMeta
+          };
+          
+          hasUpdates = true;
+          
+          diag('MANIFEST', 'manifest_md_updated', {
+            folder: item.folder,
+            changedKeys
+          });
+          
+          // Flush individual update to edge
+          flushDiagToEdge(buildDiagSummary({
+            manifest_example_0: { folder: item.folder, title: currentMeta.title || '' }
+          }));
+        }
+      } catch (error) {
+        // Background check failed, don't break the UI
+        console.warn(`Background manifest check failed for folder ${item.folder}:`, error);
+      }
+    }
+    
+    // Update state if there were changes
+    if (hasUpdates) {
+      setMediaItems(updatedItems);
+      console.log('📝 Updated metadata from background MANIFEST.md check');
+    }
+  } catch (error) {
+    console.warn('Background manifest check failed:', error);
+  }
 };

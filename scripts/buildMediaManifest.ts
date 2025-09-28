@@ -16,6 +16,11 @@ export interface MediaItem {
   fullUrl: string;
   fullType: MediaType;
   thumbnailUrl?: string;
+  meta?: {
+    title?: string;
+    description?: string;
+    tags?: string[];
+  };
 }
 
 export interface MediaManifest {
@@ -141,6 +146,95 @@ class HiDriveClient {
     const cleanPath = filePath.replace('/public/', '');
     return `https://my.hidrive.com/share/juliecamus${cleanPath}`;
   }
+
+  async fetchManifestMarkdown(folderPath: string): Promise<{ content: string; matchedFilename: string } | null> {
+    const manifestVariants = ['MANIFEST.md', 'Manifest.md', 'manifest.md'];
+    
+    for (const variant of manifestVariants) {
+      try {
+        const manifestPath = `${folderPath}/${variant}`;
+        const url = `${this.baseUrl}${manifestPath}`;
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': this.getAuthHeader(),
+            'User-Agent': 'Mozilla/5.0 (compatible; MediaManifestBuilder/1.0)'
+          }
+        });
+        
+        if (response.ok) {
+          const content = await response.text();
+          console.log(`  📄 Found manifest: ${variant}`);
+          return { content, matchedFilename: variant };
+        }
+      } catch (error) {
+        // Try next variant
+        continue;
+      }
+    }
+    
+    return null;
+  }
+
+  parseManifestMarkdown(md: string): { title?: string; description?: string; tags?: string[] } {
+    try {
+      // Check for YAML front-matter
+      if (md.startsWith('---')) {
+        const endIndex = md.indexOf('---', 3);
+        if (endIndex > 3) {
+          const yamlContent = md.slice(3, endIndex).trim();
+          
+          // Simple YAML parsing for our supported fields
+          const result: { title?: string; description?: string; tags?: string[] } = {};
+          
+          const lines = yamlContent.split('\n');
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('title:')) {
+              result.title = trimmed.slice(6).trim().replace(/^["']|["']$/g, '');
+            } else if (trimmed.startsWith('description:') || trimmed.startsWith('subtitle:')) {
+              const key = trimmed.startsWith('description:') ? 'description:' : 'subtitle:';
+              result.description = trimmed.slice(key.length).trim().replace(/^["']|["']$/g, '');
+            } else if (trimmed.startsWith('tags:')) {
+              const tagsStr = trimmed.slice(5).trim();
+              if (tagsStr.startsWith('[') && tagsStr.endsWith(']')) {
+                try {
+                  result.tags = JSON.parse(tagsStr);
+                } catch {
+                  // Fallback: split by comma
+                  result.tags = tagsStr.slice(1, -1).split(',').map(t => t.trim().replace(/^["']|["']$/g, ''));
+                }
+              }
+            }
+          }
+          
+          return result;
+        }
+      }
+      
+      // Plain markdown fallback
+      const lines = md.split('\n').map(l => l.trim()).filter(l => l);
+      const result: { title?: string; description?: string; tags?: string[] } = {};
+      
+      // Find first H1
+      const h1Line = lines.find(line => line.startsWith('# '));
+      if (h1Line) {
+        result.title = h1Line.slice(2).trim();
+      }
+      
+      // Find first non-empty paragraph (not starting with #)
+      const paragraph = lines.find(line => line && !line.startsWith('#') && line.length > 10);
+      if (paragraph) {
+        result.description = paragraph;
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Failed to parse manifest markdown', error);
+      return {};
+    }
+  }
 }
 
 class MediaManifestBuilder {
@@ -205,6 +299,17 @@ class MediaManifestBuilder {
             thumbnailUrl = await this.generateVideoThumbnail(previewUrl, dir.name);
           }
           
+          // Fetch and parse MANIFEST.md for metadata
+          const manifestResult = await this.client.fetchManifestMarkdown(folderPath);
+          let meta: { title?: string; description?: string; tags?: string[] } | undefined;
+          
+          if (manifestResult) {
+            meta = this.client.parseManifestMarkdown(manifestResult.content);
+            console.log(`  📝 Manifest metadata: ${JSON.stringify(meta)}`);
+          } else {
+            console.log(`  📝 No MANIFEST.md found`);
+          }
+          
           console.log(`  ✅ Preview: ${preview.name} -> ${previewUrl}`);
           console.log(`  ✅ Full: ${(full || preview).name} -> ${fullUrl}`);
           if (thumbnailUrl) {
@@ -214,12 +319,13 @@ class MediaManifestBuilder {
           items.push({
             orderKey: dir.name,
             folder: dir.name,
-            title: `Portfolio ${dir.name}`,
+            title: meta?.title || `Portfolio ${dir.name}`,
             previewUrl,
             previewType: this.getMediaType(preview.name),
             fullUrl,
             fullType: this.getMediaType((full || preview).name),
-            thumbnailUrl
+            thumbnailUrl,
+            meta
           });
           
         } catch (error) {

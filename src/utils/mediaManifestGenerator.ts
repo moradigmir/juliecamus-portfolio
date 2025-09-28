@@ -10,6 +10,11 @@ export interface MediaItem {
   fullUrl: string;
   fullType: MediaType;
   thumbnailUrl?: string;
+  meta?: {
+    title?: string;
+    description?: string;
+    tags?: string[];
+  };
 }
 
 export interface MediaManifest {
