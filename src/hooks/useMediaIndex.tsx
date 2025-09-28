@@ -103,14 +103,24 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       }));
 
       // Log cached metadata for diagnostics
-      const { diag: diagImport } = await import('../debug/diag');
+      const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
+      let manifestExampleFlushed = false;
+      
       proxiedItems.forEach(item => {
         if (item.meta && (item.meta.title || item.meta.description)) {
-          diagImport('MANIFEST', 'manifest_meta_cached', {
+          diag('MANIFEST', 'manifest_meta_cached', {
             folder: item.folder,
-            title: item.meta.title || '',
+            title: item.meta.title || null,
             descriptionLen: item.meta.description?.length || 0
           });
+          
+          // Flush edge example for first 2 folders with meta to avoid spam
+          if (!manifestExampleFlushed && (item.folder === '01' || item.folder === '02')) {
+            flushDiagToEdge(buildDiagSummary({
+              manifest_example_0: { folder: item.folder, title: item.meta.title || '' }
+            }));
+            manifestExampleFlushed = true;
+          }
         }
       });
 
@@ -288,7 +298,6 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       console.log(`📦 items_sorted=[${foldersList.join(',')}]`);
       
       // Diagnostics: Log the final sorted order
-      const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
       diag('ORDER', 'items_sorted', { folders: foldersList });
       
       // Flush ORDER summary to edge logs
@@ -349,45 +358,55 @@ const backgroundManifestCheck = async (
       const folderPath = `/public/${item.folder}/`;
       
       try {
-        // Fetch current MANIFEST.md metadata
+        // Always fetch current MANIFEST.md metadata for all folders (including cached ones)
         const currentMeta = await getFolderMetadata(folderPath);
         
         // Compare with cached metadata
         const cachedMeta = item.meta || {};
-        const hasChanges = (
-          currentMeta.title !== cachedMeta.title ||
-          currentMeta.description !== cachedMeta.description ||
-          JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])
-        );
         
-        if (hasChanges && (currentMeta.title || currentMeta.description)) {
-          // Update item with new metadata
-          const changedKeys = [];
-          if (currentMeta.title !== cachedMeta.title) changedKeys.push('title');
-          if (currentMeta.description !== cachedMeta.description) changedKeys.push('description');
-          if (JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])) changedKeys.push('tags');
+        // Check if we have current metadata (either from MANIFEST.md or cache)
+        if (currentMeta.title || currentMeta.description) {
+          // Check for differences
+          const hasChanges = (
+            currentMeta.title !== cachedMeta.title ||
+            currentMeta.description !== cachedMeta.description ||
+            JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])
+          );
           
-          updatedItems[i] = {
-            ...item,
-            title: currentMeta.title || item.title,
-            meta: currentMeta
-          };
-          
-          hasUpdates = true;
-          
-          diag('MANIFEST', 'manifest_md_updated', {
-            folder: item.folder,
-            changedKeys
-          });
-          
-          // Flush individual update to edge
-          flushDiagToEdge(buildDiagSummary({
-            manifest_example_0: { folder: item.folder, title: currentMeta.title || '' }
-          }));
+          if (hasChanges) {
+            // Update item with new metadata
+            const changedKeys = [];
+            if (currentMeta.title !== cachedMeta.title) changedKeys.push('title');
+            if (currentMeta.description !== cachedMeta.description) changedKeys.push('description');
+            if (JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])) changedKeys.push('tags');
+            
+            updatedItems[i] = {
+              ...item,
+              title: currentMeta.title || item.title,
+              meta: currentMeta
+            };
+            
+            hasUpdates = true;
+            
+            diag('MANIFEST', 'manifest_md_updated', {
+              folder: item.folder,
+              changedKeys
+            });
+            
+            // Flush individual update to edge
+            flushDiagToEdge(buildDiagSummary({
+              manifest_example_0: { folder: item.folder, title: currentMeta.title || '' }
+            }));
+          }
         }
+        // Note: getFolderMetadata already emits manifest_md_missing/manifest_md_ok internally
+        
       } catch (error) {
-        // Background check failed, don't break the UI
+        // Background check failed, don't break the UI but log it
         console.warn(`Background manifest check failed for folder ${item.folder}:`, error);
+        
+        // Still emit missing diagnostic if we couldn't check the folder
+        diag('MANIFEST', 'manifest_md_missing', { folder: item.folder });
       }
     }
     
