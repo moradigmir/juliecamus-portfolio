@@ -114,8 +114,8 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             descriptionLen: item.meta.description?.length || 0
           });
           
-          // Flush edge example for first 2 folders with meta to avoid spam
-          if (!manifestExampleFlushed && (item.folder === '01' || item.folder === '02')) {
+          // Flush edge example for the first folder with cached meta (avoid spam)
+          if (!manifestExampleFlushed) {
             flushDiagToEdge(buildDiagSummary({
               manifest_example_0: { folder: item.folder, title: item.meta.title || '' }
             }));
@@ -123,6 +123,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           }
         }
       });
+
 
       const requiresProxy = proxiedItems.some(
         (it) =>
