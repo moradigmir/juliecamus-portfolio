@@ -195,12 +195,85 @@ export interface ValidateResult {
  * Returns {ok:true, preview:file} if valid, {ok:false} otherwise.
  */
 /**
- * Fetch text content from a path using the HiDrive proxy.
+ * List directory contents without media filtering (for manifest search).
  */
-export const fetchText = async (path: string): Promise<string | null> => {
+const listDirAll = async (path: string): Promise<HiDriveItem[]> => {
+  const normalized = path.endsWith('/') ? path : path + '/';
+  
+  const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+  url.searchParams.set('path', normalized);
+  url.searchParams.set('list', '1');
+  
+  const res = await fetch(url.toString(), { method: 'GET' });
+  const ct = res.headers.get('content-type') || '';
+  
+  if (detectSupabaseIssueFromResponse(res.status, ct)) {
+    throw new Error(`Supabase paused (${res.status})`);
+  }
+  
+  if (!(res.ok || res.status === 207)) {
+    throw new Error(`HTTP ${res.status}: ${ct}`);
+  }
+  
+  const xml = await res.text();
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, 'application/xml');
+  const responses = Array.from(doc.getElementsByTagNameNS('*', 'response'));
+
+  const items: HiDriveItem[] = [];
+  for (const r of responses) {
+    const hrefEl = r.getElementsByTagNameNS('*', 'href')[0];
+    if (!hrefEl) continue;
+    
+    let href = hrefEl.textContent || '';
+    try { href = decodeURIComponent(href); } catch { }
+    
+    const pathOnly = href.replace(/^https?:\/\/[^/]+/, '');
+    if (!pathOnly) continue;
+    
+    const normNoSlash = normalized.replace(/\/$/, '');
+    const pathNoSlash = pathOnly.replace(/\/$/, '');
+    if (pathNoSlash === normNoSlash) continue;
+
+    const segments = pathOnly.split('/').filter(Boolean);
+    const name = segments.pop() || '';
+
+    const isDir = r.getElementsByTagNameNS('*', 'collection').length > 0;
+    const typeEl = r.getElementsByTagNameNS('*', 'getcontenttype')[0];
+    const sizeEl = r.getElementsByTagNameNS('*', 'getcontentlength')[0];
+    const modEl = r.getElementsByTagNameNS('*', 'getlastmodified')[0];
+    const contentType = (typeEl?.textContent || '').toLowerCase();
+    const size = sizeEl ? parseInt(sizeEl.textContent || '0', 10) : undefined;
+    const modified = modEl?.textContent || undefined;
+
+    if (isDir) {
+      items.push({ name, type: 'directory' });
+    } else {
+      // Include ALL files, not just media
+      items.push({ name, type: 'file', size, modified, contentType });
+    }
+  }
+  
+  const unique = new Map<string, HiDriveItem>();
+  for (const it of items) unique.set(it.name.toLowerCase(), it);
+  return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+};
+
+/**
+ * Fetch text content from a path using the HiDrive proxy with cache-busting.
+ */
+export const fetchText = async (path: string, noStore = true): Promise<string | null> => {
   try {
-    const url = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path)}`;
-    const res = await fetch(url, { method: 'GET' });
+    const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+    url.searchParams.set('path', path);
+    if (noStore) {
+      url.searchParams.set('cb', Date.now().toString());
+    }
+    
+    const res = await fetch(url.toString(), { 
+      method: 'GET',
+      cache: noStore ? 'no-store' : 'default'
+    });
     
     if (!res.ok) {
       return null;
@@ -219,22 +292,37 @@ export const fetchText = async (path: string): Promise<string | null> => {
  */
 export const findManifestMarkdown = async (folderPath: string): Promise<string | null> => {
   try {
-    const items = await listDir(folderPath);
+    // Ensure trailing slash
+    const normalizedPath = folderPath.endsWith('/') ? folderPath : folderPath + '/';
     const manifestVariants = ['MANIFEST.md', 'Manifest.md', 'manifest.md'];
     
-    // Find any case variant of MANIFEST.md
-    const manifestFile = items.find(item => 
-      item.type === 'file' && 
-      manifestVariants.some(variant => item.name.toLowerCase() === variant.toLowerCase())
-    );
-    
-    if (!manifestFile) {
-      return null;
+    // First try: listing-based search (case-insensitive, no media filter)
+    try {
+      const items = await listDirAll(normalizedPath);
+      const manifestFile = items.find(item => 
+        item.type === 'file' && 
+        manifestVariants.some(variant => item.name.toLowerCase() === variant.toLowerCase())
+      );
+      
+      if (manifestFile) {
+        const manifestPath = normalizedPath + manifestFile.name;
+        const content = await fetchText(manifestPath);
+        return content;
+      }
+    } catch (listError) {
+      console.log('❌ Listing failed, trying direct GET', { folderPath: normalizedPath, listError });
     }
     
-    const manifestPath = folderPath + manifestFile.name;
-    const content = await fetchText(manifestPath);
-    return content;
+    // Second try: direct GET fallback for all variants
+    for (const variant of manifestVariants) {
+      const manifestPath = normalizedPath + variant;
+      const content = await fetchText(manifestPath);
+      if (content) {
+        return content;
+      }
+    }
+    
+    return null;
   } catch (error) {
     console.error('❌ Failed to find manifest markdown', { folderPath, error });
     return null;
@@ -314,7 +402,7 @@ export const getFolderMetadata = async (folderPath: string): Promise<{ title?: s
     if (!markdownContent) {
       // Emit diagnostics for missing manifest
       const { diag } = await import('../debug/diag');
-      const folderNum = folderPath.replace(/\/public\/(\d+)\/.*/, '$1');
+      const folderNum = folderPath.replace(/.*\/public\/(\d+).*/, '$1');
       diag('MANIFEST', 'manifest_md_missing', { folder: folderNum });
       return {};
     }
@@ -324,7 +412,7 @@ export const getFolderMetadata = async (folderPath: string): Promise<{ title?: s
     // Emit diagnostics for successful parsing
     if (metadata.title || metadata.description) {
       const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
-      const folderNum = folderPath.replace(/\/public\/(\d+)\/.*/, '$1');
+      const folderNum = folderPath.replace(/.*\/public\/(\d+).*/, '$1');
       
       diag('MANIFEST', 'manifest_md_ok', { 
         folder: folderNum, 
@@ -342,7 +430,7 @@ export const getFolderMetadata = async (folderPath: string): Promise<{ title?: s
   } catch (error) {
     // Emit diagnostics for parse errors
     const { diag } = await import('../debug/diag');
-    const folderNum = folderPath.replace(/\/public\/(\d+)\/.*/, '$1');
+    const folderNum = folderPath.replace(/.*\/public\/(\d+).*/, '$1');
     diag('MANIFEST', 'manifest_md_error', { 
       folder: folderNum, 
       reason: error instanceof Error ? error.message : 'Unknown error'
