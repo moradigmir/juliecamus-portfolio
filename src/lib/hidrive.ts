@@ -289,8 +289,9 @@ export const fetchText = async (path: string, noStore = true): Promise<string | 
 
 /**
  * Find and fetch MANIFEST.md file in a folder (case-insensitive).
+ * Returns { content, matchedFilename } if found, null if not found.
  */
-export const findManifestMarkdown = async (folderPath: string): Promise<string | null> => {
+export const findManifestMarkdown = async (folderPath: string): Promise<{ content: string; matchedFilename: string } | null> => {
   try {
     // Ensure trailing slash
     const normalizedPath = folderPath.endsWith('/') ? folderPath : folderPath + '/';
@@ -307,7 +308,9 @@ export const findManifestMarkdown = async (folderPath: string): Promise<string |
       if (manifestFile) {
         const manifestPath = normalizedPath + manifestFile.name;
         const content = await fetchText(manifestPath);
-        return content;
+        if (content) {
+          return { content, matchedFilename: manifestFile.name };
+        }
       }
     } catch (listError) {
       console.log('❌ Listing failed, trying direct GET', { folderPath: normalizedPath, listError });
@@ -318,7 +321,7 @@ export const findManifestMarkdown = async (folderPath: string): Promise<string |
       const manifestPath = normalizedPath + variant;
       const content = await fetchText(manifestPath);
       if (content) {
-        return content;
+        return { content, matchedFilename: variant };
       }
     }
     
@@ -398,8 +401,8 @@ export const parseManifestMarkdown = (md: string): { title?: string; description
  */
 export const getFolderMetadata = async (folderPath: string): Promise<{ title?: string; description?: string; tags?: string[] }> => {
   try {
-    const markdownContent = await findManifestMarkdown(folderPath);
-    if (!markdownContent) {
+    const manifestResult = await findManifestMarkdown(folderPath);
+    if (!manifestResult) {
       // Emit diagnostics for missing manifest
       const { diag } = await import('../debug/diag');
       const folderNum = folderPath.replace(/.*\/public\/(\d+).*/, '$1');
@@ -407,28 +410,40 @@ export const getFolderMetadata = async (folderPath: string): Promise<{ title?: s
       return {};
     }
     
-    const metadata = parseManifestMarkdown(markdownContent);
+    const { content, matchedFilename } = manifestResult;
     
-    // Emit diagnostics for successful parsing
-    if (metadata.title || metadata.description) {
+    try {
+      const metadata = parseManifestMarkdown(content);
+      
+      // Always emit diagnostics for successful parsing (regardless of content)
       const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
       const folderNum = folderPath.replace(/.*\/public\/(\d+).*/, '$1');
       
       diag('MANIFEST', 'manifest_md_ok', { 
         folder: folderNum, 
-        file: 'MANIFEST.md', 
-        title: metadata.title,
+        file: matchedFilename,
+        title: metadata.title || '',
         descriptionLen: metadata.description?.length || 0
       });
       
+      // Always flush to edge for each successful parse
       flushDiagToEdge(buildDiagSummary({ 
-        manifest_example_0: { folder: folderNum, title: metadata.title }
+        manifest_example_0: { folder: folderNum, title: metadata.title || '' }
       }));
+      
+      return metadata;
+    } catch (parseError) {
+      // Emit diagnostics for parse errors
+      const { diag } = await import('../debug/diag');
+      const folderNum = folderPath.replace(/.*\/public\/(\d+).*/, '$1');
+      diag('MANIFEST', 'manifest_md_error', { 
+        folder: folderNum, 
+        reason: parseError instanceof Error ? parseError.message : 'Parse error'
+      });
+      return {};
     }
-    
-    return metadata;
   } catch (error) {
-    // Emit diagnostics for parse errors
+    // Emit diagnostics for general errors
     const { diag } = await import('../debug/diag');
     const folderNum = folderPath.replace(/.*\/public\/(\d+).*/, '$1');
     diag('MANIFEST', 'manifest_md_error', { 
