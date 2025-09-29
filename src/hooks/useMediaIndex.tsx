@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
 import { findPreviewForFolder, probeStream, getFolderMetadata } from '@/lib/hidrive';
+import { diag, flushDiagToEdge, buildDiagSummary } from '@/debug/diag';
 
 export type MediaType = 'image' | 'video';
 
@@ -58,12 +59,18 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       
       const manifest: MediaManifest = await response.json();
       
-      // Log manifest shape for debugging (before processing)
+      // Step 1: Log manifest shape deterministically (before processing)
       console.log("MANIFEST_JSON_SAMPLE", {
         hasItems: Array.isArray(manifest?.items),
+        count: manifest?.items?.length ?? 0,
         firstKeys: manifest?.items?.[0] ? Object.keys(manifest.items[0]) : [],
         firstMeta: manifest?.items?.[0]?.meta ?? null,
-        firstTwo: (manifest?.items || []).slice(0,2)
+      });
+      
+      diag("MANIFEST","manifest_json_sample", {
+        hasItems: Array.isArray(manifest?.items),
+        count: manifest?.items?.length ?? 0,
+        firstMetaPresent: !!manifest?.items?.[0]?.meta
       });
       
       // Validate manifest structure
@@ -100,23 +107,33 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return url;
       };
       
-      // Import diagnostics first
-      const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
+      // Optional sessionStorage persistence for meta
+      const persistedMeta = JSON.parse(sessionStorage.getItem("hidrive:meta") || "{}");
       let manifestExampleFlushed = false;
       let cachedWithMetaCount = 0;
       
-      // Map to proxy URLs and attach cached meta from manifest if available
+      // Step 2: Map to proxy URLs and attach cached meta from manifest BEFORE setState
       const proxiedItems = sortedItems.map((item) => {
+        // Determine meta: manifest > sessionStorage > empty
+        let meta = item.meta || {};
+        
+        // If no meta in manifest but sessionStorage has it, restore
+        if (!meta.title && !meta.description && persistedMeta[item.folder]) {
+          meta = persistedMeta[item.folder];
+          diag('MANIFEST', 'manifest_meta_restored_from_session', { folder: item.folder });
+        }
+        
         const finalItem = {
           ...item,
           previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
           fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
-          // thumbnailUrl is already a relative path, no need to proxy
-          // Keep existing meta from build-time if present, otherwise empty object
-          meta: item.meta || {},
+          // Attach cached meta immediately so tiles render titles
+          meta,
+          // Update title from meta if available
+          title: meta.title || item.title,
         };
         
-        // Log cached metadata for diagnostics - check original item.meta
+        // Step 2B: Log cached metadata for diagnostics - manifest meta only
         if (item.meta && (item.meta.title || item.meta.description)) {
           cachedWithMetaCount++;
           diag('MANIFEST', 'manifest_meta_cached', {
@@ -125,7 +142,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             descriptionLen: item.meta?.description?.length || 0
           });
           
-          // Flush edge example for the first folder with cached meta (avoid spam)
+          // Step 2C: Flush edge example for the first folder with cached meta (avoid spam)
           if (!manifestExampleFlushed && item.meta.title) {
             flushDiagToEdge(buildDiagSummary({
               manifest_example_0: { folder: item.folder, title: item.meta.title }
@@ -137,10 +154,13 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return finalItem;
       });
 
-      // Log scan result for dev debugging
+      // Step 4: Explicit "no meta in build" signal
       diag('MANIFEST', 'manifest_meta_cached_scan', { cachedWithMeta: cachedWithMetaCount });
-      if ((import.meta.env.DEV || new URL(location.href).searchParams.get("debug") === "1") && cachedWithMetaCount === 0) {
-        console.warn("DEV_ASSERT: No cached meta found in /media.manifest.json — tiles will wait for background probe.");
+      
+      if (cachedWithMetaCount === 0) {
+        // DEV assert so we stop guessing
+        console.warn("DEV_ASSERT: /media.manifest.json contains NO meta — titles will rely on background probe until next build.");
+        diag("MANIFEST","manifest_meta_absent_in_build",{ reason: "no meta fields in manifest" });
       }
 
 
@@ -313,12 +333,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return numA - numB;
       });
       
-      // Log sorted items for debugging AFTER items are fully built
+      // Step 3: ORDER DIAG after final array is built
       const foldersList = combined.map(item => item.folder);
       console.log(`📦 items_sorted=[${foldersList.join(',')}]`);
       
-      // Diagnostics: Log the final sorted order with proper counts
-      const realItemsCount = combined.length;
+      // Log the final sorted order with proper counts
       const placeholderCount = 0; // No placeholders in current implementation
       
       diag('ORDER', 'items_sorted', { folders: foldersList });
@@ -374,7 +393,8 @@ const backgroundManifestCheck = async (
   setMediaItems: (items: MediaItem[]) => void
 ) => {
   try {
-    const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
+    // Get persisted meta for sessionStorage updates
+    const persistedMeta = JSON.parse(sessionStorage.getItem("hidrive:meta") || "{}");
     let hasUpdates = false;
     const updatedItems = [...items];
 
@@ -412,6 +432,10 @@ const backgroundManifestCheck = async (
             };
             
             hasUpdates = true;
+            
+            // Step 4 Optional: persist probe results in sessionStorage
+            persistedMeta[item.folder] = currentMeta;
+            sessionStorage.setItem("hidrive:meta", JSON.stringify(persistedMeta));
             
             diag('MANIFEST', 'manifest_md_updated', {
               folder: item.folder,
