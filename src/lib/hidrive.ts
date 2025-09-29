@@ -483,19 +483,21 @@ export const getFolderMetadata = async (folderPath: string): Promise<{ title?: s
 
 export function persistFolderMetaToCache(folder: string, meta: any) {
   try {
-    const CACHE_KEY = "hidrive.meta.v1";
-    const raw = localStorage.getItem(CACHE_KEY);
-    const old = raw ? JSON.parse(raw) : {};
-    old[folder] = { ...(old[folder] ?? {}), ...(meta ?? {}), ts: Date.now() };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(old));
-    console.log("[HARD-DIAG:MANIFEST] manifest_meta_persisted", { folder });
+    const OWNER = "juliecamus";
+    const KEY = (o: string) => `manifestMetaCache:v1:${o}`;
+    const raw = localStorage.getItem(KEY(OWNER));
+    const old = raw ? JSON.parse(raw) : { owner: OWNER, updatedAt: 0, metaByFolder: {} };
+    old.owner = OWNER;
+    old.metaByFolder = old.metaByFolder || {};
+    old.metaByFolder[folder] = { ...(old.metaByFolder[folder] ?? {}), ...(meta ?? {}), ts: Date.now() };
+    old.updatedAt = Date.now();
+    localStorage.setItem(KEY(OWNER), JSON.stringify(old));
+    console.log("[HARD-DIAG:MANIFEST] manifest_meta_persisted", { folder, source: "probe" });
   } catch (e) {
-    console.log("[HARD-DIAG:MANIFEST] persist_failed", {
-      folder,
-      err: String(e),
-    });
+    console.log("[HARD-DIAG:MANIFEST] persist_failed", { folder, err: String(e) });
   }
 }
+
 
 export const validateFolder = async (folderPath: string): Promise<ValidateResult> => {
   try {
