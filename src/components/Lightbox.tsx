@@ -162,9 +162,11 @@ const Lightbox: React.FC<LightboxProps> = ({
                  ) : (
                    <video
                      src={currentContent}
-                     className="w-full h-full object-contain rounded-lg shadow-2xl"
+                     className="max-h-screen max-w-full object-contain rounded-lg shadow-2xl"
                      controls
                      playsInline
+                     autoPlay
+                     muted
                      preload="metadata"
                      onError={(e) => {
                        console.error("Video load error", currentContent, e);
