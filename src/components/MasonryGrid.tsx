@@ -513,9 +513,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
       {/* Diagnostic Panel - Only show when debug=1 */}
       {showDevControls && (
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {showDevControls && (
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -536,106 +535,104 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          )}
-          <Button
-            onClick={() => setShowHiDriveBrowser(!showHiDriveBrowser)}
-            variant="outline"
-            size="sm"
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            {showHiDriveBrowser ? 'Hide' : 'Show'} HiDrive Browser
-          </Button>
-          {(mediaError || autoMediaItems.length === 0) && !isSupabasePaused && (
-            <Button onClick={refetch} variant="outline" size="sm" disabled={mediaLoading}>
-              {mediaLoading ? 'Retrying…' : 'Retry Loading'}
+            <Button
+              onClick={() => setShowHiDriveBrowser(!showHiDriveBrowser)}
+              variant="outline"
+              size="sm"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              {showHiDriveBrowser ? 'Hide' : 'Show'} HiDrive Browser
             </Button>
-          )}
-          <Button 
-            onClick={handleRefreshManifest} 
-            variant="outline" 
-            size="sm" 
-            disabled={isRefreshing}
-            className="text-xs"
-          >
-            {isRefreshing ? 'Checking...' : 'Check Folders'}
-          </Button>
-          {autoMediaItems.length > 0 && (
-            <Dialog open={showManifestDialog} onOpenChange={setShowManifestDialog}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={handleWriteToManifest}
-                  variant="outline" 
-                  size="sm"
-                  className="text-xs"
-                >
-                  <Save className="w-3 h-3 mr-1" />
-                  Write to manifest
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-                <DialogHeader>
-                  <DialogTitle>Proposed Manifest Update</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => copyToClipboard(proposedManifest, 'JSON')}
-                      variant="outline" 
-                      size="sm"
-                    >
-                      <Copy className="w-3 h-3 mr-1" />
-                      Copy JSON
-                    </Button>
-                    <Button 
-                      onClick={() => copyToClipboard(manifestDiff, 'Diff')}
-                      variant="outline" 
-                      size="sm"
-                    >
-                      <Copy className="w-3 h-3 mr-1" />
-                      Copy Diff
-                    </Button>
-                    <Button 
-                      onClick={() => downloadManifest(proposedManifest)}
-                      variant="outline" 
-                      size="sm"
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Download JSON
-                    </Button>
+            {(mediaError || autoMediaItems.length === 0) && !isSupabasePaused && (
+              <Button onClick={refetch} variant="outline" size="sm" disabled={mediaLoading}>
+                {mediaLoading ? 'Retrying…' : 'Retry Loading'}
+              </Button>
+            )}
+            <Button 
+              onClick={handleRefreshManifest} 
+              variant="outline" 
+              size="sm" 
+              disabled={isRefreshing}
+              className="text-xs"
+            >
+              {isRefreshing ? 'Checking...' : 'Check Folders'}
+            </Button>
+            {autoMediaItems.length > 0 && (
+              <Dialog open={showManifestDialog} onOpenChange={setShowManifestDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    onClick={handleWriteToManifest}
+                    variant="outline" 
+                    size="sm"
+                    className="text-xs"
+                  >
+                    <Save className="w-3 h-3 mr-1" />
+                    Write to manifest
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+                  <DialogHeader>
+                    <DialogTitle>Proposed Manifest Update</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => copyToClipboard(proposedManifest, 'JSON')}
+                        variant="outline" 
+                        size="sm"
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        Copy JSON
+                      </Button>
+                      <Button 
+                        onClick={() => copyToClipboard(manifestDiff, 'Diff')}
+                        variant="outline" 
+                        size="sm"
+                      >
+                        <Copy className="w-3 h-3 mr-1" />
+                        Copy Diff
+                      </Button>
+                      <Button 
+                        onClick={() => downloadManifest(proposedManifest)}
+                        variant="outline" 
+                        size="sm"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download JSON
+                      </Button>
+                    </div>
+                    <div className="overflow-auto max-h-[60vh]">
+                      <pre className="text-xs bg-muted p-4 rounded whitespace-pre-wrap">
+                        {manifestDiff}
+                      </pre>
+                    </div>
                   </div>
-                  <div className="overflow-auto max-h-[60vh]">
-                    <pre className="text-xs bg-muted p-4 rounded whitespace-pre-wrap">
-                      {manifestDiff}
-                    </pre>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          )}
-          <Button 
-            onClick={() => setShowDiagnostics(!showDiagnostics)}
-            variant="outline" 
-            size="sm"
-            className="text-xs"
-          >
-            <Bug className="w-3 h-3 mr-1" />
-            Diagnostics
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          {showDevControls && (
+                </DialogContent>
+              </Dialog>
+            )}
+            <Button 
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+              variant="outline" 
+              size="sm"
+              className="text-xs"
+            >
+              <Bug className="w-3 h-3 mr-1" />
+              Diagnostics
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
               Placeholders: {clearPlaceholders ? 'OFF' : 'ON'}
             </Badge>
-          )}
-          <div className="text-sm text-muted-foreground">
-            {isSupabasePaused ? (
-              'Backend services unavailable'
-            ) : autoMediaItems.length > 0 ? (
-              `${autoMediaItems.length} auto-discovered media items`
-            ) : (
-              'No media loaded'
-            )}
+            <div className="text-sm text-muted-foreground">
+              {isSupabasePaused ? (
+                'Backend services unavailable'
+              ) : autoMediaItems.length > 0 ? (
+                `${autoMediaItems.length} auto-discovered media items`
+              ) : (
+                'No media loaded'
+              )}
+            </div>
           </div>
         </div>
       )}
