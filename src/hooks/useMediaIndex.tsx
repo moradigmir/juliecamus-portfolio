@@ -319,6 +319,66 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         })
       );
 
+      // Step 2.5: Enhance items with long video detection
+      const enhancedItems = await Promise.all(
+        healedItems.map(async (item) => {
+          // Skip if not a video or if fullUrl is already different from previewUrl
+          if (item.fullType !== 'video' || item.fullUrl !== item.previewUrl) {
+            return item;
+          }
+
+          try {
+            // Extract path and folder from preview URL to look for long version
+            const match = item.previewUrl.match(/path=([^&]+)/);
+            if (!match) return item;
+
+            const decodedPath = decodeURIComponent(match[1]);
+            const pathParts = decodedPath.split('/');
+            const fileName = pathParts[pathParts.length - 1];
+            const folderPath = pathParts.slice(0, -1).join('/') + '/';
+
+            // Derive base name and try to find long version
+            let baseName = fileName.replace(/\.[^.]+$/, ''); // remove extension
+            const extension = fileName.match(/\.[^.]+$/)?.[0] || '.mp4';
+
+            // Remove _short suffix if present to get base name
+            baseName = baseName.replace(/_short$/i, '');
+
+            // Try different long version patterns
+            const longCandidates = [
+              `${baseName}_long${extension}`,
+              `${baseName}_long.mp4`,
+              `${baseName}_long.mov`,
+              `${baseName}_long.MP4`,
+              `${baseName}_long.MOV`
+            ];
+
+            // Test each candidate by trying to fetch it
+            for (const candidate of longCandidates) {
+              const longPath = folderPath + candidate;
+              const longUrl = `${proxyBase}?path=${encodeURIComponent(longPath)}&owner=juliecamus`;
+
+              try {
+                const res = await fetch(longUrl, { method: 'GET', headers: { Range: 'bytes=0-0' } });
+                const ct = res.headers.get('content-type') || '';
+                if ((res.ok || res.status === 206) && ct.startsWith('video/')) {
+                  console.log(`✅ Found long version for ${item.folder}: ${candidate}`);
+                  return { ...item, fullUrl: longUrl };
+                }
+              } catch {
+                // Continue to next candidate
+              }
+            }
+
+            console.log(`ℹ️ No long version found for ${item.folder}, using preview as full`);
+            return item;
+          } catch (error) {
+            console.warn(`⚠️ Error checking for long version in ${item.folder}:`, error);
+            return item;
+          }
+        })
+      );
+
       // Auto-discover additional numbered folders (01-50) not present in the manifest
       const proxyBase = 'https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy';
 
@@ -383,7 +443,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       const discovered = discoveredRaw.filter(Boolean) as MediaItem[];
 
         // Merge with discovery using merge-preserve approach
-        const combined = mergeByFolder(healedItems, discovered);
+        const combined = mergeByFolder(enhancedItems, discovered);
       
       // Sort strictly by numeric folder value ascending
       combined.sort((a, b) => {

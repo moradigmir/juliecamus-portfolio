@@ -159,15 +159,25 @@ const Lightbox: React.FC<LightboxProps> = ({
                     allow="autoplay; encrypted-media; fullscreen"
                     allowFullScreen
                   />
-                ) : (
-                  <video
-                    src={currentContent}
-                    className="w-full aspect-video rounded-lg shadow-2xl"
-                    controls
-                    playsInline
-                    preload="metadata"
-                  />
-                )}
+                 ) : (
+                   <video
+                     src={currentContent}
+                     className="w-full h-full object-contain rounded-lg shadow-2xl"
+                     controls
+                     playsInline
+                     preload="metadata"
+                     onError={(e) => {
+                       console.error("Video load error", currentContent, e);
+                       // Fallback to preview URL if full URL fails
+                       if (media && currentContent === media.fullUrl && media.previewUrl !== media.fullUrl) {
+                         console.log("Falling back to preview URL");
+                         // Force reload with preview URL
+                         const video = e.target as HTMLVideoElement;
+                         video.src = media.previewUrl;
+                       }
+                     }}
+                   />
+                 )}
               </motion.div>
             ) : (
               <motion.img
