@@ -3,6 +3,10 @@ import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
 import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict } from '@/lib/hidrive';
 import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
 
+// HARD BOOT TRACER – proves this file is the one actually running
+// Do not remove.
+console.log("[BOOT] useMediaIndex.tsx loaded", { ts: Date.now() });
+
 // --- BEGIN unskippable tracer shim ---
 type DiagEntry = { t:number; tag:string; msg:string; data?:any };
 function emit(tag:string, msg:string, data?:any) {
@@ -397,6 +401,108 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
   const refetch = () => {
     fetchMediaManifest();
   };
+
+  useEffect(() => {
+    const DIAG = (msg: string, data?: any) =>
+      console.log("[HARD-DIAG:MANIFEST]", msg, data ?? "");
+
+    const CACHE_KEY = "hidrive.meta.v1"; // { [folder]: { title, description, tags, ts } }
+
+    // 0) Try to hydrate from cache synchronously (fast path)
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const cached: Record<string, any> = JSON.parse(raw);
+        const folders = Object.keys(cached);
+        if (folders.length) {
+          DIAG("manifest_meta_cached_scan", { count: folders.length });
+          folders.forEach((f) => {
+            const m = cached[f];
+            DIAG("manifest_meta_cached", {
+              folder: f,
+              title: m?.title,
+              descriptionLen: m?.description?.length ?? 0,
+            });
+          });
+          // Attach to existing items (don't reorder; only enrich)
+          setMediaItems((prev) =>
+            prev.map((it) =>
+              it.folder && cached[it.folder]
+                ? { ...it, meta: { ...(it.meta ?? {}), ...cached[it.folder] } }
+                : it
+            )
+          );
+          console.log("[HARD-DIAG:MANIFEST] CACHED_ATTACH_APPLIED", {
+            folders,
+          });
+        }
+      } else {
+        DIAG("manifest_meta_cached_scan", { count: 0 });
+      }
+    } catch (e) {
+      DIAG("cached_hydrate_failed", { err: String(e) });
+    }
+
+    // 1) Fetch /media.manifest.json and attach meta immediately
+    (async () => {
+      try {
+        const res = await fetch("/media.manifest.json", { cache: "no-store" });
+        if (!res.ok) {
+          DIAG("manifest_json_fetch_failed", { status: res.status });
+          return;
+        }
+        const json = await res.json();
+        const items: Array<{ folder?: string; meta?: any }> = Array.isArray(json?.items)
+          ? json.items
+          : [];
+        DIAG("manifest_json_sample", {
+          hasItems: items.length > 0,
+          count: items.length,
+          firstMetaPresent: !!items[0]?.meta,
+        });
+
+        // Build map {folder -> meta}
+        const fromBuild: Record<string, any> = {};
+        for (const it of items) {
+          const folder = it?.folder;
+          const meta = it?.meta;
+          if (folder && meta) fromBuild[folder] = meta;
+        }
+        const folders = Object.keys(fromBuild);
+
+        if (folders.length) {
+          // Attach to UI state without reordering
+          setMediaItems((prev) =>
+            prev.map((it) =>
+              it.folder && fromBuild[it.folder]
+                ? { ...it, meta: { ...(it.meta ?? {}), ...fromBuild[it.folder] } }
+                : it
+            )
+          );
+          console.log("[HARD-DIAG:MANIFEST] CACHED_ATTACH_APPLIED", {
+            folders,
+          });
+          // Persist for next reload (merge with any existing cache)
+          try {
+            const raw = localStorage.getItem(CACHE_KEY);
+            const oldCache = raw ? JSON.parse(raw) : {};
+            const merged = { ...oldCache };
+            folders.forEach((f) => {
+              merged[f] = { ...(merged[f] ?? {}), ...fromBuild[f], ts: Date.now() };
+            });
+            localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
+            DIAG("manifest_meta_persisted", { count: folders.length });
+          } catch (e) {
+            DIAG("persist_failed", { err: String(e) });
+          }
+        } else {
+          DIAG("manifest_json_no_meta_items", { count: items.length });
+        }
+      } catch (e) {
+        DIAG("manifest_json_exception", { err: String(e) });
+      }
+    })();
+  }, []); // IMPORTANT: run once on mount
 
   useEffect(() => {
     fetchMediaManifest();

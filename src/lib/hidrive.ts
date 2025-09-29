@@ -455,6 +455,9 @@ export const getFolderMetadata = async (folderPath: string): Promise<{ title?: s
         manifest_example_0: { folder: folderNum, title: metadata.title || '' }
       }));
       
+      // Persist the metadata to cache
+      persistFolderMetaToCache(folderNum, metadata);
+      
       return metadata;
     } catch (parseError) {
       // Emit diagnostics for parse errors
@@ -477,6 +480,22 @@ export const getFolderMetadata = async (folderPath: string): Promise<{ title?: s
     return {};
   }
 };
+
+export function persistFolderMetaToCache(folder: string, meta: any) {
+  try {
+    const CACHE_KEY = "hidrive.meta.v1";
+    const raw = localStorage.getItem(CACHE_KEY);
+    const old = raw ? JSON.parse(raw) : {};
+    old[folder] = { ...(old[folder] ?? {}), ...(meta ?? {}), ts: Date.now() };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(old));
+    console.log("[HARD-DIAG:MANIFEST] manifest_meta_persisted", { folder });
+  } catch (e) {
+    console.log("[HARD-DIAG:MANIFEST] persist_failed", {
+      folder,
+      err: String(e),
+    });
+  }
+}
 
 export const validateFolder = async (folderPath: string): Promise<ValidateResult> => {
   try {
