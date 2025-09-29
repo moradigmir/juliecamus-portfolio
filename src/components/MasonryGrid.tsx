@@ -511,7 +511,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
         </div>
       )}
 
-      {/* Diagnostic Panel */}
+      {/* Diagnostic Panel - Only show when debug=1 */}
+      {showDevControls && (
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {showDevControls && (
@@ -637,7 +638,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* HiDrive Browser Panel */}
       {showHiDriveBrowser && (
