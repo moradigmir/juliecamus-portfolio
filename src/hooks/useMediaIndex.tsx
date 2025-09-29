@@ -95,6 +95,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       // Import diagnostics first
       const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
       let manifestExampleFlushed = false;
+      let cachedWithMetaCount = 0;
       
       // Map to proxy URLs and attach cached meta from manifest if available
       const proxiedItems = sortedItems.map((item) => {
@@ -109,10 +110,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         
         // Log cached metadata for diagnostics - check original item.meta
         if (item.meta && (item.meta.title || item.meta.description)) {
+          cachedWithMetaCount++;
           diag('MANIFEST', 'manifest_meta_cached', {
             folder: item.folder,
-            title: item.meta.title || null,
-            descriptionLen: item.meta.description?.length || 0
+            title: item.meta?.title || null,
+            descriptionLen: item.meta?.description?.length || 0
           });
           
           // Flush edge example for the first folder with cached meta (avoid spam)
@@ -126,6 +128,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         
         return finalItem;
       });
+
+      // Log scan result for dev debugging
+      if (cachedWithMetaCount === 0) {
+        diag('MANIFEST', 'manifest_meta_cached_scan', { cachedWithMeta: 0 });
+      }
 
 
       const requiresProxy = proxiedItems.some(
@@ -297,9 +304,6 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return numA - numB;
       });
       
-      // Set the media items first
-      setMediaItems(combined);
-      
       // Log sorted items for debugging AFTER items are fully built
       const foldersList = combined.map(item => item.folder);
       console.log(`📦 items_sorted=[${foldersList.join(',')}]`);
@@ -316,6 +320,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         items_sorted: foldersList,
         placeholders_after_real: placeholderCount
       }));
+
+      // Set the media items AFTER all diagnostics are emitted
+      setMediaItems(combined);
       setIsSupabasePaused(false); // Reset on success
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
@@ -403,9 +410,11 @@ const backgroundManifestCheck = async (
             });
             
             // Flush individual update to edge
-            flushDiagToEdge(buildDiagSummary({
-              manifest_example_0: { folder: item.folder, title: currentMeta.title || '' }
-            }));
+            if (currentMeta.title) {
+              flushDiagToEdge(buildDiagSummary({
+                manifest_example_0: { folder: item.folder, title: currentMeta.title }
+              }));
+            }
           }
         }
         // Note: getFolderMetadata already emits manifest_md_missing/manifest_md_ok internally
