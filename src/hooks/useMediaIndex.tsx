@@ -112,51 +112,75 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       let manifestExampleFlushed = false;
       let cachedWithMetaCount = 0;
       
-      // Step 2: Map to proxy URLs and attach cached meta from manifest BEFORE setState
-      const proxiedItems = sortedItems.map((item) => {
-        // Determine meta: manifest > sessionStorage > empty
-        let meta = item.meta || {};
-        
-        // If no meta in manifest but sessionStorage has it, restore
-        if (!meta.title && !meta.description && persistedMeta[item.folder]) {
-          meta = persistedMeta[item.folder];
-          diag('MANIFEST', 'manifest_meta_restored_from_session', { folder: item.folder });
-        }
-        
-        const finalItem = {
-          ...item,
-          previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
-          fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
-          // Attach cached meta immediately so tiles render titles
-          meta,
-          // Update title from meta if available
-          title: meta.title || item.title,
-        };
-        
-        // Step 2B: Log cached metadata for diagnostics - manifest meta only
-        if (item.meta && (item.meta.title || item.meta.description)) {
-          cachedWithMetaCount++;
-          diag('MANIFEST', 'manifest_meta_cached', {
+      // Helper function for cached meta tracking
+      const traceCachedMeta = (item: MediaItem) => {
+        try {
+          diag("MANIFEST", "manifest_meta_cached", {
             folder: item.folder,
             title: item.meta?.title || null,
             descriptionLen: item.meta?.description?.length || 0
           });
           
-          // Step 2C: Flush edge example for the first folder with cached meta (avoid spam)
-          if (!manifestExampleFlushed && item.meta.title) {
-            flushDiagToEdge(buildDiagSummary({
-              manifest_example_0: { folder: item.folder, title: item.meta.title }
-            }));
-            manifestExampleFlushed = true;
+          // If this is the first item with a non-empty title, flush one edge diag
+          if (!manifestExampleFlushed && item.meta?.title) {
+            try {
+              flushDiagToEdge(buildDiagSummary({
+                manifest_example_0: { folder: item.folder, title: item.meta.title }
+              }));
+              console.log("CACHED_EDGE_FLUSHED", { folder: item.folder, title: item.meta.title });
+              manifestExampleFlushed = true;
+            } catch (e) {
+              console.log("TRACE(edge_flush_failed)", e);
+            }
           }
+        } catch (e) {
+          console.log("TRACE(diag_failed)", e);
+        }
+      };
+      
+      // Step 2: Map to proxy URLs and attach cached meta from manifest BEFORE setState
+      const proxiedItems = sortedItems.map((entry) => {
+        // Always log tracer for cached attach
+        console.log("CACHED_ATTACH_CALLED", { folder: entry.folder, meta: entry.meta ?? null });
+        
+        // Determine meta: manifest > sessionStorage > empty
+        let meta = entry.meta || {};
+        
+        // If no meta in manifest but sessionStorage has it, restore
+        if (!meta.title && !meta.description && persistedMeta[entry.folder]) {
+          meta = persistedMeta[entry.folder];
+          diag('MANIFEST', 'manifest_meta_restored_from_session', { folder: entry.folder });
+        }
+        
+        const finalItem = {
+          ...entry,
+          previewUrl: mapHiDriveUrlToProxy(entry.previewUrl),
+          fullUrl: mapHiDriveUrlToProxy(entry.fullUrl),
+          // Attach cached meta immediately so tiles render titles
+          meta,
+          // Update title from meta if available
+          title: meta.title || entry.title,
+        };
+        
+        // Attach meta to the item if present from manifest
+        if (entry.meta) {
+          finalItem.meta = entry.meta;
+        }
+        
+        // Track cached metadata for diagnostics - manifest meta only
+        if (entry.meta && (entry.meta.title || entry.meta.description)) {
+          cachedWithMetaCount++;
+          traceCachedMeta(finalItem);
         }
         
         return finalItem;
       });
 
-      // Step 4: Explicit "no meta in build" signal
-      diag('MANIFEST', 'manifest_meta_cached_scan', { cachedWithMeta: cachedWithMetaCount });
-      
+      // Log summary after mapping all items but before setState
+      console.log("CACHED_ATTACH_SUMMARY", { count: cachedWithMetaCount });
+      diag("MANIFEST", "manifest_meta_cached_scan", { count: cachedWithMetaCount });
+
+      // Step 4: Explicit "no meta in build" signal (already logged above)
       if (cachedWithMetaCount === 0) {
         // DEV assert so we stop guessing
         console.warn("DEV_ASSERT: /media.manifest.json contains NO meta — titles will rely on background probe until next build.");
