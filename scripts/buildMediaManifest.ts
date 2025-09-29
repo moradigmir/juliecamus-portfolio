@@ -248,27 +248,29 @@ class MediaManifestBuilder {
     console.log('🚀 Starting HiDrive media manifest generation...');
     
     try {
-      // List the /public/media directory
-      const mediaDir = '/public/media';
-      console.log(`📂 Scanning ${mediaDir}`);
+      // Scan /public/ directory to find ALL numbered folders (01-50)
+      const publicDir = '/public';
+      console.log(`📂 Scanning ${publicDir} for numbered folders`);
       
-      const entries = await this.client.listDirectory(mediaDir);
+      const entries = await this.client.listDirectory(publicDir);
       
-      // Filter for numbered directories
+      // Filter for numbered directories (01, 02, ..., 50)
       const numberDirs = entries
         .filter(entry => entry.type === 'dir')
-        .filter(entry => /^\d+$/.test(entry.name))
+        .filter(entry => /^\d{2}$/.test(entry.name)) // Match exactly 2 digits: 01, 02, etc.
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
       
       console.log(`📁 Found numbered directories: ${numberDirs.map(d => d.name).join(', ')}`);
       
       const items: MediaItem[] = [];
+      let withMeta = 0;
+      let withoutMeta = 0;
       
       for (const dir of numberDirs) {
         console.log(`\n🔍 Processing folder: ${dir.name}`);
         
         try {
-          const folderPath = `${mediaDir}/${dir.name}`;
+          const folderPath = `${publicDir}/${dir.name}`;
           const files = await this.client.listDirectory(folderPath);
           
           const mediaFiles = files.filter(file => 
@@ -306,33 +308,47 @@ class MediaManifestBuilder {
           if (manifestResult) {
             meta = this.client.parseManifestMarkdown(manifestResult.content);
             console.log(`  📝 Manifest metadata: ${JSON.stringify(meta)}`);
+            withMeta++;
           } else {
             console.log(`  📝 No MANIFEST.md found`);
+            withoutMeta++;
           }
           
-          console.log(`  ✅ Preview: ${preview.name} -> ${previewUrl}`);
-          console.log(`  ✅ Full: ${(full || preview).name} -> ${fullUrl}`);
+          // Use hidrive:// scheme for consistent URL format
+          const hidePreviewUrl = `hidrive://public/${dir.name}/${preview.name}`;
+          const hideFullUrl = `hidrive://public/${dir.name}/${(full || preview).name}`;
+          
+          console.log(`  ✅ Preview: ${preview.name} -> ${hidePreviewUrl}`);
+          console.log(`  ✅ Full: ${(full || preview).name} -> ${hideFullUrl}`);
           if (thumbnailUrl) {
             console.log(`  🖼️  Thumbnail: ${thumbnailUrl}`);
           }
           
-          items.push({
+          const item: MediaItem = {
             orderKey: dir.name,
             folder: dir.name,
             title: meta?.title || `Portfolio ${dir.name}`,
-            previewUrl,
+            previewUrl: hidePreviewUrl,
             previewType: this.getMediaType(preview.name),
-            fullUrl,
+            fullUrl: hideFullUrl,
             fullType: this.getMediaType((full || preview).name),
-            thumbnailUrl,
-            meta
-          });
+            thumbnailUrl
+          };
+          
+          // Only attach meta if it has content
+          if (meta && (meta.title || meta.description || (meta.tags && meta.tags.length > 0))) {
+            item.meta = meta;
+          }
+          
+          items.push(item);
           
         } catch (error) {
           console.error(`❌ Error processing folder ${dir.name}:`, error);
         }
       }
       
+      // Developer-facing build summary
+      console.log("BUILD_MANIFEST_SUMMARY", { count: items.length, withMeta, withoutMeta });
       console.log(`\n🎉 Successfully processed ${items.length} media folders`);
       
       return {

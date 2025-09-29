@@ -4,12 +4,42 @@
       "orderKey": "01",
       "folder": "01", 
       "title": "Dior Holiday Campaign",
-      "previewUrl": "https://webdav.hidrive.strato.com/users/juliecamus/public/01/01_short.mp4",
+      "previewUrl": "hidrive://public/01/01_short.mp4",
       "previewType": "video",
-      "fullUrl": "https://webdav.hidrive.strato.com/users/juliecamus/public/01/01_DIOR_HOLIDAY_BY_ELINA_KECHICHEVA.MP4",
-      "fullType": "video"
+      "fullUrl": "hidrive://public/01/01_DIOR_HOLIDAY_BY_ELINA_KECHICHEVA.MP4",
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Holiday Campaign",
+        "description": "A luxurious holiday campaign for Dior featuring elegant cinematography and stunning visuals."
+      }
+    },
+    {
+      "orderKey": "02",
+      "folder": "02",
+      "title": "Fashion Week Collection",
+      "previewUrl": "hidrive://public/02/02_preview.jpg",
+      "previewType": "image",
+      "fullUrl": "hidrive://public/02/02_FASHION_WEEK_FULL.mp4",
+      "fullType": "video",
+      "meta": {
+        "title": "Fashion Week Collection",
+        "description": "Behind the scenes of the latest fashion week collection showcasing innovative designs."
+      }
+    },
+    {
+      "orderKey": "03",
+      "folder": "03",
+      "title": "Givenchy Le Rouge",
+      "previewUrl": "hidrive://public/03/03_short.mp4",
+      "previewType": "video",
+      "fullUrl": "hidrive://public/03/GIVENCHY LE ROUGE.mp4",
+      "fullType": "video",
+      "meta": {
+        "title": "Givenchy Le Rouge",
+        "description": "Elegant lipstick campaign showcasing the rich textures and bold colors of Givenchy Le Rouge."
+      }
     }
   ],
-  "generatedAt": "2024-12-11T14:38:00.000Z",
+  "generatedAt": "2024-12-11T15:30:00.000Z",
   "source": "hidrive"
 }

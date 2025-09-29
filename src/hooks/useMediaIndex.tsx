@@ -134,46 +134,41 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       
       // Step 3: Map to proxy URLs and attach cached meta from manifest BEFORE setState
       const proxiedItems = sortedItems.map((entry) => {
-        // Determine meta: manifest > sessionStorage > empty
-        let meta = entry.meta || {};
-        
-        // If no meta in manifest but sessionStorage has it, restore
-        if (!meta.title && !meta.description && persistedMeta[entry.folder]) {
-          meta = persistedMeta[entry.folder];
-          __safeDiag('MANIFEST', 'manifest_meta_restored_from_session', { folder: entry.folder });
-        }
-        
-        const finalItem = {
+        // Map URLs to proxy
+        const item = {
           ...entry,
           previewUrl: mapHiDriveUrlToProxy(entry.previewUrl),
           fullUrl: mapHiDriveUrlToProxy(entry.fullUrl),
-          // Attach cached meta immediately so tiles render titles
-          meta,
-          // Update title from meta if available
-          title: meta.title || entry.title,
         };
         
-        // Attach meta to the item if present from manifest
+        // Attach meta from manifest if it exists
         if (entry.meta) { 
-          finalItem.meta = entry.meta; 
+          item.meta = entry.meta;
+          // Update title from meta if available
+          item.title = entry.meta.title || entry.title;
+        } else if (persistedMeta[entry.folder]) {
+          // Fallback to sessionStorage if no manifest meta
+          item.meta = persistedMeta[entry.folder];
+          item.title = persistedMeta[entry.folder].title || entry.title;
+          __safeDiag('MANIFEST', 'manifest_meta_restored_from_session', { folder: entry.folder });
         }
         
         // Always log tracer for cached attach for EVERY entry
-        console.log("CACHED_ATTACH_CALLED", { folder: finalItem.folder, meta: finalItem.meta ?? null });
+        console.log("CACHED_ATTACH_CALLED", { folder: item.folder, meta: item.meta ?? null });
         
-        // Track and emit diag for cached metadata - manifest meta only
+        // Track and emit diag for cached metadata
         __safeDiag("MANIFEST","manifest_meta_cached",{
-          folder: finalItem.folder,
-          title: finalItem.meta?.title || null,
-          descriptionLen: finalItem.meta?.description?.length || 0,
+          folder: item.folder,
+          title: item.meta?.title || null,
+          descriptionLen: item.meta?.description?.length || 0,
         });
         
-        // Edge flush for first item with title
-        if (finalItem.meta?.title) {
-          __onceEdgeFlush({ manifest_example_0: { folder: finalItem.folder, title: finalItem.meta.title } });
+        // Edge flush for first item with title from manifest
+        if (item.meta?.title) {
+          __onceEdgeFlush({ manifest_example_0: { folder: item.folder, title: item.meta.title } });
         }
         
-        return finalItem;
+        return item;
       });
 
       // Step 4: Summary after mapping ALL entries but BEFORE calling setState
