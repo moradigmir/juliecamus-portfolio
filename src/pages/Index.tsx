@@ -19,10 +19,10 @@ const Index = () => {
           <h1 className="font-playfair text-3xl md:text-6xl font-bold text-foreground mb-3 md:mb-6">
             Julie Camus
           </h1>
-          <p className="font-inter text-lg md:text-2xl text-muted-foreground mb-4 md:mb-8">
+          <p className="font-inter text-sm md:text-2xl text-muted-foreground mb-3 md:mb-8">
             French High-End Makeup Artist
           </p>
-          <p className="font-inter text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="font-inter text-xs md:text-lg text-muted-foreground max-w-2xl mx-auto">
             Specializing in editorial, fashion, and artistic makeup with over a decade of experience 
             in the luxury beauty industry across Paris, Milan, and New York.
           </p>
