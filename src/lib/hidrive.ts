@@ -2,23 +2,40 @@ import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Force proxy mapping for ALL preview/full URLs (grid + lightbox).
- * Converts hidrive:// and raw paths to the correct proxy format.
+ * Ensures exact working shape with /public/ prefix and owner=juliecamus.
  */
-export function toProxy(urlOrPath: string): string {
+export function toProxyStrict(input: string): string {
+  // Already proxied?
+  if (input.includes('/hidrive-proxy?')) return input;
+
+  // Accept raw path, hidrive://, or full URL. We only keep the PATH part.
+  let p = input.trim();
+
+  // If it's a full URL to webdav or anywhere, strip to pathname starting at /public
   try {
-    // If already proxied, return early
-    if (urlOrPath.includes('/hidrive-proxy?')) return urlOrPath;
-    // Support hidrive:// and raw paths
-    let p = urlOrPath;
-    if (p.startsWith('hidrive://')) p = p.replace('hidrive://', '/');
-    if (!p.startsWith('/')) p = '/' + p;
-    // Normalize double slashes
-    p = p.replace(/\/{2,}/g, '/');
-    return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(p)}&owner=juliecamus`;
-  } catch {
-    return urlOrPath;
-  }
+    if (p.startsWith('http')) {
+      const u = new URL(p);
+      p = u.pathname; // keep path only
+    }
+  } catch {}
+
+  // Convert hidrive:// -> /
+  if (p.startsWith('hidrive://')) p = p.replace('hidrive://','/');
+
+  // Ensure leading slash
+  if (!p.startsWith('/')) p = '/' + p;
+
+  // If it doesn't start with /public/, prefix it
+  if (!/^\/public\//i.test(p)) p = '/public' + p;
+
+  // Normalize multiple slashes
+  p = p.replace(/\/{2,}/g,'/');
+
+  return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(p)}&owner=juliecamus`;
 }
+
+// Legacy alias for backward compatibility
+export const toProxy = toProxyStrict;
 
 // Type definitions matching HiDriveBrowser
 export interface HiDriveItem {
@@ -131,35 +148,21 @@ export const listDir = async (path: string): Promise<HiDriveItem[]> => {
  * Probe a file URL using GET+Range (not HEAD) to check if it streams properly.
  * Returns ok if status is 200/206 and content-type is image/* or video/*.
  */
-export const probeStream = async (url: string): Promise<ProbeResult> => {
-  try {
-    const u = toProxy(url);
-    const res = await fetch(u, { 
-      method: 'GET', 
-      headers: { Range: 'bytes=0-1' } 
-    });
-    
-    const contentType = res.headers.get('content-type') || '';
-    const status = res.status;
-    const ok = (res.ok || status === 206) && isMediaContentType(contentType);
-    
-    console.log('🔍 hidrive probe', { url: u, status, contentType, ok });
-    
-    // Diagnostics: Log successful range requests
-    if (status === 206 && isMediaContentType(contentType)) {
-      const { diag } = await import('../debug/diag');
-      // Extract path from proxy URL for logging
-      const pathMatch = u.match(/path=([^&]+)/);
-      const path = pathMatch ? decodeURIComponent(pathMatch[1]) : u;
-      diag('NET', 'range_probe', { path, status: 206, ct: contentType });
-    }
-    
-    return { ok, status, contentType };
-  } catch (error) {
-    console.log('🔍 hidrive probe failed', { url, error: error instanceof Error ? error.message : 'Unknown error' });
-    return { ok: false, status: 0, contentType: '' };
+export async function probeStream(urlOrPath: string) {
+  const u = toProxyStrict(urlOrPath);
+  const res = await fetch(u, { headers: { Range: 'bytes=0-1' } });
+  const result = { ok: res.ok || res.status === 206, status: res.status, ct: res.headers.get('content-type') || undefined, url: u };
+  
+  // Log successful range probe with diagnostics
+  if (result.status === 206 || result.status === 200) {
+    const { diag } = await import('../debug/diag');
+    const pathMatch = u.match(/path=([^&]+)/);
+    const path = pathMatch ? decodeURIComponent(pathMatch[1]) : urlOrPath;
+    diag('NET', 'range_probe', { path, status: result.status, ct: result.ct });
   }
-};
+  
+  return result;
+}
 
 /**
  * Find a preview file for a folder using directory listing.

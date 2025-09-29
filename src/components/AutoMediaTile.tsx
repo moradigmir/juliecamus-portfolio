@@ -60,10 +60,11 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   })();
 
-  // Force proxy mapping and add diagnostics
+  // Force proxy mapping with toProxyStrict for consistent /public/ prefix
   const proxiedPreviewUrl = toProxy(media.previewUrl);
-  console.log('MEDIA_SRC_SET', { folder: media.folder, src: proxiedPreviewUrl });
-  diag('NET', 'media_src_set', { folder: media.folder, src: proxiedPreviewUrl });
+  const proxiedFullUrl = toProxy(media.fullUrl);
+  console.log('MEDIA_SRC_SET', { folder: media.folder, preview: proxiedPreviewUrl });
+  diag('NET', 'media_src_set', { folder: media.folder, preview: proxiedPreviewUrl });
   
   const cacheBustedUrl = `${proxiedPreviewUrl}${proxiedPreviewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
 
@@ -317,18 +318,10 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               poster={media.thumbnailUrl || '/placeholder.svg'}
               onLoadedMetadata={() => setIsLoaded(true)}
               onLoadedData={() => setIsLoaded(true)}
-              onError={(e) => {
+              onError={() => {
                 setHasError(true);
-                const v = e.currentTarget;
-                console.warn('MEDIA_ERROR', { 
-                  folder: media.folder, 
-                  src: cacheBustedUrl, 
-                  networkState: v.networkState,
-                  readyState: v.readyState,
-                  error: (v as any).error || null,
-                  status: httpStatus,
-                });
-                diag('NET', 'media_error', { folder: media.folder, src: cacheBustedUrl });
+                console.warn('MEDIA_ERROR', { folder: media.folder, preview: proxiedPreviewUrl });
+                diag('NET', 'media_error', { folder: media.folder, preview: proxiedPreviewUrl });
               }}
               style={{ display: hasError ? 'none' : 'block' }}
             >
@@ -337,18 +330,14 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             </video>
           ) : (
             <img
-              src={toProxy(media.previewUrl)}
+              src={proxiedPreviewUrl}
               alt={media.title}
               className="w-full h-full object-cover"
               onLoad={() => setIsLoaded(true)}
-              onError={(e) => {
+              onError={() => {
                 setHasError(true);
-                const img = e.currentTarget;
-                console.warn('MEDIA_ERROR', { 
-                  folder: media.folder, 
-                  src: img.src 
-                });
-                diag('NET', 'media_error', { folder: media.folder, src: img.src });
+                console.warn('MEDIA_ERROR', { folder: media.folder, preview: proxiedPreviewUrl });
+                diag('NET', 'media_error', { folder: media.folder, preview: proxiedPreviewUrl });
               }}
               style={{ display: hasError ? 'none' : 'block' }}
             />

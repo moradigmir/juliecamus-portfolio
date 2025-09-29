@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
-import { findPreviewForFolder, probeStream, getFolderMetadata, toProxy } from '@/lib/hidrive';
+import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict } from '@/lib/hidrive';
+
+// Use the strict proxy function for consistent /public/ prefix
+const toProxy = toProxyStrict;
 import { diag, flushDiagToEdge, buildDiagSummary } from '@/debug/diag';
 
 // Tiny tracer helpers for guaranteed logging
@@ -137,11 +140,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       
       // Step 7: Map to proxy URLs and attach cached meta from manifest BEFORE setState
       const proxiedItems = sortedItems.map((entry) => {
-        // Map URLs to proxy using toProxy function
+        // Map URLs to proxy using toProxyStrict function for guaranteed /public/ prefix
         const item = {
           ...entry,
-          previewUrl: mapHiDriveUrlToProxy(entry.previewUrl),
-          fullUrl: mapHiDriveUrlToProxy(entry.fullUrl),
+          previewUrl: toProxy(entry.previewUrl),
+          fullUrl: toProxy(entry.fullUrl),
         };
         
         // Attach meta from manifest if it exists
