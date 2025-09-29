@@ -40,6 +40,8 @@ export interface MediaItem {
   fullUrl: string;
   fullType: MediaType;
   thumbnailUrl?: string;
+  description?: string;
+  tags?: string[];
   meta?: {
     title?: string;
     description?: string;
@@ -138,7 +140,24 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       // Optional sessionStorage persistence for meta
       const persistedMeta = JSON.parse(sessionStorage.getItem("hidrive:meta") || "{}");
       
-      // Step 7: Map to proxy URLs and attach cached meta from manifest BEFORE setState
+      // Build cached meta lookup Map for immediate attachment
+      const cachedMetaMap = new Map<string, any>();
+      
+      // Add meta from manifest
+      sortedItems.forEach(entry => {
+        if (entry.meta) {
+          cachedMetaMap.set(entry.folder, entry.meta);
+        }
+      });
+      
+      // Add meta from sessionStorage as fallback
+      Object.entries(persistedMeta).forEach(([folder, meta]) => {
+        if (!cachedMetaMap.has(folder)) {
+          cachedMetaMap.set(folder, meta);
+        }
+      });
+
+      // Step 7: Map to proxy URLs and attach cached meta BEFORE setState
       const proxiedItems = sortedItems.map((entry) => {
         // Map URLs to proxy using toProxyStrict function for guaranteed /public/ prefix
         const item = {
@@ -147,29 +166,38 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           fullUrl: toProxy(entry.fullUrl),
         };
         
-        // Attach meta from manifest if it exists
-        if (entry.meta) { 
-          item.meta = entry.meta;
-          // Update title from meta if available
-          item.title = entry.meta.title || entry.title;
-        } else if (persistedMeta[entry.folder]) {
-          // Fallback to sessionStorage if no manifest meta
-          item.meta = persistedMeta[entry.folder];
-          item.title = persistedMeta[entry.folder].title || entry.title;
-          __safeDiag('MANIFEST', 'manifest_meta_restored_from_session', { folder: entry.folder });
-        }
-        
-        // Step 7: Per item logs
-        console.log('CACHED_ATTACH_CALLED', { folder: entry.folder, hasMeta: !!entry.meta });
-        __safeDiag('MANIFEST', 'manifest_meta_cached', { 
-          folder: entry.folder, 
-          title: entry.meta?.title || null, 
-          descriptionLen: entry.meta?.description?.length || 0 
-        });
-        
-        // Edge flush for first item with title from manifest
-        if (entry.meta?.title) {
-          __onceEdgeFlush({ manifest_example_0: { folder: entry.folder, title: entry.meta.title } });
+        // Attach cached meta immediately if it exists
+        const cachedMeta = cachedMetaMap.get(entry.folder);
+        if (cachedMeta) {
+          item.meta = cachedMeta;
+          item.title = cachedMeta.title || entry.title;
+          if (cachedMeta.description) {
+            item.description = cachedMeta.description;
+          }
+          if (cachedMeta.tags) {
+            item.tags = cachedMeta.tags;
+          }
+          
+          // Log cached attachment
+          console.log('CACHED_ATTACH_APPLIED', { folder: entry.folder, title: item.title });
+          __safeDiag('MANIFEST', 'manifest_meta_cached', { 
+            folder: entry.folder, 
+            title: item.title, 
+            descriptionLen: cachedMeta.description?.length || 0 
+          });
+          
+          // Edge flush for first item with title from manifest
+          if (cachedMeta.title) {
+            __onceEdgeFlush({ manifest_example_0: { folder: entry.folder, title: cachedMeta.title } });
+          }
+        } else {
+          // Log that no cached meta was found
+          console.log('CACHED_ATTACH_CALLED', { folder: entry.folder, hasMeta: false });
+          __safeDiag('MANIFEST', 'manifest_meta_cached', { 
+            folder: entry.folder, 
+            title: null, 
+            descriptionLen: 0 
+          });
         }
         
         return item;

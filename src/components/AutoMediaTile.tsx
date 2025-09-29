@@ -365,13 +365,15 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           {/* Overlay with Title */}
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
             <div className="absolute bottom-0 left-0 right-0 p-3">
-              <h3 className="font-medium text-foreground text-sm mb-1">{media.meta?.title || media.title}</h3>
+              <h3 className="font-medium text-foreground text-sm mb-1">
+                {media.title ?? media.meta?.title ?? media.folder}
+              </h3>
               <p className="text-xs text-muted-foreground">
-                {media.meta?.description && (
+                {(media.description ?? media.meta?.description ?? '') && (
                   <span className="block mb-1 opacity-90">
-                    {media.meta.description.length > 60 
-                      ? media.meta.description.slice(0, 60) + '...'
-                      : media.meta.description
+                    {(media.description ?? media.meta?.description ?? '').length > 60 
+                      ? (media.description ?? media.meta?.description ?? '').slice(0, 60) + '...'
+                      : (media.description ?? media.meta?.description ?? '')
                     }
                   </span>
                 )}
