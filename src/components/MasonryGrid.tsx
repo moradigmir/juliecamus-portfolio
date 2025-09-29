@@ -113,57 +113,45 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
         
         // Only attempt directory listing if we have a valid directory path
         if (directory && directory !== '/') {
-          // Fetch directory listing
-          const listUrl = new URL(media.previewUrl);
-          listUrl.searchParams.set('path', directory);
-          listUrl.searchParams.set('list', '1');
+          // Use proper HiDrive directory listing instead of naive text parsing
+          const hidriveItems = await listDir(directory);
           
-          const response = await fetch(listUrl.toString());
-          if (response.ok) {
-            const listing = await response.text();
+          // Filter to image files only
+          const imageFiles = hidriveItems
+            .filter(item => item.type === 'file' && (
+              isMediaContentType(item.contentType || '') ||
+              /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif)$/i.test(item.name)
+            ))
+            .filter(item => {
+              const ct = item.contentType || '';
+              return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif)$/i.test(item.name);
+            })
+            .map(item => item.name)
+            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+          
+          if (imageFiles.length > 1) {
+            // Create a project-like structure with all images
+            const owner = url.searchParams.get('owner') || 'juliecamus';
+            const images = imageFiles.map(filename => {
+              const imageUrl = new URL(media.previewUrl);
+              imageUrl.searchParams.set('path', directory + filename);
+              if (owner) imageUrl.searchParams.set('owner', owner);
+              return imageUrl.toString();
+            });
             
-            // Parse the directory listing to find all image files
-            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif'];
-            const lines = listing.split('\n');
-            const imageFiles: string[] = [];
+            // Find the index of the current image
+            const currentFilename = path.substring(path.lastIndexOf('/') + 1);
+            const currentImageIndex = imageFiles.findIndex(filename => filename === currentFilename);
             
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed && !trimmed.endsWith('/')) { // Not a directory
-                const lower = trimmed.toLowerCase();
-                if (imageExtensions.some(ext => lower.endsWith(ext))) {
-                  imageFiles.push(trimmed);
-                }
-              }
-            }
+            const project: Project = {
+              slug: media.folder,
+              title: media.title,
+              coverImage: images[0],
+              images: images.slice(1) // Lightbox expects coverImage + additional images
+            };
             
-            // Sort image files naturally (1.jpg, 2.jpg, 10.jpg, etc.)
-            imageFiles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-            
-            if (imageFiles.length > 1) {
-              // Create a project-like structure with all images
-              const owner = url.searchParams.get('owner') || 'juliecamus';
-              const images = imageFiles.map(filename => {
-                const imageUrl = new URL(media.previewUrl);
-                imageUrl.searchParams.set('path', directory + filename);
-                if (owner) imageUrl.searchParams.set('owner', owner);
-                return imageUrl.toString();
-              });
-              
-              // Find the index of the current image
-              const currentFilename = path.substring(path.lastIndexOf('/') + 1);
-              const currentImageIndex = imageFiles.findIndex(filename => filename === currentFilename);
-              
-              const project: Project = {
-                slug: media.folder,
-                title: media.title,
-                coverImage: images[0],
-                images: images.slice(1) // Lightbox expects coverImage + additional images
-              };
-              
-              openLightbox(project, Math.max(0, currentImageIndex));
-              return;
-            }
+            openLightbox(project, Math.max(0, currentImageIndex));
+            return;
           }
         }
       } catch (error) {
