@@ -92,21 +92,22 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return url;
       };
       
-      // Map to proxy URLs - use cached meta from manifest if available
-      const proxiedItems = sortedItems.map((item) => ({
-        ...item,
-        previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
-        fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
-        // thumbnailUrl is already a relative path, no need to proxy
-        // Keep existing meta from build-time if present
-        meta: item.meta || {},
-      }));
-
-      // Log cached metadata for diagnostics
+      // Import diagnostics first
       const { diag, flushDiagToEdge, buildDiagSummary } = await import('../debug/diag');
       let manifestExampleFlushed = false;
       
-      proxiedItems.forEach(item => {
+      // Map to proxy URLs and attach cached meta from manifest if available
+      const proxiedItems = sortedItems.map((item) => {
+        const finalItem = {
+          ...item,
+          previewUrl: mapHiDriveUrlToProxy(item.previewUrl),
+          fullUrl: mapHiDriveUrlToProxy(item.fullUrl),
+          // thumbnailUrl is already a relative path, no need to proxy
+          // Keep existing meta from build-time if present, otherwise empty object
+          meta: item.meta || {},
+        };
+        
+        // Log cached metadata for diagnostics - check original item.meta
         if (item.meta && (item.meta.title || item.meta.description)) {
           diag('MANIFEST', 'manifest_meta_cached', {
             folder: item.folder,
@@ -115,13 +116,15 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           });
           
           // Flush edge example for the first folder with cached meta (avoid spam)
-          if (!manifestExampleFlushed) {
+          if (!manifestExampleFlushed && item.meta.title) {
             flushDiagToEdge(buildDiagSummary({
-              manifest_example_0: { folder: item.folder, title: item.meta.title || '' }
+              manifest_example_0: { folder: item.folder, title: item.meta.title }
             }));
             manifestExampleFlushed = true;
           }
         }
+        
+        return finalItem;
       });
 
 
@@ -294,20 +297,25 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return numA - numB;
       });
       
-      // Log sorted items for debugging
+      // Set the media items first
+      setMediaItems(combined);
+      
+      // Log sorted items for debugging AFTER items are fully built
       const foldersList = combined.map(item => item.folder);
       console.log(`📦 items_sorted=[${foldersList.join(',')}]`);
       
-      // Diagnostics: Log the final sorted order
+      // Diagnostics: Log the final sorted order with proper counts
+      const realItemsCount = combined.length;
+      const placeholderCount = 0; // No placeholders in current implementation
+      
       diag('ORDER', 'items_sorted', { folders: foldersList });
+      diag('ORDER', 'placeholders_after_real', { count: placeholderCount });
       
       // Flush ORDER summary to edge logs
       flushDiagToEdge(buildDiagSummary({
         items_sorted: foldersList,
-        placeholders_after_real: 0 // Will be set in grid creation
+        placeholders_after_real: placeholderCount
       }));
-      
-      setMediaItems(combined);
       setIsSupabasePaused(false); // Reset on success
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
