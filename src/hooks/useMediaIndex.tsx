@@ -6,6 +6,32 @@ import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCa
 // HARD BOOT TRACER – proves this file is the one actually running
 // Do not remove.
 console.log("[BOOT] useMediaIndex.tsx loaded", { ts: Date.now() });
+// --- BEGIN HARD STARTUP TRACE ---
+try {
+  console.log("[HARD-DIAG:MANIFEST] BOOT_PROOF", { ts: Date.now() });
+
+  const owner = "juliecamus";
+  const cacheKey = `manifestMetaCache:v1:${owner}`;
+  const raw = localStorage.getItem(cacheKey);
+
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    const folders = Object.keys(parsed?.metaByFolder || {});
+    console.log("[HARD-DIAG:MANIFEST] manifest_meta_cached_scan", { count: folders.length });
+    folders.forEach(f => {
+      console.log("[HARD-DIAG:MANIFEST] manifest_meta_cached", {
+        folder: f,
+        title: parsed.metaByFolder[f]?.title,
+        descriptionLen: parsed.metaByFolder[f]?.description?.length ?? 0
+      });
+    });
+  } else {
+    console.log("[HARD-DIAG:MANIFEST] manifest_meta_cached_scan", { count: 0 });
+  }
+} catch (e) {
+  console.log("[HARD-DIAG:MANIFEST] boot_trace_failed", { err: String(e) });
+}
+// --- END HARD STARTUP TRACE ---
 
 // --- BEGIN unskippable tracer shim ---
 type DiagEntry = { t:number; tag:string; msg:string; data?:any };
