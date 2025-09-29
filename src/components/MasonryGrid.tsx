@@ -102,12 +102,81 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setLightboxOpen(true);
   }, []);
 
-  const openMediaLightbox = useCallback((media: MediaItem) => {
+  const openMediaLightbox = useCallback(async (media: MediaItem) => {
+    // Check if this is an image directory that should have multiple images
+    if (media.fullType === 'image' && media.previewType === 'image') {
+      try {
+        // Extract the directory path from the media URL
+        const url = new URL(media.previewUrl);
+        const path = url.searchParams.get('path') || '';
+        const directory = path.substring(0, path.lastIndexOf('/') + 1);
+        
+        // Only attempt directory listing if we have a valid directory path
+        if (directory && directory !== '/') {
+          // Fetch directory listing
+          const listUrl = new URL(media.previewUrl);
+          listUrl.searchParams.set('path', directory);
+          listUrl.searchParams.set('list', '1');
+          
+          const response = await fetch(listUrl.toString());
+          if (response.ok) {
+            const listing = await response.text();
+            
+            // Parse the directory listing to find all image files
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif'];
+            const lines = listing.split('\n');
+            const imageFiles: string[] = [];
+            
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed && !trimmed.endsWith('/')) { // Not a directory
+                const lower = trimmed.toLowerCase();
+                if (imageExtensions.some(ext => lower.endsWith(ext))) {
+                  imageFiles.push(trimmed);
+                }
+              }
+            }
+            
+            // Sort image files naturally (1.jpg, 2.jpg, 10.jpg, etc.)
+            imageFiles.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+            
+            if (imageFiles.length > 1) {
+              // Create a project-like structure with all images
+              const owner = url.searchParams.get('owner') || 'juliecamus';
+              const images = imageFiles.map(filename => {
+                const imageUrl = new URL(media.previewUrl);
+                imageUrl.searchParams.set('path', directory + filename);
+                if (owner) imageUrl.searchParams.set('owner', owner);
+                return imageUrl.toString();
+              });
+              
+              // Find the index of the current image
+              const currentFilename = path.substring(path.lastIndexOf('/') + 1);
+              const currentImageIndex = imageFiles.findIndex(filename => filename === currentFilename);
+              
+              const project: Project = {
+                slug: media.folder,
+                title: media.title,
+                coverImage: images[0],
+                images: images.slice(1) // Lightbox expects coverImage + additional images
+              };
+              
+              openLightbox(project, Math.max(0, currentImageIndex));
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to fetch directory listing for image navigation:', error);
+      }
+    }
+    
+    // Fallback: treat as single media item (for videos or single images)
     setLightboxMedia(media);
     setLightboxProject(null);
     setLightboxImageIndex(0);
     setLightboxOpen(true);
-  }, []);
+  }, [openLightbox]);
 
 
   const closeLightbox = useCallback(() => {
