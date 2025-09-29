@@ -431,45 +431,35 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
   useEffect(() => {
     const DIAG = (msg: string, data?: any) =>
       console.log("[HARD-DIAG:MANIFEST]", msg, data ?? "");
-
-    const CACHE_KEY = "hidrive.meta.v1"; // { [folder]: { title, description, tags, ts } }
-
-    // 0) Try to hydrate from cache synchronously (fast path)
+  
+    // ✅ Single source of truth for session cache
+    const OWNER = "juliecamus";
+    const KEY = (o: string) => `manifestMetaCache:v1:${o}`;
+  
+    // 0) Scan the cache and log what’s there (no mutation yet)
     try {
-      const raw = localStorage.getItem(CACHE_KEY);
+      const raw = localStorage.getItem(KEY(OWNER));
       if (raw) {
-        const cached: Record<string, any> = JSON.parse(raw);
-        const folders = Object.keys(cached);
-        if (folders.length) {
-          DIAG("manifest_meta_cached_scan", { count: folders.length });
-          folders.forEach((f) => {
-            const m = cached[f];
-            DIAG("manifest_meta_cached", {
-              folder: f,
-              title: m?.title,
-              descriptionLen: m?.description?.length ?? 0,
-            });
+        const blob = JSON.parse(raw);
+        const map = blob?.metaByFolder || {};
+        const folders = Object.keys(map);
+        DIAG("manifest_meta_cached_scan", { count: folders.length });
+        folders.forEach((f) => {
+          const m = map[f] || {};
+          DIAG("manifest_meta_cached", {
+            folder: f,
+            title: m.title,
+            descriptionLen: m.description?.length ?? 0,
           });
-          // Attach to existing items (don't reorder; only enrich)
-          setMediaItems((prev) =>
-            prev.map((it) =>
-              it.folder && cached[it.folder]
-                ? { ...it, meta: { ...(it.meta ?? {}), ...cached[it.folder] } }
-                : it
-            )
-          );
-          console.log("[HARD-DIAG:MANIFEST] CACHED_ATTACH_APPLIED", {
-            folders,
-          });
-        }
+        });
       } else {
         DIAG("manifest_meta_cached_scan", { count: 0 });
       }
     } catch (e) {
       DIAG("cached_hydrate_failed", { err: String(e) });
     }
-
-    // 1) Fetch /media.manifest.json and attach meta immediately
+  
+    // 1) Fetch /media.manifest.json and attach build-time meta immediately
     (async () => {
       try {
         const res = await fetch("/media.manifest.json", { cache: "no-store" });
@@ -486,8 +476,8 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           count: items.length,
           firstMetaPresent: !!items[0]?.meta,
         });
-
-        // Build map {folder -> meta}
+  
+        // Build {folder->meta} from build-time manifest
         const fromBuild: Record<string, any> = {};
         for (const it of items) {
           const folder = it?.folder;
@@ -495,29 +485,34 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           if (folder && meta) fromBuild[folder] = meta;
         }
         const folders = Object.keys(fromBuild);
-
+  
         if (folders.length) {
-          // Attach to UI state without reordering
+          // Attach to UI *after* the list exists (fetchMediaManifest builds the list),
+          // but in case list already exists, enrich current items too.
           setMediaItems((prev) =>
             prev.map((it) =>
               it.folder && fromBuild[it.folder]
-                ? { ...it, meta: { ...(it.meta ?? {}), ...fromBuild[it.folder] } }
+                ? { ...it, meta: { ...(it.meta ?? {}), ...fromBuild[it.folder] }, title: it.title ?? fromBuild[it.folder].title, description: it.description ?? fromBuild[it.folder].description, tags: it.tags ?? fromBuild[it.folder].tags }
                 : it
             )
           );
-          console.log("[HARD-DIAG:MANIFEST] CACHED_ATTACH_APPLIED", {
-            folders,
-          });
-          // Persist for next reload (merge with any existing cache)
+          console.log("[HARD-DIAG:MANIFEST] CACHED_ATTACH_APPLIED", { folders });
+  
+          // Persist build-time meta into the SAME cache (so next reload shows instantly)
           try {
-            const raw = localStorage.getItem(CACHE_KEY);
-            const oldCache = raw ? JSON.parse(raw) : {};
-            const merged = { ...oldCache };
+            const raw = localStorage.getItem(KEY(OWNER));
+            const old = raw ? JSON.parse(raw) : { owner: OWNER, updatedAt: 0, metaByFolder: {} };
+            const merged = { ...old, owner: OWNER, metaByFolder: { ...(old.metaByFolder || {}) } };
             folders.forEach((f) => {
-              merged[f] = { ...(merged[f] ?? {}), ...fromBuild[f], ts: Date.now() };
+              merged.metaByFolder[f] = {
+                ...(merged.metaByFolder[f] ?? {}),
+                ...fromBuild[f],
+                ts: Date.now(),
+              };
             });
-            localStorage.setItem(CACHE_KEY, JSON.stringify(merged));
-            DIAG("manifest_meta_persisted", { count: folders.length });
+            merged.updatedAt = Date.now();
+            localStorage.setItem(KEY(OWNER), JSON.stringify(merged));
+            DIAG("manifest_meta_persisted", { count: folders.length, source: "build" });
           } catch (e) {
             DIAG("persist_failed", { err: String(e) });
           }
