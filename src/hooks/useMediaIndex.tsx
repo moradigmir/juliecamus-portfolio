@@ -3,6 +3,24 @@ import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
 import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict } from '@/lib/hidrive';
 import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
 
+// --- BEGIN unskippable tracer shim ---
+type DiagEntry = { t:number; tag:string; msg:string; data?:any };
+function emit(tag:string, msg:string, data?:any) {
+  try {
+    // console
+    // Use a unique, unmistakable prefix so we can grep it reliably
+    console.log(`[HARD-DIAG:${tag}] ${msg}`, data ?? '');
+    // ring buffer on window (never throws if window exists)
+    if (typeof window !== 'undefined') {
+      const w = window as any;
+      w.__diag = Array.isArray(w.__diag) ? w.__diag : [];
+      w.__diag.push({ t: Date.now(), tag, msg, data } as DiagEntry);
+      if (w.__diag.length > 500) w.__diag.shift();
+    }
+  } catch {/* never throw from tracer */}
+}
+// --- END unskippable tracer shim ---
+
 // Use the strict proxy function for consistent /public/ prefix
 const toProxy = toProxyStrict;
 import { diag, flushDiagToEdge, buildDiagSummary } from '@/debug/diag';
@@ -75,10 +93,12 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       setIsLoading(true);
       setError(null);
       
-      // Step 6: Right after fetching /media.manifest.json (BEFORE any discovery)
+      emit('MANIFEST','manifest_fetch_begin', { url: '/media.manifest.json' });
       const response = await fetch('/media.manifest.json');
+      emit('MANIFEST','manifest_fetch_status', { ok: response.ok, status: response.status });
       
       if (!response.ok) {
+        emit('MANIFEST','manifest_fetch_fail', { status: response.status });
         console.warn('MANIFEST_FETCH_FAILED', { status: response.status });
         __safeDiag('MANIFEST', 'manifest_fetch_failed', { status: response.status });
         // Check if this looks like a Supabase issue
@@ -86,20 +106,20 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         if (detectSupabaseIssueFromResponse(response.status, contentType)) {
           setIsSupabasePaused(true);
         }
-        throw new Error(`Failed to load media manifest: ${response.status} ${response.statusText}`);
+        // continue gracefully; discovery can still run
       }
       
-      const manifest: MediaManifest = response.ok ? await response.json() : { items: [] as any[] };
-      
-      // Immediately build a lookup from manifest meta
-      const manifestMetaByFolder: Record<string, ManifestMeta> = {};
-      for (const it of manifest.items ?? []) {
-        if (it.folder && it.meta) manifestMetaByFolder[it.folder] = it.meta;
-      }
-      diag('MANIFEST','manifest_json_sample', {
+      const manifest = response.ok ? await response.json().catch(() => null) : null;
+      emit('MANIFEST','manifest_json_sample', {
         hasItems: Array.isArray(manifest?.items),
         count: Array.isArray(manifest?.items) ? manifest.items.length : 0,
-        firstMetaPresent: !!(manifest?.items?.[0]?.meta)
+        firstMetaPresent: !!manifest?.items?.[0]?.meta
+      });
+      
+      // Build meta lookup from build-time file
+      const buildMeta: Record<string, {title?:string;description?:string;tags?:string[]}> = {};
+      (manifest?.items ?? []).forEach((it:any) => {
+        if (it?.folder && it?.meta) buildMeta[it.folder] = it.meta;
       });
       
       // Validate manifest structure
@@ -108,15 +128,23 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       }
       
       // Sort items by orderKey to ensure correct order
-      const sortedItems = manifest.items.sort((a, b) => 
+      const sortedItems = (manifest?.items ?? []).sort((a, b) => 
         a.orderKey.localeCompare(b.orderKey, undefined, { numeric: true })
       );
 
-      // Restore previously persisted meta and let it WIN over build-time meta
-      const owner = 'juliecamus'; // same owner you already pass to proxy
-      const sessionBlob = loadMetaCache(owner);
-      const sessionMeta = sessionBlob?.metaByFolder ?? {};
-      const mergedMeta: Record<string, ManifestMeta> = { ...manifestMetaByFolder, ...sessionMeta };
+      // Restore session cache (localStorage)
+      const owner = 'juliecamus';
+      const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
+      let sessionMeta: Record<string, any> = {};
+      try {
+        const raw = localStorage.getItem(KEY(owner));
+        if (raw) {
+          const blob = JSON.parse(raw);
+          if (blob?.owner === owner && blob?.metaByFolder) sessionMeta = blob.metaByFolder;
+        }
+      } catch {}
+
+      const mergedMeta: Record<string, any> = { ...buildMeta, ...sessionMeta };
       
       const mapHiDriveUrlToProxy = (url: string): string => {
         if (!url) return url;
@@ -143,7 +171,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       };
       
       // Map to proxy URLs and immediately attach cached meta before setState
-      const applied: string[] = [];
+      let applied = 0;
       const proxiedItems = sortedItems.map((entry) => {
         // Map URLs to proxy using toProxyStrict function for guaranteed /public/ prefix
         const item = {
@@ -154,24 +182,23 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         
         // Attach cached meta immediately if it exists
         const m = mergedMeta[entry.folder];
-        if (m) {
-          item.meta = { ...(item.meta || {}), ...m };
-          item.title = item.title ?? m.title;
-          item.description = item.description ?? m.description;
-          item.tags = item.tags ?? m.tags;
-          applied.push(entry.folder);
-          console.log('CACHED_ATTACH_APPLIED', { folder: entry.folder, title: item.title });
-          diag('MANIFEST','manifest_meta_cached', {
-            folder: entry.folder, title: item.title, descriptionLen: item.description?.length || 0
-          });
-        }
+        if (!m) return item;
+        
+        item.meta = { ...(item.meta ?? {}), ...m };
+        item.title = item.title ?? m.title;
+        item.description = item.description ?? m.description;
+        item.tags = item.tags ?? m.tags;
+        applied++;
+        emit('MANIFEST','CACHED_ATTACH_APPLIED', {
+          folder: entry.folder, title: item.title, descriptionLen: item.description?.length ?? 0
+        });
         
         return item;
       });
       
-      diag('MANIFEST','manifest_meta_cached_scan', { count: applied.length });
+      emit('MANIFEST','manifest_meta_cached_scan', { count: applied });
       
-      if ((import.meta?.env?.DEV || new URL(location.href).searchParams.get("debug")==="1") && applied.length===0) {
+      if ((import.meta?.env?.DEV || new URL(location.href).searchParams.get("debug")==="1") && applied===0) {
         console.warn("DEV_ASSERT: No cached meta present in /media.manifest.json — UI will rely on background probe.");
         __safeDiag("MANIFEST","manifest_meta_absent_in_build",{ reason:"no meta fields in manifest" });
       }
@@ -327,10 +354,6 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 
         // Merge with discovery using merge-preserve approach
         const combined = mergeByFolder(healedItems, discovered);
-        
-        diag('MANIFEST','merge_preserved_meta', {
-          preserved: healedItems.filter(i => i.meta).length
-        });
       
       // Sort strictly by numeric folder value ascending
       combined.sort((a, b) => {
@@ -400,22 +423,25 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 };
 
 // Merge function for preserving meta during discovery
-function mergeByFolder(base: MediaItem[], incoming: MediaItem[]): MediaItem[] {
-  const map = new Map<string, MediaItem>();
-  for (const b of base) map.set(b.folder, b);
-  for (const inc of incoming) {
-    const prev = map.get(inc.folder);
-    if (!prev) { map.set(inc.folder, inc); continue; }
-    map.set(inc.folder, {
-      ...inc,
-      // preserve any meta/title/description/tags already applied
-      meta: prev.meta ?? inc.meta,
-      title: prev.title ?? inc.title,
-      description: prev.description ?? inc.description,
-      tags: prev.tags ?? inc.tags,
+function mergeByFolder<T extends { folder:string; title?:string; description?:string; tags?:string[]; meta?:any }>(
+  base: T[], inc: T[]
+): T[] {
+  const map = new Map<string, T>();
+  base.forEach(b => map.set(b.folder, b));
+  inc.forEach(n => {
+    const prev = map.get(n.folder);
+    if (!prev) { map.set(n.folder, n); return; }
+    map.set(n.folder, {
+      ...n,
+      meta: prev.meta ?? n.meta,
+      title: prev.title ?? n.title,
+      description: prev.description ?? n.description,
+      tags: prev.tags ?? n.tags,
     });
-  }
-  return Array.from(map.values());
+  });
+  const out = Array.from(map.values());
+  emit('MANIFEST','merge_preserved_meta', { preserved: out.filter(i => i.meta).length });
+  return out;
 }
 
 // Background task to check for MANIFEST.md updates
@@ -464,10 +490,20 @@ const backgroundManifestCheck = async (
             hasUpdates = true;
             
             // Persist probe results to cache
-            const current = loadMetaCache(owner)?.metaByFolder ?? {};
-            current[item.folder] = { title: currentMeta.title, description: currentMeta.description, tags: currentMeta.tags };
-            saveMetaCache(owner, current);
-            diag('MANIFEST','manifest_meta_persisted', { folder: item.folder, source: 'probe' });
+            const { title, description, tags } = currentMeta;
+            try {
+              const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
+              const raw = localStorage.getItem(KEY(owner));
+              const before = raw ? JSON.parse(raw) : { owner, updatedAt: 0, metaByFolder: {} };
+              before.metaByFolder = before.metaByFolder || {};
+              before.metaByFolder[item.folder] = { title, description, tags };
+              before.updatedAt = Date.now();
+              before.owner = owner;
+              localStorage.setItem(KEY(owner), JSON.stringify(before));
+              emit('MANIFEST','manifest_meta_persisted', { folder: item.folder, source: 'probe' });
+            } catch (e) {
+              emit('MANIFEST','manifest_meta_persist_fail', { folder: item.folder });
+            }
             
             diag('MANIFEST', 'manifest_md_updated', {
               folder: item.folder,
