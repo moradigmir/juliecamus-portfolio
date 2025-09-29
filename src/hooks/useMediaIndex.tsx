@@ -58,6 +58,14 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       
       const manifest: MediaManifest = await response.json();
       
+      // Log manifest shape for debugging (before processing)
+      console.log("MANIFEST_JSON_SAMPLE", {
+        hasItems: Array.isArray(manifest?.items),
+        firstKeys: manifest?.items?.[0] ? Object.keys(manifest.items[0]) : [],
+        firstMeta: manifest?.items?.[0]?.meta ?? null,
+        firstTwo: (manifest?.items || []).slice(0,2)
+      });
+      
       // Validate manifest structure
       if (!manifest.items || !Array.isArray(manifest.items)) {
         throw new Error('Invalid manifest structure: missing items array');
@@ -130,8 +138,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       });
 
       // Log scan result for dev debugging
-      if (cachedWithMetaCount === 0) {
-        diag('MANIFEST', 'manifest_meta_cached_scan', { cachedWithMeta: 0 });
+      diag('MANIFEST', 'manifest_meta_cached_scan', { cachedWithMeta: cachedWithMetaCount });
+      if ((import.meta.env.DEV || new URL(location.href).searchParams.get("debug") === "1") && cachedWithMetaCount === 0) {
+        console.warn("DEV_ASSERT: No cached meta found in /media.manifest.json — tiles will wait for background probe.");
       }
 
 
