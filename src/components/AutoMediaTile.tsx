@@ -15,6 +15,8 @@ interface AutoMediaTileProps {
 }
 
 const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTileProps) => {
+  // Check if in debug mode
+  const isDebugMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -357,10 +359,12 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             </div>
           )}
           
-          {/* Order Badge */}
-          <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-full">
-            {media.orderKey}
-          </div>
+          {/* Order Badge - Only show in debug mode */}
+          {isDebugMode && (
+            <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-full">
+              {media.orderKey}
+            </div>
+          )}
           
           {/* Overlay with Title */}
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
