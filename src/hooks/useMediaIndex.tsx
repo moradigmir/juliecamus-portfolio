@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
 import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict } from '@/lib/hidrive';
+import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
 
 // Use the strict proxy function for consistent /public/ prefix
 const toProxy = toProxyStrict;
@@ -90,17 +91,15 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       
       const manifest: MediaManifest = response.ok ? await response.json() : { items: [] as any[] };
       
-      // Step 6: Log manifest shape right after JSON parse (BEFORE any discovery)
-      console.log('MANIFEST_JSON_SAMPLE', {
+      // Immediately build a lookup from manifest meta
+      const manifestMetaByFolder: Record<string, ManifestMeta> = {};
+      for (const it of manifest.items ?? []) {
+        if (it.folder && it.meta) manifestMetaByFolder[it.folder] = it.meta;
+      }
+      diag('MANIFEST','manifest_json_sample', {
         hasItems: Array.isArray(manifest?.items),
-        count: manifest?.items?.length ?? 0,
-        firstKeys: manifest?.items?.[0] ? Object.keys(manifest.items[0]) : [],
-        firstMeta: manifest?.items?.[0]?.meta ?? null,
-      });
-      __safeDiag('MANIFEST', 'manifest_json_sample', {
-        hasItems: Array.isArray(manifest?.items),
-        count: manifest?.items?.length ?? 0,
-        firstMetaPresent: !!(manifest?.items?.[0]?.meta),
+        count: Array.isArray(manifest?.items) ? manifest.items.length : 0,
+        firstMetaPresent: !!(manifest?.items?.[0]?.meta)
       });
       
       // Validate manifest structure
@@ -112,6 +111,12 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       const sortedItems = manifest.items.sort((a, b) => 
         a.orderKey.localeCompare(b.orderKey, undefined, { numeric: true })
       );
+
+      // Restore previously persisted meta and let it WIN over build-time meta
+      const owner = 'juliecamus'; // same owner you already pass to proxy
+      const sessionBlob = loadMetaCache(owner);
+      const sessionMeta = sessionBlob?.metaByFolder ?? {};
+      const mergedMeta: Record<string, ManifestMeta> = { ...manifestMetaByFolder, ...sessionMeta };
       
       const mapHiDriveUrlToProxy = (url: string): string => {
         if (!url) return url;
@@ -137,27 +142,8 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return url;
       };
       
-      // Optional sessionStorage persistence for meta
-      const persistedMeta = JSON.parse(sessionStorage.getItem("hidrive:meta") || "{}");
-      
-      // Build cached meta lookup Map for immediate attachment
-      const cachedMetaMap = new Map<string, any>();
-      
-      // Add meta from manifest
-      sortedItems.forEach(entry => {
-        if (entry.meta) {
-          cachedMetaMap.set(entry.folder, entry.meta);
-        }
-      });
-      
-      // Add meta from sessionStorage as fallback
-      Object.entries(persistedMeta).forEach(([folder, meta]) => {
-        if (!cachedMetaMap.has(folder)) {
-          cachedMetaMap.set(folder, meta);
-        }
-      });
-
-      // Step 7: Map to proxy URLs and attach cached meta BEFORE setState
+      // Map to proxy URLs and immediately attach cached meta before setState
+      const applied: string[] = [];
       const proxiedItems = sortedItems.map((entry) => {
         // Map URLs to proxy using toProxyStrict function for guaranteed /public/ prefix
         const item = {
@@ -167,48 +153,25 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         };
         
         // Attach cached meta immediately if it exists
-        const cachedMeta = cachedMetaMap.get(entry.folder);
-        if (cachedMeta) {
-          item.meta = cachedMeta;
-          item.title = cachedMeta.title || entry.title;
-          if (cachedMeta.description) {
-            item.description = cachedMeta.description;
-          }
-          if (cachedMeta.tags) {
-            item.tags = cachedMeta.tags;
-          }
-          
-          // Log cached attachment
+        const m = mergedMeta[entry.folder];
+        if (m) {
+          item.meta = { ...(item.meta || {}), ...m };
+          item.title = item.title ?? m.title;
+          item.description = item.description ?? m.description;
+          item.tags = item.tags ?? m.tags;
+          applied.push(entry.folder);
           console.log('CACHED_ATTACH_APPLIED', { folder: entry.folder, title: item.title });
-          __safeDiag('MANIFEST', 'manifest_meta_cached', { 
-            folder: entry.folder, 
-            title: item.title, 
-            descriptionLen: cachedMeta.description?.length || 0 
-          });
-          
-          // Edge flush for first item with title from manifest
-          if (cachedMeta.title) {
-            __onceEdgeFlush({ manifest_example_0: { folder: entry.folder, title: cachedMeta.title } });
-          }
-        } else {
-          // Log that no cached meta was found
-          console.log('CACHED_ATTACH_CALLED', { folder: entry.folder, hasMeta: false });
-          __safeDiag('MANIFEST', 'manifest_meta_cached', { 
-            folder: entry.folder, 
-            title: null, 
-            descriptionLen: 0 
+          diag('MANIFEST','manifest_meta_cached', {
+            folder: entry.folder, title: item.title, descriptionLen: item.description?.length || 0
           });
         }
         
         return item;
       });
-
-      // Step 8: After mapping all manifest items (still BEFORE setState)
-      const itemsWithMeta = proxiedItems.filter(x => x.meta && (x.meta.title || x.meta.description)).length;
-      console.log('CACHED_ATTACH_SUMMARY', { count: itemsWithMeta });
-      __safeDiag('MANIFEST', 'manifest_meta_cached_scan', { count: itemsWithMeta });
       
-      if ((import.meta?.env?.DEV || new URL(location.href).searchParams.get("debug")==="1") && itemsWithMeta===0) {
+      diag('MANIFEST','manifest_meta_cached_scan', { count: applied.length });
+      
+      if ((import.meta?.env?.DEV || new URL(location.href).searchParams.get("debug")==="1") && applied.length===0) {
         console.warn("DEV_ASSERT: No cached meta present in /media.manifest.json — UI will rely on background probe.");
         __safeDiag("MANIFEST","manifest_meta_absent_in_build",{ reason:"no meta fields in manifest" });
       }
@@ -362,20 +325,12 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 
       const discovered = discoveredRaw.filter(Boolean) as MediaItem[];
 
-      // Merge and sort by orderKey numerically
-      const combined = [...healedItems];
-      const existingFolders = new Set(combined.map((i) => i.folder));
-      
-      // Add discovered items (de-duplicate by folder)
-      for (const d of discovered) {
-        if (!existingFolders.has(d.folder)) {
-          // Ensure discovered items have the same structure as healed items
-          combined.push({
-            ...d,
-            meta: d.meta || {}
-          });
-        }
-      }
+        // Merge with discovery using merge-preserve approach
+        const combined = mergeByFolder(healedItems, discovered);
+        
+        diag('MANIFEST','merge_preserved_meta', {
+          preserved: healedItems.filter(i => i.meta).length
+        });
       
       // Sort strictly by numeric folder value ascending
       combined.sort((a, b) => {
@@ -402,7 +357,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 
       // Background task: Check for MANIFEST.md updates after grid loads
       setTimeout(async () => {
-        await backgroundManifestCheck(combined, setMediaItems);
+        await backgroundManifestCheck(combined, setMediaItems, owner);
       }, 1000);
 
       
@@ -444,14 +399,32 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
   };
 };
 
+// Merge function for preserving meta during discovery
+function mergeByFolder(base: MediaItem[], incoming: MediaItem[]): MediaItem[] {
+  const map = new Map<string, MediaItem>();
+  for (const b of base) map.set(b.folder, b);
+  for (const inc of incoming) {
+    const prev = map.get(inc.folder);
+    if (!prev) { map.set(inc.folder, inc); continue; }
+    map.set(inc.folder, {
+      ...inc,
+      // preserve any meta/title/description/tags already applied
+      meta: prev.meta ?? inc.meta,
+      title: prev.title ?? inc.title,
+      description: prev.description ?? inc.description,
+      tags: prev.tags ?? inc.tags,
+    });
+  }
+  return Array.from(map.values());
+}
+
 // Background task to check for MANIFEST.md updates
 const backgroundManifestCheck = async (
   items: MediaItem[], 
-  setMediaItems: (items: MediaItem[]) => void
+  setMediaItems: (items: MediaItem[]) => void,
+  owner: string
 ) => {
   try {
-    // Get persisted meta for sessionStorage updates
-    const persistedMeta = JSON.parse(sessionStorage.getItem("hidrive:meta") || "{}");
     let hasUpdates = false;
     const updatedItems = [...items];
 
@@ -490,9 +463,11 @@ const backgroundManifestCheck = async (
             
             hasUpdates = true;
             
-            // Step 4 Optional: persist probe results in sessionStorage
-            persistedMeta[item.folder] = currentMeta;
-            sessionStorage.setItem("hidrive:meta", JSON.stringify(persistedMeta));
+            // Persist probe results to cache
+            const current = loadMetaCache(owner)?.metaByFolder ?? {};
+            current[item.folder] = { title: currentMeta.title, description: currentMeta.description, tags: currentMeta.tags };
+            saveMetaCache(owner, current);
+            diag('MANIFEST','manifest_meta_persisted', { folder: item.folder, source: 'probe' });
             
             diag('MANIFEST', 'manifest_md_updated', {
               folder: item.folder,
