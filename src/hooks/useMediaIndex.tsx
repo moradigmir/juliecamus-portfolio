@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
-import { findPreviewForFolder, probeStream, getFolderMetadata } from '@/lib/hidrive';
+import { findPreviewForFolder, probeStream, getFolderMetadata, toProxy } from '@/lib/hidrive';
 import { diag, flushDiagToEdge, buildDiagSummary } from '@/debug/diag';
 
 // Tiny tracer helpers for guaranteed logging
@@ -69,9 +69,12 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       setIsLoading(true);
       setError(null);
       
+      // Step 6: Right after fetching /media.manifest.json (BEFORE any discovery)
       const response = await fetch('/media.manifest.json');
       
       if (!response.ok) {
+        console.warn('MANIFEST_FETCH_FAILED', { status: response.status });
+        __safeDiag('MANIFEST', 'manifest_fetch_failed', { status: response.status });
         // Check if this looks like a Supabase issue
         const contentType = response.headers.get('content-type') || '';
         if (detectSupabaseIssueFromResponse(response.status, contentType)) {
@@ -80,16 +83,16 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         throw new Error(`Failed to load media manifest: ${response.status} ${response.statusText}`);
       }
       
-      const manifest: MediaManifest = await response.json();
+      const manifest: MediaManifest = response.ok ? await response.json() : { items: [] as any[] };
       
-      // Step 2: Log manifest shape right after JSON parse (before processing)
-      console.log("MANIFEST_JSON_SAMPLE", {
+      // Step 6: Log manifest shape right after JSON parse (BEFORE any discovery)
+      console.log('MANIFEST_JSON_SAMPLE', {
         hasItems: Array.isArray(manifest?.items),
         count: manifest?.items?.length ?? 0,
         firstKeys: manifest?.items?.[0] ? Object.keys(manifest.items[0]) : [],
         firstMeta: manifest?.items?.[0]?.meta ?? null,
       });
-      __safeDiag("MANIFEST","manifest_json_sample",{
+      __safeDiag('MANIFEST', 'manifest_json_sample', {
         hasItems: Array.isArray(manifest?.items),
         count: manifest?.items?.length ?? 0,
         firstMetaPresent: !!(manifest?.items?.[0]?.meta),
@@ -132,9 +135,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       // Optional sessionStorage persistence for meta
       const persistedMeta = JSON.parse(sessionStorage.getItem("hidrive:meta") || "{}");
       
-      // Step 3: Map to proxy URLs and attach cached meta from manifest BEFORE setState
+      // Step 7: Map to proxy URLs and attach cached meta from manifest BEFORE setState
       const proxiedItems = sortedItems.map((entry) => {
-        // Map URLs to proxy
+        // Map URLs to proxy using toProxy function
         const item = {
           ...entry,
           previewUrl: mapHiDriveUrlToProxy(entry.previewUrl),
@@ -153,30 +156,28 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           __safeDiag('MANIFEST', 'manifest_meta_restored_from_session', { folder: entry.folder });
         }
         
-        // Always log tracer for cached attach for EVERY entry
-        console.log("CACHED_ATTACH_CALLED", { folder: item.folder, meta: item.meta ?? null });
-        
-        // Track and emit diag for cached metadata
-        __safeDiag("MANIFEST","manifest_meta_cached",{
-          folder: item.folder,
-          title: item.meta?.title || null,
-          descriptionLen: item.meta?.description?.length || 0,
+        // Step 7: Per item logs
+        console.log('CACHED_ATTACH_CALLED', { folder: entry.folder, hasMeta: !!entry.meta });
+        __safeDiag('MANIFEST', 'manifest_meta_cached', { 
+          folder: entry.folder, 
+          title: entry.meta?.title || null, 
+          descriptionLen: entry.meta?.description?.length || 0 
         });
         
         // Edge flush for first item with title from manifest
-        if (item.meta?.title) {
-          __onceEdgeFlush({ manifest_example_0: { folder: item.folder, title: item.meta.title } });
+        if (entry.meta?.title) {
+          __onceEdgeFlush({ manifest_example_0: { folder: entry.folder, title: entry.meta.title } });
         }
         
         return item;
       });
 
-      // Step 4: Summary after mapping ALL entries but BEFORE calling setState
-      const itemsWithMeta = proxiedItems.filter(x => x?.meta && (x.meta.title || x.meta.description));
-      console.log("CACHED_ATTACH_SUMMARY", { count: itemsWithMeta.length });
-      __safeDiag("MANIFEST","manifest_meta_cached_scan",{ count: itemsWithMeta.length });
+      // Step 8: After mapping all manifest items (still BEFORE setState)
+      const itemsWithMeta = proxiedItems.filter(x => x.meta && (x.meta.title || x.meta.description)).length;
+      console.log('CACHED_ATTACH_SUMMARY', { count: itemsWithMeta });
+      __safeDiag('MANIFEST', 'manifest_meta_cached_scan', { count: itemsWithMeta });
       
-      if ((import.meta?.env?.DEV || new URL(location.href).searchParams.get("debug")==="1") && itemsWithMeta.length===0) {
+      if ((import.meta?.env?.DEV || new URL(location.href).searchParams.get("debug")==="1") && itemsWithMeta===0) {
         console.warn("DEV_ASSERT: No cached meta present in /media.manifest.json — UI will rely on background probe.");
         __safeDiag("MANIFEST","manifest_meta_absent_in_build",{ reason:"no meta fields in manifest" });
       }
@@ -352,7 +353,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return numA - numB;
       });
       
-      // Step 5: ORDER logs AFTER the final array (real items + placeholders) is fully built
+      // Step 9: ORDER diagnostics AFTER final array built
       const foldersList = combined.map(item => item.folder);
       const placeholderCount = 0; // No placeholders in current implementation
       console.log(`📦 items_sorted=[${foldersList.join(',')}]`);

@@ -1,5 +1,25 @@
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Force proxy mapping for ALL preview/full URLs (grid + lightbox).
+ * Converts hidrive:// and raw paths to the correct proxy format.
+ */
+export function toProxy(urlOrPath: string): string {
+  try {
+    // If already proxied, return early
+    if (urlOrPath.includes('/hidrive-proxy?')) return urlOrPath;
+    // Support hidrive:// and raw paths
+    let p = urlOrPath;
+    if (p.startsWith('hidrive://')) p = p.replace('hidrive://', '/');
+    if (!p.startsWith('/')) p = '/' + p;
+    // Normalize double slashes
+    p = p.replace(/\/{2,}/g, '/');
+    return `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(p)}&owner=juliecamus`;
+  } catch {
+    return urlOrPath;
+  }
+}
+
 // Type definitions matching HiDriveBrowser
 export interface HiDriveItem {
   name: string;
@@ -113,24 +133,25 @@ export const listDir = async (path: string): Promise<HiDriveItem[]> => {
  */
 export const probeStream = async (url: string): Promise<ProbeResult> => {
   try {
-    const res = await fetch(url, { 
+    const u = toProxy(url);
+    const res = await fetch(u, { 
       method: 'GET', 
-      headers: { Range: 'bytes=0-0' } 
+      headers: { Range: 'bytes=0-1' } 
     });
     
     const contentType = res.headers.get('content-type') || '';
     const status = res.status;
     const ok = (res.ok || status === 206) && isMediaContentType(contentType);
     
-    console.log('🔍 hidrive probe', { url, status, contentType, ok });
+    console.log('🔍 hidrive probe', { url: u, status, contentType, ok });
     
     // Diagnostics: Log successful range requests
     if (status === 206 && isMediaContentType(contentType)) {
       const { diag } = await import('../debug/diag');
       // Extract path from proxy URL for logging
-      const pathMatch = url.match(/path=([^&]+)/);
-      const path = pathMatch ? decodeURIComponent(pathMatch[1]) : url;
-      diag('NET', 'range_ok', { path, status: 206, ct: contentType });
+      const pathMatch = u.match(/path=([^&]+)/);
+      const path = pathMatch ? decodeURIComponent(pathMatch[1]) : u;
+      diag('NET', 'range_probe', { path, status: 206, ct: contentType });
     }
     
     return { ok, status, contentType };

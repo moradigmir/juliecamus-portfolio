@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
 import type { MediaItem } from '../hooks/useMediaIndex';
 import { useIsMobile } from '../hooks/use-mobile';
+import { toProxy } from '../lib/hidrive';
+import { diag } from '../debug/diag';
 
 interface AutoMediaTileProps {
   media: MediaItem;
@@ -58,11 +60,16 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   })();
 
-  const cacheBustedUrl = `${media.previewUrl}${media.previewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
+  // Force proxy mapping and add diagnostics
+  const proxiedPreviewUrl = toProxy(media.previewUrl);
+  console.log('MEDIA_SRC_SET', { folder: media.folder, src: proxiedPreviewUrl });
+  diag('NET', 'media_src_set', { folder: media.folder, src: proxiedPreviewUrl });
+  
+  const cacheBustedUrl = `${proxiedPreviewUrl}${proxiedPreviewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
 
   const listUrl = (() => {
     try {
-      const u = new URL(media.previewUrl);
+      const u = new URL(proxiedPreviewUrl);
       const owner = u.searchParams.get('owner') || '';
       const path = u.searchParams.get('path') || '';
       const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '/';
@@ -313,13 +320,15 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               onError={(e) => {
                 setHasError(true);
                 const v = e.currentTarget;
-                console.error('Video failed to load', {
-                  src: v.currentSrc,
+                console.warn('MEDIA_ERROR', { 
+                  folder: media.folder, 
+                  src: cacheBustedUrl, 
                   networkState: v.networkState,
                   readyState: v.readyState,
                   error: (v as any).error || null,
                   status: httpStatus,
                 });
+                diag('NET', 'media_error', { folder: media.folder, src: cacheBustedUrl });
               }}
               style={{ display: hasError ? 'none' : 'block' }}
             >
@@ -328,11 +337,19 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             </video>
           ) : (
             <img
-              src={media.previewUrl}
+              src={toProxy(media.previewUrl)}
               alt={media.title}
               className="w-full h-full object-cover"
               onLoad={() => setIsLoaded(true)}
-              onError={() => setHasError(true)}
+              onError={(e) => {
+                setHasError(true);
+                const img = e.currentTarget;
+                console.warn('MEDIA_ERROR', { 
+                  folder: media.folder, 
+                  src: img.src 
+                });
+                diag('NET', 'media_error', { folder: media.folder, src: img.src });
+              }}
               style={{ display: hasError ? 'none' : 'block' }}
             />
           )}
