@@ -57,7 +57,8 @@ const About = () => {
                         <p>Armani Beauty</p>
                         <p>Lancôme</p>
                         <p>Lacoste</p>
-                        <p>L'Oréal Luxe</p>
+                        <p>L'Oréal Luxe 
+Carolina Herrera</p>
                       </div>
                       <div className="space-y-1">
                         <p>Vogue</p>
