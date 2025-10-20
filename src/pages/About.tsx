@@ -39,9 +39,7 @@ const About = () => {
                 </h1>
                 
                 <div className="space-y-6 font-inter text-lg text-muted-foreground leading-relaxed">
-                  <p>
-                    With over 20 years of experience in fashion and beauty, JULIE is a highly skilled makeup artist renowned for her refined technique and meticulous attention to detail. Her signature style blends flawless, imperceptible natural looks with a sophisticated creative vision.
-                  </p>
+                  <p>With over 20 years of experience in fashion and beauty, Julie is a highly skilled makeup artist renowned for her refined technique and meticulous attention to detail. Her signature style blends flawless, imperceptible natural looks with a sophisticated creative vision.</p>
                   
                   <p>
                     Trusted by some of the most prestigious luxury brands, she has consistently delivered impeccable results for the most demanding clients. Throughout her career, she has worked alongside celebrated industry figures such as Lucia Pica, former Global Creative Director for Chanel, and Peter Philips, Creative and Image Director of Dior Makeup, with whom she has collaborated for over 15 years.
