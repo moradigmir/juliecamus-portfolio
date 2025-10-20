@@ -416,7 +416,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       };
 
       const manifestFolders = new Set(sortedItems.map((it) => it.folder));
-      const candidates = Array.from({ length: 50 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+      const candidates = Array.from({ length: 99 }, (_, i) => (i + 1).toString().padStart(2, '0'));
       const missing = candidates.filter((nn) => !manifestFolders.has(nn));
 
       const discoveredRaw = await Promise.all(
