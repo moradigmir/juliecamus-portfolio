@@ -10,14 +10,12 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <Navigation />
-      <div style={{ paddingTop: 0 }}>
-        <HeroSplashMatch />
-
-        {/* Projects Gallery - starts immediately after hero */}
-        <section style={{ paddingTop: isMobile ? "0px" : "64px", marginTop: "0px", paddingBottom: "96px" }}>
-          <MasonryGrid projects={projects} />
-        </section>
-      </div>
+      <HeroSplashMatch />
+      
+      {/* Projects Gallery - starts immediately after hero */}
+      <section style={{ paddingTop: isMobile ? "0px" : "64px", marginTop: "0px", paddingBottom: "96px" }}>
+        <MasonryGrid projects={projects} />
+      </section>
     </div>
   );
 };

@@ -9,27 +9,37 @@ export default function HeroSplashMatch() {
   const raf = useRef<number | null>(null);
   const lastLogRef = useRef(0);
   const isMobile = useIsMobile();
-  const heroRef = useRef<HTMLElement>(null);
-  
-  // Detect dev UI for bottom padding safety (only on /?diagnostics)
-  const devUI = window.location.pathname === '/' && window.location.search === '?diagnostics';
-  
-  // Read --dev-toolbar-h CSS variable
+
+  const heroRef = useRef<HTMLElement | null>(null);
+  const headlineRef = useRef<HTMLDivElement | null>(null);
+  const rightColRef = useRef<HTMLDivElement | null>(null);
+
+  // /?diagnostics shows dev tools
+  const devUI =
+    typeof window !== "undefined" &&
+    window.location.pathname === "/" &&
+    window.location.search === "?diagnostics";
+
+  // Read --dev-toolbar-h CSS variable for /?diagnostics
   const [toolbarH, setToolbarH] = useState(0);
   useEffect(() => {
     const updateToolbarH = () => {
-      const val = getComputedStyle(document.documentElement).getPropertyValue('--dev-toolbar-h').trim();
+      const val = getComputedStyle(document.documentElement)
+        .getPropertyValue("--dev-toolbar-h")
+        .trim();
       const px = parseInt(val) || 0;
       setToolbarH(px);
     };
     updateToolbarH();
     const obs = new MutationObserver(updateToolbarH);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["style"],
+    });
     return () => obs.disconnect();
   }, []);
 
-  // Mobile: measure headline to set hero height tightly
-  const headlineRef = useRef<HTMLDivElement>(null);
+  // MOBILE: keep tight measured height (already present)
   const [mobileHeroH, setMobileHeroH] = useState(0);
   useEffect(() => {
     if (!isMobile) return;
@@ -37,43 +47,95 @@ export default function HeroSplashMatch() {
     if (!el) return;
     const measure = () => {
       const h = el.getBoundingClientRect().height || 0;
+      // cushion 8px, mobile gradient handled in CSS below as 8px
       setMobileHeroH(Math.ceil(h + 8));
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    window.addEventListener('resize', measure);
+    window.addEventListener("resize", measure);
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', measure);
+      window.removeEventListener("resize", measure);
     };
   }, [isMobile]);
 
-  // Collapse on first interaction
+  // DESKTOP: measure real content height (headline + right column)
+  const [desktopHeroH, setDesktopHeroH] = useState<number | null>(null);
   useEffect(() => {
-    const collapse = (reason: string) => { 
-      if (!collapsed) { 
-        setCollapsed(true); 
+    if (isMobile) return;
+    const measureDesktop = () => {
+      const heroEl = heroRef.current;
+      const headEl = headlineRef.current;
+      if (!heroEl || !headEl) return;
+      const grad = 24; // desktop gradient
+      const cushion = 6;
+
+      const computedTop = parseFloat(
+        getComputedStyle(headEl).top || "0"
+      );
+      const headRect = headEl.getBoundingClientRect();
+
+      // headline bottom relative to hero top
+      const heroTop = heroEl.getBoundingClientRect().top;
+      const headlineBottom = computedTop + headRect.height;
+
+      // right column bottom relative to hero top (if present)
+      let rightBottom = 0;
+      if (rightColRef.current) {
+        const r = rightColRef.current.getBoundingClientRect();
+        rightBottom = r.bottom - heroTop;
+      }
+
+      const maxBottom = Math.max(headlineBottom, rightBottom);
+      const devPad = devUI ? toolbarH : 0;
+      const next = Math.ceil(maxBottom + grad + cushion + devPad);
+      setDesktopHeroH(next);
+    };
+
+    // initial + on resize + on headline/right resize + when fonts settle
+    const headEl = headlineRef.current;
+    const rightEl = rightColRef.current;
+    const ro1 = headEl ? new ResizeObserver(measureDesktop) : null;
+    const ro2 = rightEl ? new ResizeObserver(measureDesktop) : null;
+    if (ro1 && headEl) ro1.observe(headEl);
+    if (ro2 && rightEl) ro2.observe(rightEl);
+
+    measureDesktop();
+    window.addEventListener("resize", measureDesktop);
+    // fonts ready (optional, safe in modern browsers)
+    if (document?.fonts?.ready) {
+      document.fonts.ready.then(measureDesktop).catch(() => {});
+    }
+    return () => {
+      window.removeEventListener("resize", measureDesktop);
+      ro1?.disconnect();
+      ro2?.disconnect();
+    };
+  }, [isMobile, devUI, toolbarH]);
+
+  // Collapse on first interaction (keep behavior)
+  useEffect(() => {
+    const collapse = (reason: string) => {
+      if (!collapsed) {
+        setCollapsed(true);
         console.log("[HARD-DIAG:HERO]", "hero_collapsed", { reason });
         diag("MANIFEST", "hero_collapsed", { reason });
-      } 
+      }
     };
-    
     if (window.scrollY > 0) collapse("at_load_scrollY>0");
-    
     const onWheel = () => collapse("wheel");
     const onScroll = () => collapse("scroll");
     const onTouch = () => collapse("touch");
     const onKey = (e: KeyboardEvent) => {
-      if (["ArrowDown","PageDown"," ","Spacebar","End"].includes(e.key)) collapse("keydown");
+      if (["ArrowDown", "PageDown", " ", "Spacebar", "End"].includes(e.key))
+        collapse("keydown");
     };
-    
     window.addEventListener("wheel", onWheel, { passive: true });
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("touchstart", onTouch, { passive: true });
     window.addEventListener("touchmove", onTouch, { passive: true });
     window.addEventListener("keydown", onKey);
-    
     return () => {
       window.removeEventListener("wheel", onWheel);
       window.removeEventListener("scroll", onScroll);
@@ -83,6 +145,7 @@ export default function HeroSplashMatch() {
     };
   }, [collapsed]);
 
+  // track scroll (for fade only)
   useEffect(() => {
     const onScroll = () => {
       if (raf.current) return;
@@ -95,14 +158,10 @@ export default function HeroSplashMatch() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Height and fade calculations
-  const baseH = isMobile ? 0.28 : 0.62;  // 28vh mobile, 62vh desktop
-  const hVH = baseH * 100;
-  const fade = collapsed ? 0 : (1 - Math.min(y / 100, 0.2)); // subtle fade on scroll
-  const dynamicPaddingBottom = devUI ? toolbarH : 0;
+  // subtle fade on scroll (kept)
+  const fade = collapsed ? 0 : 1 - Math.min(y / 100, 0.2);
 
   useEffect(() => {
-    // Log throttled to avoid spam (every ~120px)
     if (Math.abs(y - lastLogRef.current) > 120) {
       lastLogRef.current = y;
       diag("MANIFEST", "hero_scroll_state", { y, collapsed });
@@ -112,26 +171,35 @@ export default function HeroSplashMatch() {
 
   useEffect(() => {
     diag("MANIFEST", "hero_theme_synced", { bg: THEME.bg, fg: THEME.fg });
-    console.log("[HARD-DIAG:THEME]", "hero_theme_synced", { bg: THEME.bg, fg: THEME.fg });
+    console.log("[HARD-DIAG:THEME]", "hero_theme_synced", {
+      bg: THEME.bg,
+      fg: THEME.fg,
+    });
   }, []);
+
+  // Final hero height selection
+  const heroH = collapsed
+    ? 0
+    : isMobile
+    ? mobileHeroH
+    : desktopHeroH ?? Math.round(window.innerHeight * 0.62);
 
   return (
     <>
       <section
-        ref={heroRef}
         id="hero"
+        ref={heroRef}
         className="relative overflow-hidden"
         style={{
           background: THEME.bg,
           color: THEME.fg,
-          height: collapsed ? '0px' : (isMobile ? `${mobileHeroH || 0}px` : `${hVH}vh`),
-          minHeight: 0,
-          paddingBottom: dynamicPaddingBottom,
-          transition: "height 100ms ease-out, opacity 140ms ease-out, padding-bottom 80ms ease-out",
+          height: heroH,
+          minHeight: collapsed ? 0 : 420,
+          transition: "height 260ms ease-out",
           opacity: fade,
         }}
       >
-        {/* 3-line pyramid headline */}
+        {/* 3-line pyramid headline (keep visual offsets and clamps) */}
         <div
           ref={headlineRef}
           className="absolute select-none pointer-events-none"
@@ -154,6 +222,7 @@ export default function HeroSplashMatch() {
 
         {/* Right-side descriptive copy */}
         <div
+          ref={rightColRef}
           className="absolute right-col"
           style={{
             right: "min(6vw, 60px)",
@@ -186,7 +255,7 @@ export default function HeroSplashMatch() {
             left: 0,
             right: 0,
             bottom: 0,
-            height: isMobile ? 8 : 48,
+            height: isMobile ? 8 : 24,
             background: "linear-gradient(to bottom, rgba(244,240,233,0), rgba(244,240,233,1))",
           }}
         />
