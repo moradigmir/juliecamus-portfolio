@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { THEME } from "@/lib/theme";
 import { diag } from "@/debug/diag";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function HeroSplashMatch() {
   const [y, setY] = useState(0);
   const raf = useRef<number | null>(null);
   const lastLogRef = useRef(0);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const onScroll = () => {
@@ -20,7 +22,8 @@ export default function HeroSplashMatch() {
   }, []);
 
   // Collapse from baseHeight to minHeight as user scrolls
-  const baseH = 0.62;  // 62vh
+  // Use smaller height on mobile
+  const baseH = isMobile ? 0.35 : 0.62;  // 35vh mobile, 62vh desktop
   const minH = 0;      // collapse to 0
   const dist = 10;     // px to reach min (instant collapse)
   const t = Math.min(1, Math.max(0, y / dist)); // 0..1
@@ -50,7 +53,7 @@ export default function HeroSplashMatch() {
           background: THEME.bg,
           color: THEME.fg,
           height: y > dist ? '0px' : `${hVH}vh`,
-          minHeight: y > dist ? 0 : 200,
+          minHeight: y > dist ? 0 : (isMobile ? 0 : 200),
           transition: "height 120ms ease-out",
           opacity: fade,
         }}
@@ -60,7 +63,7 @@ export default function HeroSplashMatch() {
           className="absolute select-none pointer-events-none"
           style={{
             left: "clamp(8px, 5vw, 40px)",
-            top: "clamp(12px, 8vh, 80px)",
+            top: isMobile ? "clamp(8px, 2vh, 16px)" : "clamp(12px, 8vh, 80px)",
             lineHeight: 0.78,
             letterSpacing: "-0.02em",
             fontFamily: THEME.font,
