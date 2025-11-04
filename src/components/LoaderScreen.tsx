@@ -40,7 +40,7 @@ export default function LoaderScreen({
     >
       {/* Oversized Headline (cropped like the reference) */}
       <div
-        className="absolute select-none pointer-events-none font-archivo-black"
+        className="absolute select-none pointer-events-none"
         style={{ 
           left: "min(5vw, 40px)", 
           top: "-8vh",
@@ -48,6 +48,7 @@ export default function LoaderScreen({
           lineHeight: 0.78,
           letterSpacing: "-0.02em",
           fontWeight: 900,
+          fontFamily: '"Helvetica Neue LT Std", "Helvetica Neue", Helvetica, Arial, sans-serif',
         }}
       >
         <h1>
@@ -59,13 +60,14 @@ export default function LoaderScreen({
 
       {/* Right column lorem list */}
       <div
-        className="absolute font-inter"
+        className="absolute"
         style={{
           right: "min(6vw, 60px)",
           top: "18vh",
           width: "min(520px, 42vw)",
           fontSize: "clamp(14px, 1.1vw, 16px)",
           lineHeight: 1.65,
+          fontFamily: '"Helvetica Neue LT Std", "Helvetica Neue", Helvetica, Arial, sans-serif',
         }}
       >
         <p style={{ fontWeight: 600, marginBottom: "0.75rem" }}>LOREM IPSUM</p>
