@@ -28,6 +28,27 @@ export default function HeroSplashMatch() {
     return () => obs.disconnect();
   }, []);
 
+  // Mobile: measure headline to set hero height tightly
+  const headlineRef = useRef<HTMLDivElement>(null);
+  const [mobileHeroH, setMobileHeroH] = useState(0);
+  useEffect(() => {
+    if (!isMobile) return;
+    const el = headlineRef.current;
+    if (!el) return;
+    const measure = () => {
+      const h = el.getBoundingClientRect().height || 0;
+      setMobileHeroH(Math.ceil(h + 8));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [isMobile]);
+
   // Collapse on first interaction
   useEffect(() => {
     const collapse = (reason: string) => { 
@@ -103,8 +124,8 @@ export default function HeroSplashMatch() {
         style={{
           background: THEME.bg,
           color: THEME.fg,
-          height: collapsed ? '0px' : `${hVH}vh`,
-          minHeight: collapsed ? 0 : (isMobile ? 0 : 200),
+          height: collapsed ? '0px' : (isMobile ? `${mobileHeroH || 0}px` : `${hVH}vh`),
+          minHeight: 0,
           paddingBottom: dynamicPaddingBottom,
           transition: "height 100ms ease-out, opacity 140ms ease-out, padding-bottom 80ms ease-out",
           opacity: fade,
@@ -112,6 +133,7 @@ export default function HeroSplashMatch() {
       >
         {/* 3-line pyramid headline */}
         <div
+          ref={headlineRef}
           className="absolute select-none pointer-events-none"
           style={{
             left: "clamp(8px, 5vw, 40px)",
@@ -164,7 +186,7 @@ export default function HeroSplashMatch() {
             left: 0,
             right: 0,
             bottom: 0,
-            height: 48,
+            height: isMobile ? 8 : 48,
             background: "linear-gradient(to bottom, rgba(244,240,233,0), rgba(244,240,233,1))",
           }}
         />
