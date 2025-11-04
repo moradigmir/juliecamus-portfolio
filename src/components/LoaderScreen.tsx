@@ -21,6 +21,7 @@ export default function LoaderScreen({
 
     const t = setTimeout(() => {
       const durationMs = Date.now() - start.current;
+      document.body.classList.add("loader-done");
       setVisible(false);
       diag("MANIFEST", "loader_screen_hidden", { durationMs });
       console.log("[HARD-DIAG:MANIFEST]", "loader_screen_hidden", { durationMs });

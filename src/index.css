@@ -51,6 +51,10 @@ All colors MUST be HSL.
     --lavender: 280 100% 85%;
     --charcoal: 20 14% 8%;
     --off-white: 60 9% 98%;
+
+    /* Theme tokens matching splash loader */
+    --theme-bg: #F4F0E9;
+    --theme-fg: #0D0D0D;
   }
 
   .dark {
@@ -99,7 +103,8 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    background: var(--theme-bg);
+    color: var(--theme-fg);
     font-family: "Helvetica Neue LT Std", "Helvetica Neue", Helvetica, Arial, sans-serif;
   }
 
