@@ -194,7 +194,7 @@ export default function HeroSplashMatch() {
           background: THEME.bg,
           color: THEME.fg,
           height: heroH,
-          minHeight: collapsed ? 0 : 420,
+          minHeight: collapsed ? 0 : (isMobile ? "auto" : 420),
           transition: "height 260ms ease-out",
           opacity: fade,
         }}
