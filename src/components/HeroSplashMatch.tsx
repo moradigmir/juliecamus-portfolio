@@ -40,7 +40,7 @@ export default function HeroSplashMatch() {
           >
             Julie
             <br />
-            Camus
+            <span style={{ paddingLeft: "0.15em" }}>Camus</span>
           </h1>
         </div>
 
