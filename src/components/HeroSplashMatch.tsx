@@ -9,9 +9,24 @@ export default function HeroSplashMatch() {
   const raf = useRef<number | null>(null);
   const lastLogRef = useRef(0);
   const isMobile = useIsMobile();
+  const heroRef = useRef<HTMLElement>(null);
   
   // Detect dev UI for bottom padding safety
   const devUI = import.meta.env.DEV || new URLSearchParams(location.search).get('debug') === '1';
+  
+  // Read --dev-toolbar-h CSS variable
+  const [toolbarH, setToolbarH] = useState(0);
+  useEffect(() => {
+    const updateToolbarH = () => {
+      const val = getComputedStyle(document.documentElement).getPropertyValue('--dev-toolbar-h').trim();
+      const px = parseInt(val) || 0;
+      setToolbarH(px);
+    };
+    updateToolbarH();
+    const obs = new MutationObserver(updateToolbarH);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+    return () => obs.disconnect();
+  }, []);
 
   // Collapse on first interaction
   useEffect(() => {
@@ -60,9 +75,10 @@ export default function HeroSplashMatch() {
   }, []);
 
   // Height and fade calculations
-  const baseH = isMobile ? 0.24 : 0.62;  // 24vh mobile, 62vh desktop
+  const baseH = isMobile ? 0.20 : 0.62;  // 20vh mobile, 62vh desktop
   const hVH = baseH * 100;
-  const fade = collapsed ? 0.1 : (1 - Math.min(y / 100, 0.2)); // subtle fade on scroll
+  const fade = collapsed ? 0 : (1 - Math.min(y / 100, 0.2)); // subtle fade on scroll
+  const dynamicPaddingBottom = devUI ? toolbarH : 0;
 
   useEffect(() => {
     // Log throttled to avoid spam (every ~120px)
@@ -81,6 +97,7 @@ export default function HeroSplashMatch() {
   return (
     <>
       <section
+        ref={heroRef}
         id="hero"
         className="relative overflow-hidden"
         style={{
@@ -88,8 +105,8 @@ export default function HeroSplashMatch() {
           color: THEME.fg,
           height: collapsed ? '0px' : `${hVH}vh`,
           minHeight: collapsed ? 0 : (isMobile ? 0 : 200),
-          paddingBottom: devUI ? 64 : 0,
-          transition: "height 120ms ease-out, opacity 160ms ease-out",
+          paddingBottom: dynamicPaddingBottom,
+          transition: "height 100ms ease-out, opacity 140ms ease-out, padding-bottom 80ms ease-out",
           opacity: fade,
         }}
       >
@@ -98,12 +115,12 @@ export default function HeroSplashMatch() {
           className="absolute select-none pointer-events-none"
           style={{
             left: "clamp(8px, 5vw, 40px)",
-            top: isMobile ? "14px" : "clamp(12px, 8vh, 80px)",
+            top: isMobile ? "max(env(safe-area-inset-top, 0px), 8px)" : "clamp(12px, 8vh, 80px)",
             lineHeight: 0.78,
             letterSpacing: "-0.02em",
             fontFamily: THEME.font,
             fontWeight: 900,
-            fontSize: "clamp(3rem, 16vw, 18rem)",
+            fontSize: isMobile ? "clamp(2.5rem, 14vw, 16rem)" : "clamp(3rem, 16vw, 18rem)",
             maxWidth: "90vw",
             zIndex: 2,
           }}

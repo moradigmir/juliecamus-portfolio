@@ -31,16 +31,19 @@ const Navigation = () => {
 
   return (
     <nav 
-      className="fixed top-0 left-0 right-0 z-50"
+      className="fixed z-50"
       style={{
-        background: THEME.bg,
-        borderBottom: "1px solid rgba(0,0,0,0.06)",
-        backdropFilter: "saturate(140%) blur(4px)",
+        top: variant === 'home' ? 'env(safe-area-inset-top, 0px)' : 0,
+        left: variant === 'home' ? 'auto' : 0,
+        right: variant === 'home' ? 'min(4vw, 28px)' : 0,
+        background: variant === 'home' ? 'transparent' : THEME.bg,
+        borderBottom: variant === 'home' ? 'none' : "1px solid rgba(0,0,0,0.06)",
+        backdropFilter: variant === 'home' ? 'none' : "saturate(140%) blur(4px)",
       }}
     >
       <div className="mx-auto flex items-center" style={{ 
-        maxWidth: 1280, 
-        padding: "14px min(4vw, 28px)",
+        maxWidth: variant === 'home' ? 'none' : 1280, 
+        padding: variant === 'home' ? "14px 0" : "14px min(4vw, 28px)",
         justifyContent: variant === 'home' ? 'flex-end' : 'space-between'
       }}>
         {variant === 'default' && (

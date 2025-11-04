@@ -53,6 +53,25 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   // Check if in dev mode or debug URL param  
   const isDevMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
   const showDevControls = isDevMode;
+  
+  // Track dev toolbar height and expose as CSS variable
+  useEffect(() => {
+    if (!showDevControls) {
+      document.documentElement.style.setProperty('--dev-toolbar-h', '0px');
+      return;
+    }
+    const toolbar = document.querySelector('[data-dev-toolbar]');
+    if (!toolbar) return;
+    
+    const updateHeight = () => {
+      const h = toolbar.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--dev-toolbar-h', `${h}px`);
+    };
+    updateHeight();
+    const obs = new ResizeObserver(updateHeight);
+    obs.observe(toolbar);
+    return () => obs.disconnect();
+  }, [showDevControls]);
 
   // Auto-open diagnostics if ?debug=1 in URL
   useEffect(() => {
@@ -523,7 +542,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
       {/* Diagnostic Panel - Only show when debug=1 */}
       {showDevControls && (
-        <div className="mb-6 flex items-center justify-between">
+        <div data-dev-toolbar className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TooltipProvider>
               <Tooltip>
