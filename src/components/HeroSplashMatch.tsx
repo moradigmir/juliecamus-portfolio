@@ -75,7 +75,7 @@ export default function HeroSplashMatch() {
   }, []);
 
   // Height and fade calculations
-  const baseH = isMobile ? 0.20 : 0.62;  // 20vh mobile, 62vh desktop
+  const baseH = isMobile ? 0.32 : 0.62;  // 32vh mobile, 62vh desktop
   const hVH = baseH * 100;
   const fade = collapsed ? 0 : (1 - Math.min(y / 100, 0.2)); // subtle fade on scroll
   const dynamicPaddingBottom = devUI ? toolbarH : 0;
