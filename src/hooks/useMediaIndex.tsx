@@ -215,9 +215,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         if (!m) return item;
         
         item.meta = { ...(item.meta ?? {}), ...m };
-        item.title = item.title ?? m.title;
-        item.description = item.description ?? m.description;
-        item.tags = item.tags ?? m.tags;
+        if (m.title) item.title = m.title;
+        if (m.description) item.description = m.description;
+        if (m.tags) item.tags = m.tags;
         applied++;
         emit('MANIFEST','CACHED_ATTACH_APPLIED', {
           folder: entry.folder, title: item.title, descriptionLen: item.description?.length ?? 0
@@ -566,8 +566,8 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             const merged = { ...old, owner: OWNER, metaByFolder: { ...(old.metaByFolder || {}) } };
             folders.forEach((f) => {
               merged.metaByFolder[f] = {
-                ...(merged.metaByFolder[f] ?? {}),
                 ...fromBuild[f],
+                ...(merged.metaByFolder[f] ?? {}),
                 ts: Date.now(),
               };
             });
