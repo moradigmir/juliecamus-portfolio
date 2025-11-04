@@ -47,8 +47,8 @@ export default function HeroSplashMatch() {
     if (!el) return;
     const measure = () => {
       const h = el.getBoundingClientRect().height || 0;
-      // cushion 8px, mobile gradient handled in CSS below as 8px
-      setMobileHeroH(Math.ceil(h + 8));
+      // cushion 20px to ensure descenders (like "p") are fully visible
+      setMobileHeroH(Math.ceil(h + 20));
     };
     measure();
     const ro = new ResizeObserver(measure);
