@@ -416,31 +416,39 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       };
 
       const manifestFolders = new Set(sortedItems.map((it) => it.folder));
-      const candidates = Array.from({ length: 99 }, (_, i) => (i + 1).toString().padStart(2, '0'));
-      const missing = candidates.filter((nn) => !manifestFolders.has(nn));
+      const diagnosticsMode = new URLSearchParams(window.location.search).get('diagnostics') === '1';
 
-      const discoveredRaw = await Promise.all(
-        missing.map(async (nn) => {
-          const firstPath = await probePublicFirstMedia(nn);
-          if (!firstPath) return null;
-          const proxied = `${proxyBase}?path=${encodeURIComponent(firstPath)}`;
-          const isVideo = /\.(mp4|mov)$/i.test(firstPath);
-          
-          const extra: MediaItem = {
-            orderKey: nn,
-            folder: nn,
-            title: `Folder ${nn}`,
-            previewUrl: proxied,
-            previewType: isVideo ? 'video' : 'image',
-            fullUrl: proxied,
-            fullType: isVideo ? 'video' : 'image',
-            meta: {}, // Will be populated by background check
-          };
-          return extra;
-        })
-      );
+      let discovered: MediaItem[] = [];
 
-      const discovered = discoveredRaw.filter(Boolean) as MediaItem[];
+      if (diagnosticsMode) {
+        // Only run discovery in diagnostics mode and limit breadth for speed
+        const candidates = Array.from({ length: 99 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+        const missing = candidates.filter((nn) => !manifestFolders.has(nn));
+        const missingLimited = missing.slice(0, 10); // cap to 10 to avoid long scans
+
+        const discoveredRaw = await Promise.all(
+          missingLimited.map(async (nn) => {
+            const firstPath = await probePublicFirstMedia(nn);
+            if (!firstPath) return null;
+            const proxied = `${proxyBase}?path=${encodeURIComponent(firstPath)}`;
+            const isVideo = /(\.mp4|\.mov)$/i.test(firstPath);
+            const extra: MediaItem = {
+              orderKey: nn,
+              folder: nn,
+              title: `Folder ${nn}`,
+              previewUrl: proxied,
+              previewType: isVideo ? 'video' : 'image',
+              fullUrl: proxied,
+              fullType: isVideo ? 'video' : 'image',
+              meta: {},
+            };
+            return extra;
+          })
+        );
+
+        discovered = (discoveredRaw.filter(Boolean) as MediaItem[]);
+      }
+
 
         // Merge with discovery using merge-preserve approach
         const combined = mergeByFolder(enhancedItems, discovered);
