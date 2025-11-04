@@ -468,10 +468,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       setIsSupabasePaused(false); // Reset on success
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
-      // Background task: Check for MANIFEST.md updates after grid loads
-      setTimeout(async () => {
-        await backgroundManifestCheck(combined, setMediaItems, owner);
-      }, 1000);
+      // Background task: Check for MANIFEST.md updates IMMEDIATELY (no delay)
+      // This ensures metadata is cached before user might reload
+      backgroundManifestCheck(combined, setMediaItems, owner).catch(err => 
+        console.warn('Background manifest check error:', err)
+      );
 
       
     } catch (err) {
@@ -654,8 +655,9 @@ const backgroundManifestCheck = async (
         
         // Check if we have current metadata (either from MANIFEST.md or cache)
         if (currentMeta.title || currentMeta.description) {
-          // Check for differences
+          // Check for differences OR if this is a new folder without cache
           const hasChanges = (
+            !cachedMeta.title || // No cached data = treat as changed to persist
             currentMeta.title !== cachedMeta.title ||
             currentMeta.description !== cachedMeta.description ||
             JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])
