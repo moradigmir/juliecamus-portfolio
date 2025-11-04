@@ -416,31 +416,8 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       };
 
       const manifestFolders = new Set(sortedItems.map((it) => it.folder));
-      const candidates = Array.from({ length: 99 }, (_, i) => (i + 1).toString().padStart(2, '0'));
-      const missing = candidates.filter((nn) => !manifestFolders.has(nn));
+      const discovered: MediaItem[] = []; // discovery moved to background for speed
 
-      const discoveredRaw = await Promise.all(
-        missing.map(async (nn) => {
-          const firstPath = await probePublicFirstMedia(nn);
-          if (!firstPath) return null;
-          const proxied = `${proxyBase}?path=${encodeURIComponent(firstPath)}`;
-          const isVideo = /\.(mp4|mov)$/i.test(firstPath);
-          
-          const extra: MediaItem = {
-            orderKey: nn,
-            folder: nn,
-            title: `Folder ${nn}`,
-            previewUrl: proxied,
-            previewType: isVideo ? 'video' : 'image',
-            fullUrl: proxied,
-            fullType: isVideo ? 'video' : 'image',
-            meta: {},
-          };
-          return extra;
-        })
-      );
-
-      const discovered = discoveredRaw.filter(Boolean) as MediaItem[];
 
 
         // Merge with discovery using merge-preserve approach
@@ -474,6 +451,58 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       backgroundManifestCheck(combined, setMediaItems, owner).catch(err => 
         console.warn('Background manifest check error:', err)
       );
+
+      // Background discovery (non-blocking, concurrency-limited, incremental)
+      // Keeps initial load fast; progressively adds missing folders
+      setTimeout(() => {
+        (async () => {
+          try {
+            const manifestFolders = new Set(combined.map((it) => it.folder));
+            const candidates = Array.from({ length: 99 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+            const missing = candidates.filter((nn) => !manifestFolders.has(nn));
+            if (!missing.length) return;
+
+            const MAX_CHECKS = 30; // cap breadth for speed
+            const CONCURRENCY = 6; // limit parallelism
+            const queue = missing.slice(0, MAX_CHECKS);
+
+            async function processOne(nn: string) {
+              try {
+                const firstPath = await findPreviewForFolder(`/public/${nn}/`);
+                if (!firstPath) return;
+                // firstPath is a proxied URL already
+                const isVideo = /\.(mp4|mov)$/i.test(firstPath);
+                const extra: MediaItem = {
+                  orderKey: nn,
+                  folder: nn,
+                  title: `Folder ${nn}`,
+                  previewUrl: firstPath,
+                  previewType: isVideo ? 'video' : 'image',
+                  fullUrl: firstPath,
+                  fullType: isVideo ? 'video' : 'image',
+                  meta: {},
+                };
+                setMediaItems((prev) => mergeByFolder(prev, [extra]));
+              } catch (e) {
+                // ignore individual errors
+              }
+            }
+
+            async function worker() {
+              while (queue.length) {
+                const nn = queue.shift();
+                if (!nn) break;
+                await processOne(nn);
+              }
+            }
+
+            await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+          } catch (e) {
+            console.warn('Background discovery failed:', e);
+          }
+        })();
+      }, 0);
+
 
       
     } catch (err) {
