@@ -21,8 +21,8 @@ export default function HeroSplashMatch() {
 
   // Collapse from baseHeight to minHeight as user scrolls
   const baseH = 0.62;  // 62vh
-  const minH = 0.42;   // 42vh (never smaller)
-  const dist = 700;    // px to reach min
+  const minH = 0;      // collapse to 0
+  const dist = 150;    // px to reach min (fast collapse)
   const t = Math.min(1, Math.max(0, y / dist)); // 0..1
   const hVH = (baseH - (baseH - minH) * t) * 100; // vh
   const fade = 1 - t * 0.9; // fade to ~0.1
@@ -49,9 +49,8 @@ export default function HeroSplashMatch() {
         style={{
           background: THEME.bg,
           color: THEME.fg,
-          height: `${hVH}vh`,
-          minHeight: 420,
-          paddingTop: "64px",
+          height: y > dist ? '0px' : `${hVH}vh`,
+          minHeight: y > dist ? 0 : 300,
           transition: "height 260ms ease-out",
           opacity: fade,
         }}
@@ -60,18 +59,19 @@ export default function HeroSplashMatch() {
         <div
           className="absolute select-none pointer-events-none"
           style={{
-            left: "min(5vw, 40px)",
-            top: "calc(64px - 4vh)",
+            left: "clamp(8px, 5vw, 40px)",
+            top: "clamp(60px, calc(64px - 4vh), 80px)",
             lineHeight: 0.78,
             letterSpacing: "-0.02em",
             fontFamily: THEME.font,
             fontWeight: 900,
-            fontSize: "clamp(7rem, 16vw, 18rem)",
+            fontSize: "clamp(3.5rem, 16vw, 18rem)",
+            maxWidth: "90vw",
           }}
         >
           <div>Julie</div>
-          <div style={{ marginLeft: "2vw" }}>Camus</div>
-          <div style={{ marginLeft: "4vw" }}>Makeup</div>
+          <div style={{ marginLeft: "8vw" }}>Camus</div>
+          <div style={{ marginLeft: "20vw" }}>Makeup</div>
         </div>
 
         {/* Right-side descriptive copy */}
@@ -124,7 +124,7 @@ export default function HeroSplashMatch() {
           opacity: 1; 
           transform: translateY(0); 
         }
-        @media (max-width: 900px) {
+        @media (max-width: 1100px) {
           #hero .right-col { display: none; }
         }
       `}</style>
