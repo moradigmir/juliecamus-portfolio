@@ -482,7 +482,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
                   fullType: isVideo ? 'video' : 'image',
                   meta: {},
                 };
-                setMediaItems((prev) => mergeByFolder(prev, [extra]));
+                setMediaItems((prev) => sortMedia(mergeByFolder(prev, [extra])));
               } catch (e) {
                 // ignore individual errors
               }
@@ -662,52 +662,49 @@ function mergeByFolder<T extends { folder:string; title?:string; description?:st
   return out;
 }
 
-// Background task to check for MANIFEST.md updates
+// Ensure consistent ordering by numeric folder/orderKey
+function sortMedia(items: MediaItem[]): MediaItem[] {
+  try {
+    return [...items].sort((a, b) => {
+      const aKey = parseInt((a.orderKey || a.folder || '0').toString(), 10);
+      const bKey = parseInt((b.orderKey || b.folder || '0').toString(), 10);
+      return aKey - bKey;
+    });
+  } catch {
+    return items;
+  }
+}
+
+// Background task to check for MANIFEST.md updates (concurrency-limited and incremental)
 const backgroundManifestCheck = async (
   items: MediaItem[], 
   setMediaItems: (items: MediaItem[]) => void,
   owner: string
 ) => {
   try {
-    let hasUpdates = false;
     const updatedItems = [...items];
+    const indices = updatedItems.map((_, i) => i);
+    const CONCURRENCY = 6;
 
-    for (let i = 0; i < updatedItems.length; i++) {
+    async function processIndex(i: number) {
       const item = updatedItems[i];
       const folderPath = `/public/${item.folder}/`;
-      
       try {
-        // Always fetch current MANIFEST.md metadata for all folders (including cached ones)
         const currentMeta = await getFolderMetadata(folderPath);
-        
-        // Compare with cached metadata
         const cachedMeta = item.meta || {};
-        
-        // Check if we have current metadata (either from MANIFEST.md or cache)
         if (currentMeta.title || currentMeta.description) {
-          // Check for differences OR if this is a new folder without cache
           const hasChanges = (
-            !cachedMeta.title || // No cached data = treat as changed to persist
+            !cachedMeta.title ||
             currentMeta.title !== cachedMeta.title ||
             currentMeta.description !== cachedMeta.description ||
             JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])
           );
-          
           if (hasChanges) {
-            // Update item with new metadata
-            const changedKeys = [];
-            if (currentMeta.title !== cachedMeta.title) changedKeys.push('title');
-            if (currentMeta.description !== cachedMeta.description) changedKeys.push('description');
-            if (JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])) changedKeys.push('tags');
-            
             updatedItems[i] = {
               ...item,
               title: currentMeta.title || item.title,
-              meta: currentMeta
+              meta: { ...(item.meta ?? {}), ...currentMeta },
             };
-            
-            hasUpdates = true;
-            
             // Persist probe results to cache
             const { title, description, tags } = currentMeta;
             try {
@@ -715,7 +712,7 @@ const backgroundManifestCheck = async (
               const raw = localStorage.getItem(KEY(owner));
               const before = raw ? JSON.parse(raw) : { owner, updatedAt: 0, metaByFolder: {} };
               before.metaByFolder = before.metaByFolder || {};
-              before.metaByFolder[item.folder] = { title, description, tags };
+              before.metaByFolder[item.folder] = { ...(before.metaByFolder[item.folder] ?? {}), title, description, tags, ts: Date.now() };
               before.updatedAt = Date.now();
               before.owner = owner;
               localStorage.setItem(KEY(owner), JSON.stringify(before));
@@ -723,36 +720,24 @@ const backgroundManifestCheck = async (
             } catch (e) {
               emit('MANIFEST','manifest_meta_persist_fail', { folder: item.folder });
             }
-            
-            diag('MANIFEST', 'manifest_md_updated', {
-              folder: item.folder,
-              changedKeys
-            });
-            
-            // Flush individual update to edge
-            if (currentMeta.title) {
-              flushDiagToEdge(buildDiagSummary({
-                manifest_example_0: { folder: item.folder, title: currentMeta.title }
-              }));
-            }
+            // Incremental UI update for faster feedback
+            setMediaItems(sortMedia(updatedItems));
           }
         }
-        // Note: getFolderMetadata already emits manifest_md_missing/manifest_md_ok internally
-        
       } catch (error) {
-        // Background check failed, don't break the UI but log it
         console.warn(`Background manifest check failed for folder ${item.folder}:`, error);
-        
-        // Still emit missing diagnostic if we couldn't check the folder
-        diag('MANIFEST', 'manifest_md_missing', { folder: item.folder });
       }
     }
-    
-    // Update state if there were changes
-    if (hasUpdates) {
-      setMediaItems(updatedItems);
-      console.log('📝 Updated metadata from background MANIFEST.md check');
+
+    async function worker() {
+      while (indices.length) {
+        const i = indices.shift();
+        if (typeof i !== 'number') break;
+        await processIndex(i);
+      }
     }
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
   } catch (error) {
     console.warn('Background manifest check failed:', error);
   }
