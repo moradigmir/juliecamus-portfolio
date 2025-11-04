@@ -14,11 +14,11 @@ export default function HeroSplashMatch() {
   const headlineRef = useRef<HTMLDivElement | null>(null);
   const rightColRef = useRef<HTMLDivElement | null>(null);
 
-  // /?diagnostics shows dev tools
+  // /?diagnostics=1 shows dev tools
   const devUI =
     typeof window !== "undefined" &&
     window.location.pathname === "/" &&
-    window.location.search === "?diagnostics";
+    new URLSearchParams(window.location.search).get("diagnostics") === "1";
 
   // Read --dev-toolbar-h CSS variable for /?diagnostics
   const [toolbarH, setToolbarH] = useState(0);

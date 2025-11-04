@@ -50,8 +50,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [manifestDiff, setManifestDiff] = useState<string>('');
   const { toast } = useToast();
 
-  // Show dev controls only on /?diagnostics route
-  const showDevControls = window.location.pathname === '/' && window.location.search === '?diagnostics';
+  // Show dev controls only on /?diagnostics=1 route
+  const showDevControls = window.location.pathname === '/' && new URLSearchParams(window.location.search).get('diagnostics') === '1';
   
   // Track dev toolbar height and expose as CSS variable
   useEffect(() => {
@@ -72,9 +72,9 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     return () => obs.disconnect();
   }, [showDevControls]);
 
-  // Auto-open diagnostics if on /?diagnostics route
+  // Auto-open diagnostics if on /?diagnostics=1 route
   useEffect(() => {
-    if (window.location.pathname === '/' && window.location.search === '?diagnostics') {
+    if (window.location.pathname === '/' && new URLSearchParams(window.location.search).get('diagnostics') === '1') {
       setShowDiagnostics(true);
     }
 
