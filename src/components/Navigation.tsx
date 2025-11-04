@@ -1,12 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { THEME } from '@/lib/theme';
+import { diag } from '@/debug/diag';
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  
+  const variant = useMemo(() => location.pathname === '/' ? 'home' : 'default', [location.pathname]);
+
+  useEffect(() => {
+    diag("MANIFEST", "nav_variant_selected", { variant, path: location.pathname });
+    console.log("[HARD-DIAG:NAV]", "nav_variant_selected", { variant, path: location.pathname });
+  }, [variant, location.pathname]);
 
   const navigation = [
     { name: 'Portfolio', href: '/' },
@@ -30,22 +38,28 @@ const Navigation = () => {
         backdropFilter: "saturate(140%) blur(4px)",
       }}
     >
-      <div className="mx-auto flex items-center justify-between" style={{ maxWidth: 1280, padding: "14px min(4vw, 28px)" }}>
-        <Link 
-          to="/" 
-          className="select-none hover:opacity-80 transition-opacity"
-          aria-label="Julie Camus – Home"
-          style={{
-            fontFamily: THEME.font,
-            fontWeight: 900,
-            letterSpacing: "-0.01em",
-            fontSize: "clamp(18px, 2.1vw, 28px)",
-            lineHeight: 1,
-            color: THEME.fg,
-          }}
-        >
-          Julie&nbsp;Camus
-        </Link>
+      <div className="mx-auto flex items-center" style={{ 
+        maxWidth: 1280, 
+        padding: "14px min(4vw, 28px)",
+        justifyContent: variant === 'home' ? 'flex-end' : 'space-between'
+      }}>
+        {variant === 'default' && (
+          <Link 
+            to="/" 
+            className="select-none hover:opacity-80 transition-opacity"
+            aria-label="Julie Camus – Home"
+            style={{
+              fontFamily: THEME.font,
+              fontWeight: 900,
+              letterSpacing: "-0.01em",
+              fontSize: "clamp(18px, 2.1vw, 28px)",
+              lineHeight: 1,
+              color: THEME.fg,
+            }}
+          >
+            Julie&nbsp;Camus
+          </Link>
+        )}
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-6">
