@@ -22,7 +22,7 @@ export default function HeroSplashMatch() {
   // Collapse from baseHeight to minHeight as user scrolls
   const baseH = 0.62;  // 62vh
   const minH = 0;      // collapse to 0
-  const dist = 150;    // px to reach min (fast collapse)
+  const dist = 10;     // px to reach min (instant collapse)
   const t = Math.min(1, Math.max(0, y / dist)); // 0..1
   const hVH = (baseH - (baseH - minH) * t) * 100; // vh
   const fade = 1 - t * 0.9; // fade to ~0.1
@@ -50,8 +50,8 @@ export default function HeroSplashMatch() {
           background: THEME.bg,
           color: THEME.fg,
           height: y > dist ? '0px' : `${hVH}vh`,
-          minHeight: y > dist ? 0 : 300,
-          transition: "height 260ms ease-out",
+          minHeight: y > dist ? 0 : 200,
+          transition: "height 120ms ease-out",
           opacity: fade,
         }}
       >
@@ -60,7 +60,7 @@ export default function HeroSplashMatch() {
           className="absolute select-none pointer-events-none"
           style={{
             left: "clamp(8px, 5vw, 40px)",
-            top: "clamp(60px, calc(64px - 4vh), 80px)",
+            top: "clamp(12px, 8vh, 80px)",
             lineHeight: 0.78,
             letterSpacing: "-0.02em",
             fontFamily: THEME.font,
