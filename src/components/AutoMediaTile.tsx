@@ -15,8 +15,8 @@ interface AutoMediaTileProps {
 }
 
 const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTileProps) => {
-  // Check if in debug mode
-  const isDebugMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
+  // Check if in diagnostics mode
+  const isDebugMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('diagnostics') === '1';
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
