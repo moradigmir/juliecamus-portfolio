@@ -116,7 +116,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           // Use proper HiDrive directory listing instead of naive text parsing
           const hidriveItems = await listDir(directory);
           
-          // Filter to image files only
+          // Filter to image files only and EXCLUDE preview.* files from gallery
           const imageFiles = hidriveItems
             .filter(item => item.type === 'file' && (
               isMediaContentType(item.contentType || '') ||
@@ -126,8 +126,18 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               const ct = item.contentType || '';
               return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif)$/i.test(item.name);
             })
+            .filter(item => !/^preview\./i.test(item.name)) // Skip preview.* files in gallery
             .map(item => item.name)
             .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+          
+          // Diagnostic: Log preview filter
+          const totalFiles = hidriveItems.filter(item => item.type === 'file').length;
+          console.log('[MANIFEST] preview_filter_applied', {
+            folder: media.folder,
+            total: totalFiles,
+            shownInGallery: imageFiles.length,
+            skippedPreviewCount: totalFiles - imageFiles.length
+          });
           
           if (imageFiles.length > 1) {
             // Create a project-like structure with all images
