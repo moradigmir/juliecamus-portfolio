@@ -321,7 +321,17 @@ export const findManifestMarkdown = async (folderPath: string): Promise<{ conten
     const normalizedPath = folderPath.endsWith('/') ? folderPath : folderPath + '/';
     const manifestVariants = ['MANIFEST.md', 'Manifest.md', 'manifest.md'];
     
-    // First try: listing-based search (case-insensitive, no media filter)
+    // PRIORITY: Direct GET first (WebDAV listing may not show .md files)
+    for (const variant of manifestVariants) {
+      const manifestPath = normalizedPath + variant;
+      const content = await fetchText(manifestPath);
+      if (content) {
+        console.log('✅ Found MANIFEST.md via direct GET', { folder: normalizedPath, file: variant });
+        return { content, matchedFilename: variant };
+      }
+    }
+    
+    // Fallback: listing-based search (in case direct GET fails but listing works)
     try {
       const items = await listDirAll(normalizedPath);
       const manifestFile = items.find(item => 
@@ -333,20 +343,12 @@ export const findManifestMarkdown = async (folderPath: string): Promise<{ conten
         const manifestPath = normalizedPath + manifestFile.name;
         const content = await fetchText(manifestPath);
         if (content) {
+          console.log('✅ Found MANIFEST.md via listing', { folder: normalizedPath, file: manifestFile.name });
           return { content, matchedFilename: manifestFile.name };
         }
       }
     } catch (listError) {
-      console.log('❌ Listing failed, trying direct GET', { folderPath: normalizedPath, listError });
-    }
-    
-    // Second try: direct GET fallback for all variants
-    for (const variant of manifestVariants) {
-      const manifestPath = normalizedPath + variant;
-      const content = await fetchText(manifestPath);
-      if (content) {
-        return { content, matchedFilename: variant };
-      }
+      console.log('⚠️ Listing failed for MANIFEST.md search', { folderPath: normalizedPath });
     }
     
     return null;
