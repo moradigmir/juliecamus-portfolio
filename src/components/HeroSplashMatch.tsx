@@ -68,13 +68,20 @@ export default function HeroSplashMatch() {
       const heroEl = heroRef.current;
       const headEl = headlineRef.current;
       if (!heroEl || !headEl) return;
-      const grad = 24; // desktop gradient
-      const cushion = 6;
+      
+      // Proportional gradient: clamp(8px, 3vh, 28px) on desktop
+      const vh = Math.max(320, window.innerHeight || 0);
+      const grad = Math.round(
+        Math.min(Math.max(vh * 0.03, 8), 28)
+      );
+      
+      const headRect = headEl.getBoundingClientRect();
+      // Proportional cushion: max(4px, 4% of headline height)
+      const cushion = Math.max(4, Math.round(headRect.height * 0.04));
 
       const computedTop = parseFloat(
         getComputedStyle(headEl).top || "0"
       );
-      const headRect = headEl.getBoundingClientRect();
 
       // headline bottom relative to hero top
       const heroTop = heroEl.getBoundingClientRect().top;
@@ -182,7 +189,7 @@ export default function HeroSplashMatch() {
     ? 0
     : isMobile
     ? mobileHeroH
-    : desktopHeroH ?? Math.round(window.innerHeight * 0.62);
+    : desktopHeroH ?? Math.round(Math.max(window.innerHeight * 0.48, 360));
 
   return (
     <>
@@ -194,7 +201,7 @@ export default function HeroSplashMatch() {
           background: THEME.bg,
           color: THEME.fg,
           height: heroH,
-          minHeight: collapsed ? 0 : (isMobile ? "auto" : 420),
+          minHeight: collapsed ? 0 : "auto",
           transition: "height 260ms ease-out",
           opacity: fade,
         }}
@@ -255,7 +262,7 @@ export default function HeroSplashMatch() {
             left: 0,
             right: 0,
             bottom: 0,
-            height: isMobile ? 8 : 24,
+            height: isMobile ? "min(16px, max(6px, 2vh))" : "min(28px, max(8px, 3vh))",
             background: "linear-gradient(to bottom, rgba(244,240,233,0), rgba(244,240,233,1))",
           }}
         />
