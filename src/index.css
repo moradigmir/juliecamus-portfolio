@@ -100,7 +100,7 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
+    font-family: "Helvetica Neue LT Std", "Helvetica Neue", Helvetica, Arial, sans-serif;
   }
 
   html {
@@ -108,8 +108,7 @@ All colors MUST be HSL.
   }
 }
 
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+/* Helvetica Neue LT Std is used as a system font */
 
 @layer components {
   /* Flowing Grid - STRICT 3 columns with natural accordion flow */

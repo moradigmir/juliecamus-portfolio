@@ -19,9 +19,7 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				'playfair': ['Playfair Display', 'serif'],
-				'inter': ['Inter', 'sans-serif'],
-				'archivo-black': ['Archivo Black', 'sans-serif'],
+				'sans': ['"Helvetica Neue LT Std"', '"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
