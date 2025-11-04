@@ -50,9 +50,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [manifestDiff, setManifestDiff] = useState<string>('');
   const { toast } = useToast();
 
-  // Check if in dev mode or debug URL param  
-  const isDevMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
-  const showDevControls = isDevMode;
+  // Show dev controls only on /?diagnostics route
+  const showDevControls = window.location.pathname === '/' && window.location.search === '?diagnostics';
   
   // Track dev toolbar height and expose as CSS variable
   useEffect(() => {
@@ -73,14 +72,14 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     return () => obs.disconnect();
   }, [showDevControls]);
 
-  // Auto-open diagnostics if ?debug=1 in URL
+  // Auto-open diagnostics if on /?diagnostics route
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('debug') === '1') {
+    if (window.location.pathname === '/' && window.location.search === '?diagnostics') {
       setShowDiagnostics(true);
     }
 
     // Read clear placeholders setting from sessionStorage and URL override
+    const params = new URLSearchParams(window.location.search);
     const storedClearPlaceholders = sessionStorage.getItem('hidrive:clearPlaceholders') === '1';
     const urlNoPlaceholders = params.get('noplaceholders') === '1';
     

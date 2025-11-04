@@ -11,8 +11,8 @@ export default function HeroSplashMatch() {
   const isMobile = useIsMobile();
   const heroRef = useRef<HTMLElement>(null);
   
-  // Detect dev UI for bottom padding safety
-  const devUI = import.meta.env.DEV || new URLSearchParams(location.search).get('debug') === '1';
+  // Detect dev UI for bottom padding safety (only on /?diagnostics)
+  const devUI = window.location.pathname === '/' && window.location.search === '?diagnostics';
   
   // Read --dev-toolbar-h CSS variable
   const [toolbarH, setToolbarH] = useState(0);
