@@ -165,6 +165,15 @@ export default function HeroSplashMatch() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Reset hero when scrolling back to top
+  useEffect(() => {
+    if (y === 0 && collapsed) {
+      setCollapsed(false);
+      console.log("[HARD-DIAG:HERO]", "hero_reset", { reason: "scrolled_to_top" });
+      diag("MANIFEST", "hero_reset", { reason: "scrolled_to_top" });
+    }
+  }, [y, collapsed]);
+
   // subtle fade on scroll (kept)
   const fade = collapsed ? 0 : 1 - Math.min(y / 100, 0.2);
 
