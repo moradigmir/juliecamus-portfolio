@@ -462,9 +462,8 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             const missing = candidates.filter((nn) => !manifestFolders.has(nn));
             if (!missing.length) return;
 
-            const MAX_CHECKS = 30; // cap breadth for speed
             const CONCURRENCY = 6; // limit parallelism
-            const queue = missing.slice(0, MAX_CHECKS);
+            const queue = missing; // check all missing folders
 
             async function processOne(nn: string) {
               try {
