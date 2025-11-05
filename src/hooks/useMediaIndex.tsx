@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
-import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict } from '@/lib/hidrive';
+import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict, persistFolderMetaToCache } from '@/lib/hidrive';
 import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
 
 // HARD BOOT TRACER – proves this file is the one actually running
@@ -452,23 +452,49 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         console.warn('Background manifest check error:', err)
       );
 
-      // Background discovery (non-blocking, concurrency-limited, incremental)
+      // Background discovery (non-blocking, concurrency-limited, smart range)
       // Keeps initial load fast; progressively adds missing folders
       setTimeout(() => {
         (async () => {
           try {
             const manifestFolders = new Set(combined.map((it) => it.folder));
-            const candidates = Array.from({ length: 99 }, (_, i) => (i + 1).toString().padStart(2, '0'));
+            
+            // Smart discovery: only scan up to max folder + slack (e.g., +4)
+            const maxFolder = Math.max(...Array.from(manifestFolders).map(f => parseInt(f, 10) || 0));
+            const scanMax = Math.min(99, maxFolder + 4);
+            
+            const candidates = Array.from({ length: scanMax }, (_, i) => (i + 1).toString().padStart(2, '0'));
             const missing = candidates.filter((nn) => !manifestFolders.has(nn));
             if (!missing.length) return;
 
-            const CONCURRENCY = 6; // limit parallelism
-            const queue = missing; // check all missing folders
+            console.log(`🔍 Discovery range: 01-${scanMax.toString().padStart(2, '0')} (${missing.length} missing)`);
+
+            const CONCURRENCY = 8; // increased concurrency for speed
+            const CONSECUTIVE_404_LIMIT = 4; // stop if we hit this many 404s in a row above maxFolder
+            const queue = [...missing]; // check all missing folders
+            let consecutive404s = 0;
 
             async function processOne(nn: string) {
               try {
+                const folderNum = parseInt(nn, 10);
                 const firstPath = await findPreviewForFolder(`/public/${nn}/`);
-                if (!firstPath) return;
+                
+                if (!firstPath) {
+                  // Track consecutive 404s above the known max
+                  if (folderNum > maxFolder) {
+                    consecutive404s++;
+                    if (consecutive404s >= CONSECUTIVE_404_LIMIT) {
+                      console.log(`⚠️ Discovery stopped: ${consecutive404s} consecutive 404s above max folder`);
+                      queue.length = 0; // clear queue to stop workers
+                      return;
+                    }
+                  }
+                  return;
+                }
+                
+                // Reset consecutive 404 counter on success
+                consecutive404s = 0;
+                
                 // firstPath is a proxied URL already
                 const isVideo = /\.(mp4|mov)$/i.test(firstPath);
                 const extra: MediaItem = {
@@ -482,13 +508,14 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
                   meta: {},
                 };
                 setMediaItems((prev) => sortMedia(mergeByFolder(prev, [extra])));
+                console.log(`✅ Discovered folder ${nn}`);
               } catch (e) {
                 // ignore individual errors
               }
             }
 
             async function worker() {
-              while (queue.length) {
+              while (queue.length && consecutive404s < CONSECUTIVE_404_LIMIT) {
                 const nn = queue.shift();
                 if (!nn) break;
                 await processOne(nn);
@@ -496,6 +523,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             }
 
             await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+            console.log(`✅ Discovery complete`);
           } catch (e) {
             console.warn('Background discovery failed:', e);
           }
@@ -674,57 +702,101 @@ function sortMedia(items: MediaItem[]): MediaItem[] {
   }
 }
 
-// Background task to check for MANIFEST.md updates (concurrency-limited and incremental)
+// Background task to check for MANIFEST updates (prioritized, cached, concurrency-limited)
 const backgroundManifestCheck = async (
   items: MediaItem[], 
   setMediaItems: (items: MediaItem[]) => void,
   owner: string
 ) => {
   try {
+    const CONCURRENCY = 8; // increased for faster processing
+    const TTL_MS = 10 * 60 * 1000; // 10 minutes for negative cache
+    const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
+    
+    // Load existing cache
+    let cachedData: any = {};
+    try {
+      const raw = localStorage.getItem(KEY(owner));
+      if (raw) {
+        const blob = JSON.parse(raw);
+        cachedData = blob?.metaByFolder || {};
+      }
+    } catch {}
+    
     const updatedItems = [...items];
-    const indices = updatedItems.map((_, i) => i);
-    const CONCURRENCY = 6;
+    
+    // Sort indices to prioritize lower folder numbers (visible first)
+    const indices = updatedItems
+      .map((item, i) => ({ i, folder: parseInt(item.folder, 10) || 999 }))
+      .sort((a, b) => a.folder - b.folder)
+      .map(x => x.i);
+    
+    console.log(`📋 Manifest check queue: ${indices.length} folders (prioritized by folder number)`);
 
     async function processIndex(i: number) {
       const item = updatedItems[i];
       const folderPath = `/public/${item.folder}/`;
+      const cachedMeta = cachedData[item.folder];
+      
+      // Skip if recently cached (positive or negative)
+      if (cachedMeta?.ts) {
+        const age = Date.now() - cachedMeta.ts;
+        
+        // Skip if negative cache is still valid
+        if (cachedMeta.__absent && age < TTL_MS) {
+          console.log(`⏭️ Skip folder ${item.folder}: absent cached (${Math.round(age/1000)}s ago)`);
+          return;
+        }
+        
+        // Skip if positive cache is fresh (< 1 hour) and has title
+        if (cachedMeta.title && age < 60 * 60 * 1000) {
+          console.log(`⏭️ Skip folder ${item.folder}: meta cached (${Math.round(age/1000)}s ago)`);
+          return;
+        }
+      }
+      
       try {
         const currentMeta = await getFolderMetadata(folderPath);
-        const cachedMeta = item.meta || {};
-        if (currentMeta.title || currentMeta.description) {
-          const hasChanges = (
-            !cachedMeta.title ||
-            currentMeta.title !== cachedMeta.title ||
-            currentMeta.description !== cachedMeta.description ||
-            JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])
-          );
-          if (hasChanges) {
-            updatedItems[i] = {
-              ...item,
-              title: currentMeta.title || item.title,
-              meta: { ...(item.meta ?? {}), ...currentMeta },
-            };
-            // Persist probe results to cache
-            const { title, description, tags } = currentMeta;
-            try {
-              const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
-              const raw = localStorage.getItem(KEY(owner));
-              const before = raw ? JSON.parse(raw) : { owner, updatedAt: 0, metaByFolder: {} };
-              before.metaByFolder = before.metaByFolder || {};
-              before.metaByFolder[item.folder] = { ...(before.metaByFolder[item.folder] ?? {}), title, description, tags, ts: Date.now() };
-              before.updatedAt = Date.now();
-              before.owner = owner;
-              localStorage.setItem(KEY(owner), JSON.stringify(before));
-              emit('MANIFEST','manifest_meta_persisted', { folder: item.folder, source: 'probe' });
-            } catch (e) {
-              emit('MANIFEST','manifest_meta_persist_fail', { folder: item.folder });
-            }
-            // Incremental UI update for faster feedback
-            setMediaItems(sortMedia(updatedItems));
-          }
+        
+        // No manifest found - store negative cache
+        if (!currentMeta.title && !currentMeta.description) {
+          console.log(`📭 Folder ${item.folder}: no manifest found`);
+          persistFolderMetaToCache(item.folder, { __absent: true });
+          cachedData[item.folder] = { __absent: true, ts: Date.now() };
+          return;
+        }
+        
+        // Manifest found - check for changes
+        const itemMeta = item.meta || {};
+        const hasChanges = (
+          !itemMeta.title ||
+          currentMeta.title !== itemMeta.title ||
+          currentMeta.description !== itemMeta.description ||
+          JSON.stringify(currentMeta.tags || []) !== JSON.stringify(itemMeta.tags || [])
+        );
+        
+        if (hasChanges) {
+          console.log(`📝 Folder ${item.folder}: manifest updated`, { title: currentMeta.title });
+          
+          updatedItems[i] = {
+            ...item,
+            title: currentMeta.title || item.title,
+            description: currentMeta.description || item.description,
+            tags: currentMeta.tags || item.tags,
+            meta: { ...(item.meta ?? {}), ...currentMeta },
+          };
+          
+          // Persist to cache
+          persistFolderMetaToCache(item.folder, currentMeta);
+          cachedData[item.folder] = { ...currentMeta, ts: Date.now() };
+          
+          // Incremental UI update for faster feedback
+          setMediaItems(sortMedia(updatedItems));
+        } else {
+          console.log(`✓ Folder ${item.folder}: manifest unchanged`);
         }
       } catch (error) {
-        console.warn(`Background manifest check failed for folder ${item.folder}:`, error);
+        console.warn(`⚠️ Manifest check failed for folder ${item.folder}:`, error);
       }
     }
 
@@ -737,6 +809,7 @@ const backgroundManifestCheck = async (
     }
 
     await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+    console.log(`✅ Manifest check complete`);
   } catch (error) {
     console.warn('Background manifest check failed:', error);
   }
