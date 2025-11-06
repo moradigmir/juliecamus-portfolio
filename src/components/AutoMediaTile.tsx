@@ -256,10 +256,15 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                   {httpStatus !== null && (
                     <p className="text-xs opacity-70 mt-1">HTTP {httpStatus}</p>
                   )}
-                  {codecHint && (
-                    <p className="text-xs opacity-80 mt-1">Detected codec: {codecHint}</p>
+                  {codecHint && (codecHint.includes('HEVC') || codecHint.includes('AV1')) && (
+                    <>
+                      <p className="text-xs opacity-80 mt-1">Detected codec: {codecHint}</p>
+                      <p className="text-xs opacity-70 mt-1">This codec may not be supported in your browser. Try Safari or download the file.</p>
+                    </>
                   )}
-                  <p className="text-xs opacity-70 mt-1">If your browser doesn't support this codec, try Safari or download the file.</p>
+                  {(!codecHint || (!codecHint.includes('HEVC') && !codecHint.includes('AV1'))) && (
+                    <p className="text-xs opacity-70 mt-1">The video couldn't be loaded. Check your connection and try again.</p>
+                  )}
                 </>
               )}
             </div>
