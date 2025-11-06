@@ -459,20 +459,20 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           try {
             const manifestFolders = new Set(combined.map((it) => it.folder));
             
-            // Smart discovery: only scan up to max folder + slack (e.g., +4)
-            const maxFolder = Math.max(...Array.from(manifestFolders).map(f => parseInt(f, 10) || 0));
-            const scanMax = Math.min(99, maxFolder + 4);
+            // Discovery: scan all folders 01-99, stop after consecutive 404s
+            const scanMax = 99; // always scan full range
             
             const candidates = Array.from({ length: scanMax }, (_, i) => (i + 1).toString().padStart(2, '0'));
             const missing = candidates.filter((nn) => !manifestFolders.has(nn));
             if (!missing.length) return;
 
-            console.log(`🔍 Discovery range: 01-${scanMax.toString().padStart(2, '0')} (${missing.length} missing)`);
+            console.log(`🔍 Discovery range: 01-99 (${missing.length} missing folders to check)`);
 
             const CONCURRENCY = 8; // increased concurrency for speed
-            const CONSECUTIVE_404_LIMIT = 4; // stop if we hit this many 404s in a row above maxFolder
+            const CONSECUTIVE_404_LIMIT = 8; // stop after 8 consecutive 404s
             const queue = [...missing]; // check all missing folders
             let consecutive404s = 0;
+            let lastCheckedFolder = 0;
 
             async function processOne(nn: string) {
               try {
@@ -480,11 +480,12 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
                 const firstPath = await findPreviewForFolder(`/public/${nn}/`);
                 
                 if (!firstPath) {
-                  // Track consecutive 404s above the known max
-                  if (folderNum > maxFolder) {
+                  // Track consecutive 404s (only if we're checking in order)
+                  if (folderNum > lastCheckedFolder) {
                     consecutive404s++;
+                    lastCheckedFolder = folderNum;
                     if (consecutive404s >= CONSECUTIVE_404_LIMIT) {
-                      console.log(`⚠️ Discovery stopped: ${consecutive404s} consecutive 404s above max folder`);
+                      console.log(`⚠️ Discovery stopped: ${consecutive404s} consecutive 404s at folder ${nn}`);
                       queue.length = 0; // clear queue to stop workers
                       return;
                     }
@@ -494,6 +495,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
                 
                 // Reset consecutive 404 counter on success
                 consecutive404s = 0;
+                lastCheckedFolder = folderNum;
                 
                 // firstPath is a proxied URL already
                 const isVideo = /\.(mp4|mov)$/i.test(firstPath);
