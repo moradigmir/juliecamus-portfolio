@@ -127,7 +127,7 @@ const Contact = () => {
                   />
                 </div>
 
-                <Button type="submit" disabled={isSubmitting} className="w-full font-inter">
+                <Button type="submit" disabled={isSubmitting} variant="secondary" className="w-full font-inter">
                   {isSubmitting ? (
                     <>Sending...</>
                   ) : (
