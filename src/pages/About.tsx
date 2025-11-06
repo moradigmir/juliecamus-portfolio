@@ -26,18 +26,6 @@ const About = () => {
 
       <div className="pt-24 pb-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Quick visible client logos strip */}
-          <div className="mt-2 mb-8">
-            <h3 className="font-playfair text-xl font-semibold text-foreground mb-4">Clients include:</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {logos.map((logo) => (
-                <div key={logo.alt} className="relative aspect-video bg-muted/30 rounded-lg p-6 flex items-center justify-center overflow-hidden border border-border/50">
-                  <img src={logo.src} alt={logo.alt} className="w-full h-full object-contain grayscale opacity-60 transition-all duration-300" loading="eager" />
-                </div>
-              ))}
-            </div>
-          </div>
-
           <motion.div
             initial={{
               opacity: 0,
@@ -100,6 +88,18 @@ const About = () => {
               </motion.div>
             </div>
           </motion.div>
+
+          {/* Client logos */}
+          <div className="mt-16">
+            <h3 className="font-playfair text-xl font-semibold text-foreground mb-6">Clients include:</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {logos.map((logo) => (
+                <div key={logo.alt} className="relative aspect-video bg-muted/30 rounded-lg p-6 flex items-center justify-center overflow-hidden border border-border/50">
+                  <img src={logo.src} alt={logo.alt} className="w-full h-full object-contain grayscale opacity-60 transition-all duration-300" loading="eager" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
