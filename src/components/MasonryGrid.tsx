@@ -74,21 +74,15 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
   // Auto-open diagnostics if on /?diagnostics=1 route
   useEffect(() => {
-    if (window.location.pathname === '/' && new URLSearchParams(window.location.search).get('diagnostics') === '1') {
+    const params = new URLSearchParams(window.location.search);
+    const isDiagnosticsMode = params.get('diagnostics') === '1';
+    
+    if (window.location.pathname === '/' && isDiagnosticsMode) {
       setShowDiagnostics(true);
     }
 
-    // Read clear placeholders setting from sessionStorage and URL override
-    const params = new URLSearchParams(window.location.search);
-    const storedClearPlaceholders = sessionStorage.getItem('hidrive:clearPlaceholders') === '1';
-    const urlNoPlaceholders = params.get('noplaceholders') === '1';
-    
-    if (urlNoPlaceholders) {
-      sessionStorage.setItem('hidrive:clearPlaceholders', '1');
-      setClearPlaceholders(true);
-    } else {
-      setClearPlaceholders(storedClearPlaceholders);
-    }
+    // Hide placeholders by default, only show when ?diagnostics=1
+    setClearPlaceholders(!isDiagnosticsMode);
   }, []);
   
   // Load auto-discovered media from HiDrive
@@ -452,7 +446,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
   const handleClearPlaceholdersToggle = useCallback((checked: boolean) => {
     setClearPlaceholders(checked);
-    sessionStorage.setItem('hidrive:clearPlaceholders', checked ? '1' : '0');
     
     // Diagnostics: Log toggle change
     diag('ORDER', 'clear_placeholders_toggled', { on: checked });
