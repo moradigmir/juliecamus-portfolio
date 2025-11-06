@@ -27,6 +27,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayTimeout, setAutoPlayTimeout] = useState<NodeJS.Timeout | null>(null);
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
+  const [errorAttempts, setErrorAttempts] = useState(0);
+  const [useFullSource, setUseFullSource] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
@@ -69,6 +71,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   diag('NET', 'media_src_set', { folder: media.folder, preview: proxiedPreviewUrl });
   
   const cacheBustedUrl = `${proxiedPreviewUrl}${proxiedPreviewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
+  const cacheBustedFullUrl = `${proxiedFullUrl}${proxiedFullUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
+  const currentSrc = useFullSource ? cacheBustedFullUrl : cacheBustedUrl;
 
   const listUrl = (() => {
     try {
@@ -202,6 +206,17 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   }, [media.previewType, media.thumbnailUrl]);
 
+  // Reset error state when media changes
+  useEffect(() => {
+    setHasError(false);
+    setIsLoaded(false);
+    setErrorAttempts(0);
+    setUseFullSource(false);
+    setSupabasePaused(false);
+    setProxyMisrouted(false);
+    setHttpStatus(null);
+  }, [media.previewUrl, media.fullUrl]);
+  
   return (
     <motion.div
       ref={tileRef}
@@ -302,7 +317,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                 </button>
               )}
               <a
-                href={cacheBustedUrl}
+                href={currentSrc}
                 target="_blank"
                 rel="noopener noreferrer"
                 download
@@ -325,17 +340,37 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               loop
               playsInline
               preload="metadata"
+              crossOrigin="anonymous"
               poster={media.thumbnailUrl || '/placeholder.svg'}
               onLoadedMetadata={() => setIsLoaded(true)}
-              onLoadedData={() => setIsLoaded(true)}
+              onCanPlay={() => { setIsLoaded(true); setHasError(false); setErrorAttempts(0); }}
+              onLoadedData={() => { setIsLoaded(true); setHasError(false); setErrorAttempts(0); }}
               onError={() => {
-                setHasError(true);
-                console.warn('MEDIA_ERROR', { folder: media.folder, preview: proxiedPreviewUrl });
-                diag('NET', 'media_error', { folder: media.folder, preview: proxiedPreviewUrl });
+                setErrorAttempts((prev) => {
+                  if (prev < 1) {
+                    setUseFullSource(true);
+                    setHasError(false);
+                    setSupabasePaused(false);
+                    setProxyMisrouted(false);
+                    setHttpStatus(null);
+                    setReloadKey((k) => k + 1);
+                    if (videoRef.current) {
+                      videoRef.current.load();
+                    }
+                    console.warn('MEDIA_RETRY_WITH_FULL_SOURCE', { folder: media.folder, preview: proxiedPreviewUrl, full: proxiedFullUrl });
+                    diag('NET', 'media_retry_full', { folder: media.folder, preview: proxiedPreviewUrl, full: proxiedFullUrl });
+                    return prev + 1;
+                  }
+                  console.warn('MEDIA_ERROR', { folder: media.folder, src: currentSrc });
+                  diag('NET', 'media_error', { folder: media.folder, src: currentSrc });
+                  setHasError(true);
+                  return prev + 1;
+                });
               }}
               style={{ display: hasError ? 'none' : 'block' }}
+              key={`${media.folder}-${useFullSource ? 'full' : 'preview'}-${reloadKey}`}
             >
-              <source src={cacheBustedUrl} type={mimeType} />
+              <source src={currentSrc} type={mimeType} />
               Your browser does not support video playback.
             </video>
           ) : (
