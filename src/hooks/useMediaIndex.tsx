@@ -712,7 +712,8 @@ const backgroundManifestCheck = async (
 ) => {
   try {
     const CONCURRENCY = 8; // increased for faster processing
-    const TTL_MS = 10 * 60 * 1000; // 10 minutes for negative cache
+    const NEGATIVE_CACHE_TTL = 30 * 1000; // 30 seconds for negative cache (faster retry)
+    const POSITIVE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for positive cache (more aggressive refresh)
     const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
     
     // Load existing cache
@@ -740,21 +741,29 @@ const backgroundManifestCheck = async (
       const folderPath = `/public/${item.folder}/`;
       const cachedMeta = cachedData[item.folder];
       
-      // Skip if recently cached (positive or negative)
-      if (cachedMeta?.ts) {
+      // Always check if item is missing title/description, even if cached
+      const needsRefresh = !item.title || item.title === item.folder || !item.meta?.title;
+      
+      // Skip only if cache is recent AND item already has good metadata
+      if (cachedMeta?.ts && !needsRefresh) {
         const age = Date.now() - cachedMeta.ts;
         
         // Skip if negative cache is still valid
-        if (cachedMeta.__absent && age < TTL_MS) {
+        if (cachedMeta.__absent && age < NEGATIVE_CACHE_TTL) {
           console.log(`⏭️ Skip folder ${item.folder}: absent cached (${Math.round(age/1000)}s ago)`);
           return;
         }
         
-        // Skip if positive cache is fresh (< 1 hour) and has title
-        if (cachedMeta.title && age < 60 * 60 * 1000) {
+        // Skip if positive cache is fresh and has title
+        if (cachedMeta.title && age < POSITIVE_CACHE_TTL) {
           console.log(`⏭️ Skip folder ${item.folder}: meta cached (${Math.round(age/1000)}s ago)`);
           return;
         }
+      }
+      
+      // Force fetch if item doesn't have proper metadata
+      if (needsRefresh) {
+        console.log(`🔄 Force refresh folder ${item.folder}: missing or default title`);
       }
       
       try {
