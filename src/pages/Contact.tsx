@@ -152,8 +152,8 @@ const Contact = () => {
 
                 <div className="space-y-4">
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Mail className="w-5 h-5 text-primary" />
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-foreground" />
                     </div>
                     <div>
                       <p className="font-inter font-medium text-foreground">Email</p>
@@ -162,8 +162,8 @@ const Contact = () => {
                   </div>
 
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Phone className="w-5 h-5 text-primary" />
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                      <Phone className="w-5 h-5 text-foreground" />
                     </div>
                     <div>
                       <p className="font-inter font-medium text-foreground">Phone</p>
@@ -172,8 +172,8 @@ const Contact = () => {
                   </div>
 
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <MapPin className="w-5 h-5 text-primary" />
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                      <MapPin className="w-5 h-5 text-foreground" />
                     </div>
                     <div>
                       <p className="font-inter font-medium text-foreground">Location</p>
@@ -182,8 +182,8 @@ const Contact = () => {
                   </div>
 
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <Instagram className="w-5 h-5 text-primary" />
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                      <Instagram className="w-5 h-5 text-foreground" />
                     </div>
                     <div>
                       <p className="font-inter font-medium text-foreground">Instagram</p>
