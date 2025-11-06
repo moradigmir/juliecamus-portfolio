@@ -9,6 +9,16 @@ const About = () => {
     { src: `${base}logos/carolina-herrera.png`, alt: "Carolina Herrera" },
     { src: `${base}logos/numero.png`, alt: "Numéro" },
     { src: `${base}logos/harpers-bazaar.png`, alt: "Harper's Bazaar" },
+    { src: `${base}logos/chanel.png`, alt: "Chanel" },
+    { src: `${base}logos/lancome.png`, alt: "Lancôme" },
+    { src: `${base}logos/lacoste.png`, alt: "Lacoste" },
+    { src: `${base}logos/loreal-luxe.png`, alt: "L'Oréal Luxe" },
+    { src: `${base}logos/vogue.png`, alt: "Vogue" },
+    { src: `${base}logos/elle.png`, alt: "Elle" },
+    { src: `${base}logos/nike.png`, alt: "Nike" },
+    { src: `${base}logos/puma.png`, alt: "Puma" },
+    { src: `${base}logos/replay.png`, alt: "Replay" },
+    { src: `${base}logos/levis.png`, alt: "Levi's" },
   ];
   return (
     <div className="min-h-screen bg-background">
@@ -19,15 +29,8 @@ const About = () => {
           {/* Quick visible client logos strip */}
           <div className="mt-2 mb-8">
             <h3 className="font-playfair text-xl font-semibold text-foreground mb-4">Clients include:</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {[
-                { src: '/logos/dior.png', alt: 'Dior' },
-                { src: '/logos/givenchy.png', alt: 'Givenchy' },
-                { src: '/logos/armani-beauty.png', alt: 'Armani Beauty' },
-                { src: '/logos/carolina-herrera.png', alt: 'Carolina Herrera' },
-                { src: '/logos/numero.png', alt: 'Numéro' },
-                { src: '/logos/harpers-bazaar.png', alt: "Harper's Bazaar" },
-              ].map((logo) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {logos.map((logo) => (
                 <div key={logo.alt} className="relative aspect-video bg-muted/30 rounded-lg p-6 flex items-center justify-center overflow-hidden border border-border/50">
                   <img src={logo.src} alt={logo.alt} className="w-full h-full object-contain grayscale opacity-60 transition-all duration-300" loading="eager" />
                 </div>
@@ -91,40 +94,6 @@ const About = () => {
                     industry figures such as Lucia Pica, former Global Creative Director for Chanel, and Peter Philips,
                     Creative and Image Director of Dior Makeup, with whom she has collaborated for over 15 years.
                   </p>
-
-                  <div className="mt-8">
-                    <h3 className="font-playfair text-xl font-semibold text-foreground mb-6">Clients include:</h3>
-                    <motion.div 
-                      className="grid grid-cols-2 md:grid-cols-3 gap-4"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.8, delay: 0.4 }}
-                    >
-                      {[
-                        { src: '/logos/dior.png', alt: 'Dior' },
-                        { src: '/logos/givenchy.png', alt: 'Givenchy' },
-                        { src: '/logos/armani-beauty.png', alt: 'Armani Beauty' },
-                        { src: '/logos/carolina-herrera.png', alt: 'Carolina Herrera' },
-                        { src: '/logos/numero.png', alt: 'Numéro' },
-                        { src: '/logos/harpers-bazaar.png', alt: "Harper's Bazaar" },
-                      ].map((logo, index) => (
-                        <motion.div
-                          key={logo.alt}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
-                          className="group relative aspect-video bg-muted/30 rounded-lg p-6 flex items-center justify-center overflow-hidden border border-border/50 hover:border-border transition-all duration-300"
-                        >
-                          <img
-                            src={logo.src}
-                            alt={logo.alt}
-                            className="w-full h-full object-contain grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
-                            loading="lazy"
-                          />
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  </div>
                 </div>
 
                 {/* Achievements */}
