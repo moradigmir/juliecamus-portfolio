@@ -1,13 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Volume2, VolumeX, Play, PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { THEME } from '@/lib/theme';
 import { diag } from '@/debug/diag';
+import { useVideoSettings } from '@/hooks/useVideoSettings';
+import { Switch } from '@/components/ui/switch';
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { autoplayEnabled, muteEnabled, setAutoplayEnabled, setMuteEnabled } = useVideoSettings();
   
   const variant = useMemo(() => location.pathname === '/' ? 'home' : 'default', [location.pathname]);
 
@@ -89,6 +92,44 @@ const Navigation = () => {
               )}
             </Link>
           ))}
+          
+          {/* Video Settings */}
+          {location.pathname === '/' && (
+            <>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setAutoplayEnabled(!autoplayEnabled)}
+                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                  style={{
+                    fontFamily: THEME.font,
+                    fontSize: "clamp(12px, 0.9vw, 13px)",
+                    letterSpacing: "0.02em",
+                    color: THEME.fg,
+                  }}
+                  title={autoplayEnabled ? "Disable autoplay" : "Enable autoplay"}
+                >
+                  <PlayCircle size={14} />
+                  <Switch checked={autoplayEnabled} onCheckedChange={setAutoplayEnabled} />
+                </button>
+                
+                <button
+                  onClick={() => setMuteEnabled(!muteEnabled)}
+                  className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                  style={{
+                    fontFamily: THEME.font,
+                    fontSize: "clamp(12px, 0.9vw, 13px)",
+                    letterSpacing: "0.02em",
+                    color: THEME.fg,
+                  }}
+                  title={muteEnabled ? "Unmute videos" : "Mute videos"}
+                >
+                  {muteEnabled ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                  <Switch checked={muteEnabled} onCheckedChange={setMuteEnabled} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -132,6 +173,30 @@ const Navigation = () => {
                   {item.name}
                 </Link>
               ))}
+              
+              {/* Video Settings for Mobile */}
+              {location.pathname === '/' && (
+                <>
+                  <div className="h-px bg-border my-2" />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-2" style={{ fontFamily: THEME.font, fontSize: "14px", color: THEME.fg }}>
+                        <PlayCircle size={16} />
+                        <span>Autoplay</span>
+                      </div>
+                      <Switch checked={autoplayEnabled} onCheckedChange={setAutoplayEnabled} />
+                    </div>
+                    
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-2" style={{ fontFamily: THEME.font, fontSize: "14px", color: THEME.fg }}>
+                        {muteEnabled ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                        <span>Mute</span>
+                      </div>
+                      <Switch checked={muteEnabled} onCheckedChange={setMuteEnabled} />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}

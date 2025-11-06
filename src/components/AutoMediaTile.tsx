@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
 import type { MediaItem } from '../hooks/useMediaIndex';
 import { useIsMobile } from '../hooks/use-mobile';
+import { useVideoSettings } from '../hooks/useVideoSettings';
 import { toProxy } from '../lib/hidrive';
 import { diag } from '../debug/diag';
 
@@ -33,6 +34,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  const { autoplayEnabled, muteEnabled } = useVideoSettings();
 
   const handleClick = () => {
     if (hasError) return;
@@ -161,7 +163,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
   // Viewport-based autoplay (same behavior on mobile and desktop)
   useEffect(() => {
-    if (media.previewType !== 'video' || !videoRef.current || !tileRef.current) {
+    if (media.previewType !== 'video' || !videoRef.current || !tileRef.current || !autoplayEnabled) {
       return;
     }
 
@@ -197,7 +199,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     return () => {
       observer.disconnect();
     };
-  }, [media.previewType, isPlaying]);
+  }, [media.previewType, isPlaying, autoplayEnabled]);
 
   // Ensure poster is visible immediately if provided (avoid blocking overlay)
   useEffect(() => {
@@ -336,7 +338,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             <video
               ref={videoRef}
               className="w-full h-full object-cover"
-              muted
+              muted={muteEnabled}
               loop
               playsInline
               preload="metadata"
