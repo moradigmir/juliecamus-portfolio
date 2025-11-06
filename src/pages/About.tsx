@@ -1,12 +1,40 @@
 import { motion } from "framer-motion";
 import Navigation from "../components/Navigation";
 const About = () => {
+  const base = import.meta.env.BASE_URL || "/";
+  const logos = [
+    { src: `${base}logos/dior.png`, alt: "Dior" },
+    { src: `${base}logos/givenchy.png`, alt: "Givenchy" },
+    { src: `${base}logos/armani-beauty.png`, alt: "Armani Beauty" },
+    { src: `${base}logos/carolina-herrera.png`, alt: "Carolina Herrera" },
+    { src: `${base}logos/numero.png`, alt: "Numéro" },
+    { src: `${base}logos/harpers-bazaar.png`, alt: "Harper's Bazaar" },
+  ];
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
 
       <div className="pt-24 pb-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Quick visible client logos strip */}
+          <div className="mt-2 mb-8">
+            <h3 className="font-playfair text-xl font-semibold text-foreground mb-4">Clients include:</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {[
+                { src: '/logos/dior.png', alt: 'Dior' },
+                { src: '/logos/givenchy.png', alt: 'Givenchy' },
+                { src: '/logos/armani-beauty.png', alt: 'Armani Beauty' },
+                { src: '/logos/carolina-herrera.png', alt: 'Carolina Herrera' },
+                { src: '/logos/numero.png', alt: 'Numéro' },
+                { src: '/logos/harpers-bazaar.png', alt: "Harper's Bazaar" },
+              ].map((logo) => (
+                <div key={logo.alt} className="relative aspect-video bg-muted/30 rounded-lg p-6 flex items-center justify-center overflow-hidden border border-border/50">
+                  <img src={logo.src} alt={logo.alt} className="w-full h-full object-contain grayscale opacity-60 transition-all duration-300" loading="eager" />
+                </div>
+              ))}
+            </div>
+          </div>
+
           <motion.div
             initial={{
               opacity: 0,
