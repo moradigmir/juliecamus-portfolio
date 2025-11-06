@@ -152,7 +152,7 @@ const Contact = () => {
 
                 <div className="space-y-4">
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-accent">
                       <Mail className="w-5 h-5 text-foreground" />
                     </div>
                     <div>
@@ -162,7 +162,7 @@ const Contact = () => {
                   </div>
 
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-accent">
                       <Phone className="w-5 h-5 text-foreground" />
                     </div>
                     <div>
@@ -172,7 +172,7 @@ const Contact = () => {
                   </div>
 
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-accent">
                       <MapPin className="w-5 h-5 text-foreground" />
                     </div>
                     <div>
@@ -182,7 +182,7 @@ const Contact = () => {
                   </div>
 
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110 hover:bg-accent">
                       <Instagram className="w-5 h-5 text-foreground" />
                     </div>
                     <div>
@@ -193,9 +193,9 @@ const Contact = () => {
                 </div>
               </div>
 
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h3 className="font-playfair text-xl font-semibold text-card-foreground mb-4">Services</h3>
-                <ul className="font-inter text-muted-foreground space-y-2">
+              <div className="bg-muted/50 border-2 border-border rounded-lg p-6 shadow-sm">
+                <h3 className="font-playfair text-xl font-semibold text-foreground mb-4">Services</h3>
+                <ul className="font-inter text-foreground/80 space-y-2">
                   <li>• Editorial & Fashion Photography</li>
                   <li>• Runway & Fashion Week</li>
                   <li>• Celebrity & Red Carpet</li>
