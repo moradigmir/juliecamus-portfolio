@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Save, Copy, Bug, ToggleLeft, Download } from 'lucide-react';
+import { Settings, Save, Copy, Bug, ToggleLeft, Download, ArrowUp } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
@@ -741,6 +741,20 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           }
         })}
       </div>
+
+      {/* Back to top button */}
+      {gridItems.length > 0 && (
+        <div className="flex justify-center mt-16 mb-8">
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="group flex flex-col items-center gap-2 px-6 py-4 bg-muted hover:bg-accent rounded-lg transition-all duration-300 hover:scale-105"
+            aria-label="Back to top"
+          >
+            <ArrowUp className="w-6 h-6 text-foreground animate-bounce" />
+            <span className="text-sm font-inter text-foreground">Back to top</span>
+          </button>
+        </div>
+      )}
 
       {/* Lightbox */}
       <Lightbox
