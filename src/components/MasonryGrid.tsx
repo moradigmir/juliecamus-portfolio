@@ -578,6 +578,26 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             >
               {isRefreshing ? 'Checking...' : 'Check Folders'}
             </Button>
+            <Button 
+              onClick={() => {
+                const owner = 'juliecamus';
+                const cacheKey = `manifestMetaCache:v1:${owner}`;
+                localStorage.removeItem(cacheKey);
+                console.log('🗑️ Cleared metadata cache');
+                toast({ 
+                  title: 'Cache cleared', 
+                  description: 'Metadata cache cleared. Reload page to fetch fresh MANIFEST.txt files.' 
+                });
+                // Optionally auto-reload
+                setTimeout(() => window.location.reload(), 1000);
+              }} 
+              variant="outline" 
+              size="sm"
+              className="text-xs"
+            >
+              <Download className="w-3 h-3 mr-1" />
+              Clear Cache
+            </Button>
             {autoMediaItems.length > 0 && (
               <Dialog open={showManifestDialog} onOpenChange={setShowManifestDialog}>
                 <DialogTrigger asChild>

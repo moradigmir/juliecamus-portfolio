@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { MediaItem } from '../lib/mediaConfig';
+import type { MediaItem } from '../hooks/useMediaIndex';
 
 interface Project {
   slug: string;
@@ -31,7 +31,9 @@ const Lightbox: React.FC<LightboxProps> = ({
   onPrev
 }) => {
   // Handle media vs project content
-  const title = media ? media.title : project?.title || '';
+  const title = media 
+    ? (media.meta?.title || media.title) 
+    : project?.title || '';
   const isVideo = media?.fullType === 'video';
   
   // Get all images/content
