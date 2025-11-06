@@ -65,29 +65,37 @@ const About = () => {
                   </p>
 
                   <div className="mt-8">
-                    <h3 className="font-playfair text-xl font-semibold text-foreground mb-4">Clients include:</h3>
-                    <div className="grid grid-cols-2 gap-2 text-base">
-                      <div className="space-y-1">
-                        <p>Dior</p>
-                        <p>Chanel</p>
-                        <p>Givenchy Beauty</p>
-                        <p>Armani Beauty</p>
-                        <p>Lancôme</p>
-                        <p>Lacoste</p>
-                        <p>L'Oréal Luxe</p>
-                        <p>Carolina Herrera</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p>Vogue</p>
-                        <p>Harper's Bazaar</p>
-                        <p>Elle</p>
-                        <p>Numéro</p>
-                        <p>Nike</p>
-                        <p>Puma</p>
-                        <p>Replay</p>
-                        <p>Levi's</p>
-                      </div>
-                    </div>
+                    <h3 className="font-playfair text-xl font-semibold text-foreground mb-6">Clients include:</h3>
+                    <motion.div 
+                      className="grid grid-cols-2 md:grid-cols-3 gap-4"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.8, delay: 0.4 }}
+                    >
+                      {[
+                        { src: '/logos/dior.png', alt: 'Dior' },
+                        { src: '/logos/givenchy.png', alt: 'Givenchy' },
+                        { src: '/logos/armani-beauty.png', alt: 'Armani Beauty' },
+                        { src: '/logos/carolina-herrera.png', alt: 'Carolina Herrera' },
+                        { src: '/logos/numero.png', alt: 'Numéro' },
+                        { src: '/logos/harpers-bazaar.png', alt: "Harper's Bazaar" },
+                      ].map((logo, index) => (
+                        <motion.div
+                          key={logo.alt}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5, delay: 0.5 + index * 0.1 }}
+                          className="group relative aspect-video bg-muted/30 rounded-lg p-6 flex items-center justify-center overflow-hidden border border-border/50 hover:border-border transition-all duration-300"
+                        >
+                          <img
+                            src={logo.src}
+                            alt={logo.alt}
+                            className="w-full h-full object-contain grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
+                            loading="lazy"
+                          />
+                        </motion.div>
+                      ))}
+                    </motion.div>
                   </div>
                 </div>
 
