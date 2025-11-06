@@ -206,11 +206,9 @@ const Lightbox: React.FC<LightboxProps> = ({
             </div>
           )}
 
-          {/* Title */}
-          <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg px-4 py-2">
-            <h2 className="text-lg font-playfair font-semibold text-foreground">
-              {title}
-            </h2>
+          {/* Title overlay: gradient white with only title */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-card/90 via-card/50 to-transparent rounded-b-lg">
+            <h2 className="text-base font-medium text-foreground">{title}</h2>
           </div>
         </motion.div>
       )}

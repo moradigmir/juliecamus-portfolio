@@ -94,6 +94,15 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     refetch 
   } = useMediaIndex();
 
+  // Keep lightbox media in sync with latest metadata (e.g., MANIFEST updates)
+  useEffect(() => {
+    if (!lightboxMedia) return;
+    const latest = autoMediaItems.find((m) => m.folder === lightboxMedia.folder);
+    if (latest && (latest.meta !== lightboxMedia.meta || latest.title !== lightboxMedia.title)) {
+      setLightboxMedia(latest);
+    }
+  }, [autoMediaItems, lightboxMedia]);
+
   // Debounced hover handlers to prevent mouse chase flicker
   const handleTileHover = useCallback((index: number) => {
     setExpandedTile(index);
@@ -182,7 +191,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }
     
     // Fallback: treat as single media item (for videos or single images)
-    setLightboxMedia(media);
+    const latest = autoMediaItems.find((m) => m.folder === media.folder) || media;
+    setLightboxMedia(latest);
     setLightboxProject(null);
     setLightboxImageIndex(0);
     setLightboxOpen(true);
@@ -688,7 +698,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       {/* Show loading or error states */}
       {mediaLoading && !isSupabasePaused && (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-charcoal mx-auto mb-2"></div>
           <p className="text-muted-foreground">Loading media...</p>
         </div>
       )}

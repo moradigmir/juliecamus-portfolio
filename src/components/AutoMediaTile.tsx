@@ -247,7 +247,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         {/* Loading State */}
         {!isLoaded && !hasError && (
           <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-charcoal border-t-transparent rounded-full animate-spin" />
           </div>
         )}
         
@@ -393,7 +393,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           {/* Loading State - Show while video loads */}
           {!isLoaded && !hasError && !media.thumbnailUrl && (
             <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-charcoal border-t-transparent rounded-full animate-spin" />
             </div>
           )}
           

@@ -394,7 +394,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
             className="flex-1"
           />
           <Button onClick={() => listDirectory(currentPath.endsWith('/') ? currentPath : currentPath + '/')} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-charcoal' : ''}`} />
           </Button>
         </div>
       </CardHeader>
@@ -483,7 +483,7 @@ const HiDriveBrowser = ({ onPathFound }: HiDriveBrowserProps) => {
 
           {isLoading && (
             <div className="text-center py-8">
-              <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin text-primary" />
+              <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin text-charcoal" />
               <p className="text-muted-foreground">Loading directory...</p>
             </div>
           )}
