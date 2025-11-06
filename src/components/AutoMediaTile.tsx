@@ -252,18 +252,21 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                 </>
               ) : (
                 <>
-                  <p className="text-sm font-medium">Failed to load</p>
-                  {httpStatus !== null && (
+                  <p className="text-sm font-medium">Unable to play video</p>
+                  {httpStatus !== null && httpStatus >= 400 && (
                     <p className="text-xs opacity-70 mt-1">HTTP {httpStatus}</p>
                   )}
                   {codecHint && (codecHint.includes('HEVC') || codecHint.includes('AV1')) && (
                     <>
-                      <p className="text-xs opacity-80 mt-1">Detected codec: {codecHint}</p>
-                      <p className="text-xs opacity-70 mt-1">This codec may not be supported in your browser. Try Safari or download the file.</p>
+                      <p className="text-xs opacity-80 mt-1">Codec: {codecHint}</p>
+                      <p className="text-xs opacity-70 mt-1">Not supported in this browser. Try Safari or download.</p>
                     </>
                   )}
-                  {(!codecHint || (!codecHint.includes('HEVC') && !codecHint.includes('AV1'))) && (
-                    <p className="text-xs opacity-70 mt-1">The video couldn't be loaded. Check your connection and try again.</p>
+                  {(!httpStatus || (httpStatus >= 200 && httpStatus < 300)) && (!codecHint || (!codecHint.includes('HEVC') && !codecHint.includes('AV1'))) && (
+                    <p className="text-xs opacity-70 mt-1">Video format may not be compatible with your browser.</p>
+                  )}
+                  {httpStatus && httpStatus >= 400 && (
+                    <p className="text-xs opacity-70 mt-1">Unable to download video from server.</p>
                   )}
                 </>
               )}
