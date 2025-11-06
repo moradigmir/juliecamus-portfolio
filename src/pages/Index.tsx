@@ -1,6 +1,7 @@
 import Navigation from '../components/Navigation';
 import HeroSplashMatch from '../components/HeroSplashMatch';
 import MasonryGrid from '../components/MasonryGrid';
+import ScrollToTop from '../components/ScrollToTop';
 import { projects } from '../data/projects';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -16,6 +17,8 @@ const Index = () => {
       <section style={{ paddingTop: isMobile ? "20px" : "64px", marginTop: "0px", paddingBottom: "96px" }}>
         <MasonryGrid projects={projects} />
       </section>
+      
+      <ScrollToTop />
     </div>
   );
 };
