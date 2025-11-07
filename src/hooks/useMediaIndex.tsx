@@ -460,20 +460,19 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         flushDiagToEdge(buildDiagSummary({ items_sorted: foldersList, placeholders_after_real: placeholderCount })); 
       } catch(_) {}
 
-      // Set the media items AFTER all diagnostics are emitted
+      // CRITICAL: Set items immediately so UI shows SOMETHING
+      console.log(`🎯 [CRITICAL] Setting ${combined.length} media items NOW`);
       setMediaItems(combined);
-      setIsSupabasePaused(false); // Reset on success
+      setIsSupabasePaused(false);
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
-      // Background task: Check if we should force refresh
-      const MANIFEST_REFRESH_KEY = 'manifest:last_refresh_ts';
-      const lastRefreshTs = parseInt(localStorage.getItem(MANIFEST_REFRESH_KEY) || '0', 10);
-      const shouldForce = !lastRefreshTs || Date.now() - lastRefreshTs > 24 * 60 * 60 * 1000; // Force if >24h
-      
-      console.log(`🚀 Starting MANIFEST check (force=${shouldForce})...`);
-      backgroundManifestCheck(combined, setMediaItems, owner, shouldForce, setMetaStats).catch(err => 
-        console.error('❌ Background manifest check error:', err)
-      );
+      // FORCE MANIFEST CHECK on every load to prove it runs
+      console.log(`🚀 [CRITICAL] FORCING MANIFEST CHECK NOW`);
+      setTimeout(() => {
+        backgroundManifestCheck(combined, setMediaItems, owner, true, setMetaStats)
+          .then(() => console.log('✅ [MANIFEST] Background check COMPLETED'))
+          .catch(err => console.error('❌ [MANIFEST] Background check FAILED:', err));
+      }, 100);
 
       // Background discovery (non-blocking, concurrency-limited, smart range)
       // Keeps initial load fast; progressively adds missing folders

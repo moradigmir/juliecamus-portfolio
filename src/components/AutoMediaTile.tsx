@@ -201,23 +201,22 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     };
   }, [media.previewType, isPlaying, autoplayEnabled]);
 
-  // Ensure poster is visible immediately if provided (avoid blocking overlay)
+  // IMMEDIATE load for ANY media with thumbnail OR for images
   useEffect(() => {
-    if (media.previewType === 'video' && media.thumbnailUrl) {
+    if (media.thumbnailUrl || media.previewType === 'image') {
       setIsLoaded(true);
     }
   }, [media.previewType, media.thumbnailUrl]);
 
-  // Safety timeout: mark as loaded after 1.2s to prevent stuck spinners
+  // AGGRESSIVE safety timeout: mark as loaded after 800ms ALWAYS
   useEffect(() => {
     if (isLoaded) return;
     const timeout = setTimeout(() => {
-      if (media.thumbnailUrl || videoRef.current?.readyState >= 2) {
-        setIsLoaded(true);
-      }
-    }, 1200);
+      console.log(`⏰ [LOADER TIMEOUT] Forcing tile ${media.folder} to show (was stuck loading)`);
+      setIsLoaded(true); // FORCE IT
+    }, 800);
     return () => clearTimeout(timeout);
-  }, [isLoaded, media.thumbnailUrl]);
+  }, [isLoaded, media.folder]);
 
   // Reset error state when media changes
   useEffect(() => {
