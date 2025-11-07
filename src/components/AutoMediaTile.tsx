@@ -206,8 +206,17 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     // Images load instantly
     if (media.previewType === 'image') {
       setIsLoaded(true);
+      return;
     }
-    // Videos: wait for onCanPlay/onLoadedData events only
+    
+    // Videos: wait for onCanPlay/onLoadedData, but fallback after 5s
+    // (preview iframe may block events due to CORS/sandbox)
+    const timeout = setTimeout(() => {
+      console.log(`[AutoMediaTile] Video load timeout for ${media.folder}, showing anyway`);
+      setIsLoaded(true);
+    }, 5000);
+    
+    return () => clearTimeout(timeout);
   }, [media.previewType, media.folder]);
 
   // Reset error state when media changes
@@ -346,9 +355,9 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               preload="metadata"
               crossOrigin="anonymous"
               poster={media.thumbnailUrl || '/placeholder.svg'}
-              onLoadedMetadata={() => setIsLoaded(true)}
-              onCanPlay={() => { setIsLoaded(true); setHasError(false); setErrorAttempts(0); }}
-              onLoadedData={() => { setIsLoaded(true); setHasError(false); setErrorAttempts(0); }}
+              onLoadedMetadata={() => { console.log(`[AutoMediaTile] loadedMetadata: ${media.folder}`); setIsLoaded(true); }}
+              onCanPlay={() => { console.log(`[AutoMediaTile] canPlay: ${media.folder}`); setIsLoaded(true); setHasError(false); setErrorAttempts(0); }}
+              onLoadedData={() => { console.log(`[AutoMediaTile] loadedData: ${media.folder}`); setIsLoaded(true); setHasError(false); setErrorAttempts(0); }}
               onError={() => {
                 setErrorAttempts((prev) => {
                   if (prev < 1) {
