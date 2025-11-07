@@ -14,6 +14,7 @@ import {
   type ManifestMetadata 
 } from '@/lib/manifestEditor';
 import { clearMetaCache } from '@/lib/metaCache';
+import { toProxy } from '@/lib/hidrive';
 import type { MediaItem } from '@/hooks/useMediaIndex';
 
 interface ManifestEditorProps {
@@ -392,17 +393,17 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
                     {/* Media Content */}
                     {previewMediaItem.previewType === 'video' ? (
                       <video
-                        src={previewMediaItem.previewUrl}
+                        src={toProxy(previewMediaItem.previewUrl)}
                         className="w-full h-full object-cover"
                         autoPlay
                         muted
                         loop
                         playsInline
-                        poster={previewMediaItem.thumbnailUrl || '/placeholder.svg'}
+                        poster={previewMediaItem.thumbnailUrl ? toProxy(previewMediaItem.thumbnailUrl) : '/placeholder.svg'}
                       />
                     ) : (
                       <img
-                        src={previewMediaItem.previewUrl}
+                        src={toProxy(previewMediaItem.previewUrl)}
                         alt={previewFolder.title}
                         className="w-full h-full object-cover"
                       />
@@ -492,18 +493,18 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
               <div className="w-full h-full flex items-center justify-center">
                 {previewMediaItem.previewType === 'video' ? (
                   <video
-                    src={previewMediaItem.fullUrl || previewMediaItem.previewUrl}
+                    src={toProxy(previewMediaItem.fullUrl || previewMediaItem.previewUrl)}
                     className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                     autoPlay
                     muted
                     loop
                     playsInline
                     controls
-                    poster={previewMediaItem.thumbnailUrl || '/placeholder.svg'}
+                    poster={previewMediaItem.thumbnailUrl ? toProxy(previewMediaItem.thumbnailUrl) : '/placeholder.svg'}
                   />
                 ) : (
                   <img
-                    src={previewMediaItem.fullUrl || previewMediaItem.previewUrl}
+                    src={toProxy(previewMediaItem.fullUrl || previewMediaItem.previewUrl)}
                     alt={previewFolder.title}
                     className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                   />
