@@ -570,7 +570,7 @@ export const getFolderMetadata = async (folderPath: string): Promise<{ title?: s
 export function persistFolderMetaToCache(folder: string, meta: any) {
   try {
     const OWNER = "juliecamus";
-    const KEY = (o: string) => `manifestMetaCache:v1:${o}`;
+    const KEY = (o: string) => `manifestMetaCache:v2:${o}`;
     const raw = localStorage.getItem(KEY(OWNER));
     const old = raw ? JSON.parse(raw) : { owner: OWNER, updatedAt: 0, metaByFolder: {} };
     old.owner = OWNER;

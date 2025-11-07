@@ -11,7 +11,7 @@ try {
   console.log("[HARD-DIAG:MANIFEST] BOOT_PROOF", { ts: Date.now() });
 
   const owner = "juliecamus";
-  const cacheKey = `manifestMetaCache:v1:${owner}`;
+  const cacheKey = `manifestMetaCache:v2:${owner}`;
   const raw = localStorage.getItem(cacheKey);
 
   if (raw) {
@@ -165,12 +165,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         firstMetaPresent: !!manifest?.items?.[0]?.meta
       });
       
-      // Build meta lookup from build-time file
-      const buildMeta: Record<string, {title?:string;description?:string;tags?:string[]}> = {};
-      (manifest?.items ?? []).forEach((it:any) => {
-        if (it?.folder && it?.meta) buildMeta[it.folder] = it.meta;
-      });
-      
+      // DO NOT use build-time meta for runtime UI/cache anymore
+      // We only use session cache that comes from real MANIFEST files
+
       // Validate manifest structure
       if (!manifest.items || !Array.isArray(manifest.items)) {
         throw new Error('Invalid manifest structure: missing items array');
@@ -183,7 +180,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 
       // Restore session cache (localStorage)
       const owner = 'juliecamus';
-      const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
+      const KEY = (o:string) => `manifestMetaCache:v2:${o}`;
       let sessionMeta: Record<string, any> = {};
       try {
         const raw = localStorage.getItem(KEY(owner));
@@ -193,7 +190,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         }
       } catch {}
 
-      const mergedMeta: Record<string, any> = { ...buildMeta, ...sessionMeta };
+      const mergedMeta: Record<string, any> = { ...sessionMeta };
       
       const mapHiDriveUrlToProxy = (url: string): string => {
         if (!url) return url;
@@ -491,7 +488,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             console.log(`🔍 Discovery range: 01-99 (${missing.length} missing folders to check)`);
 
             const CONCURRENCY = 8; // increased concurrency for speed
-            const CONSECUTIVE_404_LIMIT = 8; // stop after 8 consecutive 404s
+            const CONSECUTIVE_404_LIMIT = Number.POSITIVE_INFINITY; // do not early stop
             const queue = [...missing]; // check all missing folders
             let consecutive404s = 0;
             let lastCheckedFolder = 0;
@@ -579,101 +576,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
   }, [mediaItems]);
 
   useEffect(() => {
-    const DIAG = (msg: string, data?: any) =>
-      console.log("[HARD-DIAG:MANIFEST]", msg, data ?? "");
-  
-    // ✅ Single source of truth for session cache
-    const OWNER = "juliecamus";
-    const KEY = (o: string) => `manifestMetaCache:v1:${o}`;
-  
-    // 0) Scan the cache and log what’s there (no mutation yet)
-    try {
-      const raw = localStorage.getItem(KEY(OWNER));
-      if (raw) {
-        const blob = JSON.parse(raw);
-        const map = blob?.metaByFolder || {};
-        const folders = Object.keys(map);
-        DIAG("manifest_meta_cached_scan", { count: folders.length });
-        folders.forEach((f) => {
-          const m = map[f] || {};
-          DIAG("manifest_meta_cached", {
-            folder: f,
-            title: m.title,
-            descriptionLen: m.description?.length ?? 0,
-          });
-        });
-      } else {
-        DIAG("manifest_meta_cached_scan", { count: 0 });
-      }
-    } catch (e) {
-      DIAG("cached_hydrate_failed", { err: String(e) });
-    }
-  
-    // 1) Fetch /media.manifest.json and attach build-time meta immediately
-    (async () => {
-      try {
-        const res = await fetch("/media.manifest.json", { cache: "no-store" });
-        if (!res.ok) {
-          DIAG("manifest_json_fetch_failed", { status: res.status });
-          return;
-        }
-        const json = await res.json();
-        const items: Array<{ folder?: string; meta?: any }> = Array.isArray(json?.items)
-          ? json.items
-          : [];
-        DIAG("manifest_json_sample", {
-          hasItems: items.length > 0,
-          count: items.length,
-          firstMetaPresent: !!items[0]?.meta,
-        });
-  
-        // Build {folder->meta} from build-time manifest
-        const fromBuild: Record<string, any> = {};
-        for (const it of items) {
-          const folder = it?.folder;
-          const meta = it?.meta;
-          if (folder && meta) fromBuild[folder] = meta;
-        }
-        const folders = Object.keys(fromBuild);
-  
-        if (folders.length) {
-          // Attach to UI *after* the list exists (fetchMediaManifest builds the list),
-          // but in case list already exists, enrich current items too.
-          setMediaItems((prev) =>
-            prev.map((it) =>
-              it.folder && fromBuild[it.folder]
-                ? { ...it, meta: { ...(it.meta ?? {}), ...fromBuild[it.folder] }, title: it.title ?? fromBuild[it.folder].title, description: it.description ?? fromBuild[it.folder].description, tags: it.tags ?? fromBuild[it.folder].tags }
-                : it
-            )
-          );
-          console.log("[HARD-DIAG:MANIFEST] CACHED_ATTACH_APPLIED", { folders });
-  
-          // Persist build-time meta into the SAME cache (so next reload shows instantly)
-          try {
-            const raw = localStorage.getItem(KEY(OWNER));
-            const old = raw ? JSON.parse(raw) : { owner: OWNER, updatedAt: 0, metaByFolder: {} };
-            const merged = { ...old, owner: OWNER, metaByFolder: { ...(old.metaByFolder || {}) } };
-            folders.forEach((f) => {
-              merged.metaByFolder[f] = {
-                ...fromBuild[f],
-                ...(merged.metaByFolder[f] ?? {}),
-                ts: Date.now(),
-              };
-            });
-            merged.updatedAt = Date.now();
-            localStorage.setItem(KEY(OWNER), JSON.stringify(merged));
-            DIAG("manifest_meta_persisted", { count: folders.length, source: "build" });
-          } catch (e) {
-            DIAG("persist_failed", { err: String(e) });
-          }
-        } else {
-          DIAG("manifest_json_no_meta_items", { count: items.length });
-        }
-      } catch (e) {
-        DIAG("manifest_json_exception", { err: String(e) });
-      }
-    })();
-  }, []); // IMPORTANT: run once on mount
+    console.log('[MANIFEST] build meta hydration disabled');
+  }, []);
+
 
   useEffect(() => {
     fetchMediaManifest();
@@ -751,7 +656,7 @@ const backgroundManifestCheck = async (
     const CONCURRENCY = 8;
     const NEGATIVE_CACHE_TTL = 30 * 1000; // 30 seconds
     const POSITIVE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-    const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
+    const KEY = (o:string) => `manifestMetaCache:v2:${o}`;
     const MANIFEST_REFRESH_KEY = 'manifest:last_refresh_ts';
     const MANIFEST_RESULT_KEY = 'manifest:last_result';
     

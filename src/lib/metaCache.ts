@@ -3,7 +3,7 @@ type Folder = string;
 export type Meta = { title?: string; description?: string; tags?: string[] };
 type CacheBlob = { owner: string; updatedAt: number; metaByFolder: Record<Folder, Meta> };
 
-const KEY = (owner: string) => `manifestMetaCache:v1:${owner}`;
+const KEY = (owner: string) => `manifestMetaCache:v2:${owner}`;
 
 export function loadMetaCache(owner: string): CacheBlob | null {
   try {
@@ -30,3 +30,16 @@ export function getMetaCacheStats(owner: string): { updatedAt: number; count: nu
     return null;
   }
 }
+
+export function clearMetaCache(owner: string) {
+  try {
+    const keys = [
+      `manifestMetaCache:v1:${owner}`,
+      `manifestMetaCache:v2:${owner}`,
+      'manifest:last_refresh_ts',
+      'manifest:last_result'
+    ];
+    keys.forEach(k => localStorage.removeItem(k));
+  } catch {}
+}
+
