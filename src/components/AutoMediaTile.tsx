@@ -300,38 +300,77 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         
         {/* Error State */}
         {hasError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted text-muted-foreground p-4 text-center">
-            <div>
-              <div className="w-12 h-12 mx-auto mb-2 opacity-50">⚠️</div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted text-muted-foreground p-4 text-center overflow-y-auto">
+            <div className="w-full max-w-[90%]">
+              <div className="w-12 h-12 mx-auto mb-3 opacity-50">⚠️</div>
+              
+              {/* Primary Error Message */}
               {supabasePaused ? (
                 <>
-                  <p className="text-sm font-medium text-destructive">Supabase Project Paused</p>
-                  <p className="text-xs opacity-70 mt-1">Backend services are unavailable. The project may be paused.</p>
-                  <p className="text-xs opacity-80 mt-1">Go to Supabase dashboard to resume the project.</p>
+                  <p className="text-sm font-semibold text-destructive">Supabase Project Paused</p>
+                  <p className="text-xs opacity-70 mt-1">Backend services are unavailable.</p>
+                  <p className="text-xs opacity-80 mt-1">Go to Supabase dashboard to resume.</p>
                 </>
               ) : proxyMisrouted ? (
                 <>
-                  <p className="text-sm font-medium">Proxy misrouted</p>
-                  <p className="text-xs opacity-70 mt-1">The proxy returned HTML instead of media. Check function deployment.</p>
+                  <p className="text-sm font-semibold text-destructive">Proxy Error</p>
+                  <p className="text-xs opacity-70 mt-1">Received HTML instead of video.</p>
+                  <p className="text-xs opacity-80 mt-1">Check edge function deployment.</p>
                 </>
               ) : (
                 <>
-                  <p className="text-sm font-medium">Unable to play video</p>
-                  {httpStatus !== null && httpStatus >= 400 && (
-                    <p className="text-xs opacity-70 mt-1">HTTP {httpStatus}</p>
+                  <p className="text-sm font-semibold text-destructive">Unable to Load Video</p>
+                  
+                  {/* HTTP Status */}
+                  {httpStatus !== null && (
+                    <div className="mt-2 px-2 py-1 bg-background/50 rounded text-xs">
+                      <span className="font-medium">HTTP Status:</span>{' '}
+                      <span className={httpStatus >= 400 ? 'text-destructive font-semibold' : 'text-foreground'}>
+                        {httpStatus}
+                      </span>
+                      {httpStatus === 404 && <span className="opacity-70"> (Not Found)</span>}
+                      {httpStatus === 403 && <span className="opacity-70"> (Forbidden)</span>}
+                      {httpStatus === 500 && <span className="opacity-70"> (Server Error)</span>}
+                      {httpStatus === 206 && <span className="opacity-70"> (Partial Content - OK)</span>}
+                    </div>
                   )}
-                  {codecHint && (codecHint.includes('HEVC') || codecHint.includes('AV1')) && (
-                    <>
-                      <p className="text-xs opacity-80 mt-1">Codec: {codecHint}</p>
-                      <p className="text-xs opacity-70 mt-1">Not supported in this browser. Try Safari or download.</p>
-                    </>
+                  
+                  {/* Codec Info */}
+                  {codecHint && (
+                    <div className="mt-2 px-2 py-1 bg-background/50 rounded text-xs">
+                      <span className="font-medium">Codec:</span>{' '}
+                      <span className={
+                        codecHint.includes('HEVC') || codecHint.includes('AV1') 
+                          ? 'text-amber-500 font-semibold' 
+                          : 'text-foreground'
+                      }>
+                        {codecHint}
+                      </span>
+                      {(codecHint.includes('HEVC') || codecHint.includes('AV1')) && (
+                        <p className="mt-1 opacity-70">⚠️ Not supported in most browsers</p>
+                      )}
+                    </div>
                   )}
-                  {(!httpStatus || (httpStatus >= 200 && httpStatus < 300)) && (!codecHint || (!codecHint.includes('HEVC') && !codecHint.includes('AV1'))) && (
-                    <p className="text-xs opacity-70 mt-1">Video format may not be compatible with your browser.</p>
-                  )}
-                  {httpStatus && httpStatus >= 400 && (
-                    <p className="text-xs opacity-70 mt-1">Unable to download video from server.</p>
-                  )}
+                  
+                  {/* Source Info */}
+                  <div className="mt-2 px-2 py-1 bg-background/50 rounded text-xs break-all">
+                    <span className="font-medium">Source:</span>{' '}
+                    <span className="opacity-70">
+                      {useFullSource ? 'Full URL' : 'Preview URL'}
+                    </span>
+                    <p className="mt-1 text-[10px] opacity-50 font-mono leading-tight">
+                      {currentSrc.length > 80 ? currentSrc.substring(0, 77) + '...' : currentSrc}
+                    </p>
+                  </div>
+                  
+                  {/* Helpful Message */}
+                  <p className="text-xs opacity-70 mt-2">
+                    {httpStatus && httpStatus >= 400 
+                      ? 'File not accessible on server.' 
+                      : codecHint && (codecHint.includes('HEVC') || codecHint.includes('AV1'))
+                        ? 'Try Safari or download the video.'
+                        : 'Video format may be incompatible.'}
+                  </p>
                 </>
               )}
             </div>
