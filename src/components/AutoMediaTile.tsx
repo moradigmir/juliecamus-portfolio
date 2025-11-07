@@ -4,7 +4,7 @@ import { Play } from 'lucide-react';
 import type { MediaItem } from '../hooks/useMediaIndex';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useVideoSettings } from '../hooks/useVideoSettings';
-import { toProxy, listDir } from '../lib/hidrive';
+import { toProxy } from '../lib/hidrive';
 import { diag } from '../debug/diag';
 
 interface AutoMediaTileProps {
@@ -30,7 +30,6 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [errorAttempts, setErrorAttempts] = useState(0);
   const [useFullSource, setUseFullSource] = useState(false);
-  const [fallbackImageUrl, setFallbackImageUrl] = useState<string | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
@@ -202,22 +201,21 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     };
   }, [media.previewType, isPlaying, autoplayEnabled]);
 
-  // IMMEDIATE load for ANY media with thumbnail OR for images
+  // Simple load state management
   useEffect(() => {
-    if (media.thumbnailUrl || media.previewType === 'image') {
+    // Images load instantly
+    if (media.previewType === 'image') {
       setIsLoaded(true);
+      return;
     }
-  }, [media.previewType, media.thumbnailUrl]);
-
-  // AGGRESSIVE safety timeout: mark as loaded after 800ms ALWAYS
-  useEffect(() => {
-    if (isLoaded) return;
+    
+    // Videos: wait for actual load, but timeout after 2s
     const timeout = setTimeout(() => {
-      console.log(`⏰ [LOADER TIMEOUT] Forcing tile ${media.folder} to show (was stuck loading)`);
-      setIsLoaded(true); // FORCE IT
-    }, 800);
+      setIsLoaded(true);
+    }, 2000);
+    
     return () => clearTimeout(timeout);
-  }, [isLoaded, media.folder]);
+  }, [media.previewType, media.folder]);
 
   // Reset error state when media changes
   useEffect(() => {
@@ -228,7 +226,6 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     setSupabasePaused(false);
     setProxyMisrouted(false);
     setHttpStatus(null);
-    setFallbackImageUrl(null);
   }, [media.previewUrl, media.fullUrl, media.folder]);
   
   return (
@@ -416,9 +413,16 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             </div>
           )}
           
+          {/* MANIFEST indicator - show if metadata exists */}
+          {media.meta?.title && (
+            <div className="absolute top-2 left-2 bg-charcoal/90 text-off-white text-xs font-medium px-2 py-0.5 rounded-full border border-off-white/20">
+              ✓ Meta
+            </div>
+          )}
+          
           {/* Order Badge - Only show in debug mode */}
           {isDebugMode && (
-            <div className="absolute top-2 left-2 bg-charcoal text-off-white text-xs font-medium px-2 py-1 rounded-full">
+            <div className="absolute top-2 right-2 bg-charcoal text-off-white text-xs font-medium px-2 py-1 rounded-full">
               {media.orderKey}
             </div>
           )}
