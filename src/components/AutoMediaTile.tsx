@@ -84,12 +84,22 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const effectivePreviewType = (healedType ?? media.previewType);
   const effectiveFullType = (healedType ?? media.fullType);
 
+  // Decide final rendering type (force video if full is video)
+  const isVideo = (() => {
+    if (effectiveFullType === 'video' || effectivePreviewType === 'video') return true;
+    try {
+      const url = healedSrc ?? media.fullUrl ?? media.previewUrl;
+      const lower = url.toLowerCase();
+      return /\.(mp4|mov|webm|m4v)(\?|$)/.test(lower);
+    } catch { return false; }
+  })();
+
   console.log('MEDIA_SRC_SET', { folder: media.folder, preview: basePreviewUrl });
   diag('NET', 'media_src_set', { folder: media.folder, preview: basePreviewUrl });
   
   const cacheBustedUrl = `${basePreviewUrl}${basePreviewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
   const cacheBustedFullUrl = `${baseFullUrl}${baseFullUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
-  const currentSrc = useFullSource ? cacheBustedFullUrl : cacheBustedUrl;
+  const currentSrc = isVideo ? cacheBustedFullUrl : cacheBustedUrl;
 
   const listUrl = (() => {
     try {
@@ -199,7 +209,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
   // For videos: mark loaded immediately so poster is always visible; no artificial error timers
   useEffect(() => {
-    if (media.previewType === 'image') {
+    if (!isVideo) {
       setIsLoaded(true);
       return;
     }
@@ -211,7 +221,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     return () => {
       clearTimeout(initTimer);
     };
-  }, [media.previewType, media.folder]);
+  }, [isVideo, media.folder]);
 
   // Reset error state when media changes
   useEffect(() => {
@@ -257,109 +267,31 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           </div>
         )}
         
-        {/* Error State */}
-        {hasError && (
+        {/* Error State - never block videos */}
+        {(() => { const showErrorOverlay = hasError && !isVideo; return showErrorOverlay; })() && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted text-muted-foreground p-4 text-center overflow-y-auto">
             <div className="w-full max-w-[90%]">
               <div className="w-12 h-12 mx-auto mb-3 opacity-50">⚠️</div>
-              
-              {/* Primary Error Message */}
-              {supabasePaused ? (
-                <>
-                  <p className="text-sm font-semibold text-destructive">Supabase Project Paused</p>
-                  <p className="text-xs opacity-70 mt-1">Backend services are unavailable.</p>
-                  <p className="text-xs opacity-80 mt-1">Go to Supabase dashboard to resume.</p>
-                </>
-              ) : proxyMisrouted ? (
-                <>
-                  <p className="text-sm font-semibold text-destructive">Proxy Error</p>
-                  <p className="text-xs opacity-70 mt-1">Received HTML instead of video.</p>
-                  <p className="text-xs opacity-80 mt-1">Check edge function deployment.</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-destructive">Unable to Load Video</p>
-                  
-                  {/* HTTP Status */}
-                  {httpStatus !== null && (
-                    <div className="mt-2 px-2 py-1 bg-background/50 rounded text-xs">
-                      <span className="font-medium">HTTP Status:</span>{' '}
-                      <span className={httpStatus >= 400 ? 'text-destructive font-semibold' : 'text-foreground'}>
-                        {httpStatus}
-                      </span>
-                      {httpStatus === 404 && <span className="opacity-70"> (Not Found)</span>}
-                      {httpStatus === 403 && <span className="opacity-70"> (Forbidden)</span>}
-                      {httpStatus === 500 && <span className="opacity-70"> (Server Error)</span>}
-                      {httpStatus === 206 && <span className="opacity-70"> (Partial Content - OK)</span>}
-                    </div>
-                  )}
-                  
-                  {/* Codec Info */}
-                  {codecHint && (
-                    <div className="mt-2 px-2 py-1 bg-background/50 rounded text-xs">
-                      <span className="font-medium">Codec:</span>{' '}
-                      <span className={
-                        codecHint.includes('HEVC') || codecHint.includes('AV1') 
-                          ? 'text-amber-500 font-semibold' 
-                          : 'text-foreground'
-                      }>
-                        {codecHint}
-                      </span>
-                      {(codecHint.includes('HEVC') || codecHint.includes('AV1')) && (
-                        <p className="mt-1 opacity-70">⚠️ Not supported in most browsers</p>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Source Info */}
-                  <div className="mt-2 px-2 py-1 bg-background/50 rounded text-xs break-all">
-                    <span className="font-medium">Source:</span>{' '}
-                    <span className="opacity-70">
-                      {useFullSource ? 'Full URL' : 'Preview URL'}
-                    </span>
-                    <p className="mt-1 text-[10px] opacity-50 font-mono leading-tight">
-                      {currentSrc.length > 80 ? currentSrc.substring(0, 77) + '...' : currentSrc}
-                    </p>
-                  </div>
-                  
-                  {/* Helpful Message */}
-                  <p className="text-xs opacity-70 mt-2">
-                    {httpStatus && httpStatus >= 400 
-                      ? 'File not accessible on server.' 
-                      : codecHint && (codecHint.includes('HEVC') || codecHint.includes('AV1'))
-                        ? 'Try Safari or download the video.'
-                        : 'Video format may be incompatible.'}
-                  </p>
-                </>
-              )}
+              <p className="text-sm font-semibold text-destructive">Unable to Load Media</p>
+              {/* Source Info */}
+              <div className="mt-2 px-2 py-1 bg-background/50 rounded text-xs break-all">
+                <span className="font-medium">Source:</span>{' '}
+                <span className="opacity-70">Preview URL</span>
+                <p className="mt-1 text-[10px] opacity-50 font-mono leading-tight">
+                  {currentSrc.length > 80 ? currentSrc.substring(0, 77) + '...' : currentSrc}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              {supabasePaused ? (
-                <a
-                  href="https://supabase.com/dashboard/project/fvrgjyyflojdiklqepqt"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1 text-xs rounded-md bg-charcoal text-off-white"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Resume Project
-                </a>
-              ) : healing ? (
-                <div className="px-3 py-1 text-xs text-muted-foreground">
-                  Healing...
-                </div>
-              ) : null}
-              <a
-                href={currentSrc}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
-                className="px-3 py-1 text-xs rounded-md bg-secondary text-secondary-foreground"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Download
-              </a>
-            </div>
+            <a
+              href={currentSrc}
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+              className="px-3 py-1 text-xs rounded-md bg-secondary text-secondary-foreground"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Download
+            </a>
           </div>
         )}
 
