@@ -164,10 +164,9 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           return;
         }
         
-        // Auto-heal on 404 or 403
+        // Auto-heal disabled - let videos load naturally
         if (res.status === 404 || res.status === 403) {
-          console.log(`[AUTO-HEAL] Detected ${res.status}, attempting heal for ${media.folder}`);
-          attemptHeal();
+          console.log(`[DEBUG] Detected ${res.status} for ${media.folder}`);
           return;
         }
         
@@ -188,12 +187,6 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         else if (ascii.includes('avc1') || ascii.includes('isom') || ascii.includes('mp41') || ascii.includes('mp42')) hint = 'H.264/AVC (avc1)';
         setCodecHint(hint);
         setHttpStatus(res.status);
-        
-        // If codec is likely unsupported (HEVC/AV1), attempt image-based heal immediately
-        if (hint && (hint.includes('HEVC') || hint.includes('AV1'))) {
-          console.log(`[AUTO-HEAL] Unsupported codec (${hint}), attempting image fallback for ${media.folder}`);
-          attemptHeal();
-        }
       } catch (_) {
         // ignore
       }
@@ -507,9 +500,6 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                   }
                   console.warn('MEDIA_ERROR', { folder: media.folder, src: currentSrc });
                   diag('NET', 'media_error', { folder: media.folder, src: currentSrc });
-                  // Auto-heal on video error
-                  console.log(`[AUTO-HEAL] Video error, attempting heal for ${media.folder}`);
-                  attemptHeal();
                   setHasError(true);
                   return prev + 1;
                 });
@@ -529,9 +519,6 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               onError={() => {
                 console.warn('MEDIA_ERROR', { folder: media.folder, preview: basePreviewUrl });
                 diag('NET', 'media_error', { folder: media.folder, preview: basePreviewUrl });
-                // Auto-heal on image error
-                console.log(`[AUTO-HEAL] Image error, attempting heal for ${media.folder}`);
-                attemptHeal();
                 setHasError(true);
               }}
               style={{ display: hasError ? 'none' : 'block' }}
