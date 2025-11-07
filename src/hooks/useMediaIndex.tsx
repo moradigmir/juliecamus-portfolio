@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, SetStateAction, Dispatch } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
 import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict, persistFolderMetaToCache } from '@/lib/hidrive';
 import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
@@ -675,7 +675,7 @@ function sortMedia(items: MediaItem[]): MediaItem[] {
 // FORCE MODE: On first load, ignores all cache and fetches MANIFEST.txt for ALL folders
 const backgroundManifestCheck = async (
   items: MediaItem[], 
-  setMediaItems: (items: MediaItem[]) => void,
+  setMediaItems: Dispatch<SetStateAction<MediaItem[]>>,
   owner: string,
   forceRefresh = false,
   setMetaStats?: (stats: MetaStats) => void
@@ -700,8 +700,6 @@ const backgroundManifestCheck = async (
       }
     } catch {}
     
-    const updatedItems = [...items];
-    
     // Stats tracking
     let statsProcessed = 0;
     let statsFound = 0;
@@ -709,7 +707,7 @@ const backgroundManifestCheck = async (
     let statsErrors = 0;
     
     // Sort indices to prioritize lower folder numbers
-    const indices = updatedItems
+    const indices = items
       .map((item, i) => ({ i, folder: parseInt(item.folder, 10) || 999 }))
       .sort((a, b) => a.folder - b.folder)
       .map(x => x.i);
@@ -717,7 +715,7 @@ const backgroundManifestCheck = async (
     console.log(`📋 [MANIFEST QUEUE] ${indices.length} folders prioritized by number`);
 
     async function processIndex(i: number) {
-      const item = updatedItems[i];
+      const item = items[i];
       const folderPath = `/public/${item.folder}/`;
       const cachedMeta = cachedData[item.folder];
       
@@ -796,20 +794,20 @@ const backgroundManifestCheck = async (
         if (hasChanges || forceRefresh) {
           console.log(`📝 [MANIFEST ${item.folder}] UPDATING UI`, { title: currentMeta.title });
           
-          updatedItems[i] = {
+          const updatedItem = {
             ...item,
             title: currentMeta.title || item.title,
             description: currentMeta.description || item.description,
             tags: currentMeta.tags || item.tags,
-            meta: { ...(item.meta ?? {}), ...currentMeta, source: 'file' },
+            meta: { ...(item.meta ?? {}), ...currentMeta, source: 'file' as const },
           };
           
           // Persist to cache with source marker
           persistFolderMetaToCache(item.folder, { ...currentMeta, source: 'file' });
           cachedData[item.folder] = { ...currentMeta, source: 'file', ts: Date.now() };
           
-          // Incremental UI update
-          setMediaItems(sortMedia(updatedItems));
+          // Incremental UI update - use functional setState to preserve discovered items
+          setMediaItems(prev => sortMedia(mergeByFolder(prev, [updatedItem])));
         } else {
           console.log(`✓ [MANIFEST ${item.folder}] No changes`);
         }
