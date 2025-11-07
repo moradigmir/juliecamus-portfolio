@@ -8,7 +8,7 @@
 function corsHeaders(origin?: string) {
   return {
     'Access-Control-Allow-Origin': origin || '*',
-    'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,HEAD,OPTIONS,PUT',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, range, accept, origin',
     'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, Content-Type',
   } as Record<string, string>;
@@ -28,6 +28,83 @@ Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: { ...corsHeaders(origin) } });
+  }
+
+  // Handle PUT requests for writing files
+  if (req.method === 'PUT') {
+    const pathParam = url.searchParams.get('path') || '';
+    const ownerParam = url.searchParams.get('owner') || undefined;
+
+    if (!pathParam || !pathParam.startsWith('/')) {
+      return new Response("Missing or invalid 'path' query param", {
+        status: 400,
+        headers: { ...corsHeaders(origin) },
+      });
+    }
+
+    // Allow writing to allowed prefixes
+    const allowedPrefixes = [/^\/public(\/|$)/i, /^\/common(\/|$)/i, /^\/personal(\/|$)/i, /^\/shared(\/|$)/i];
+    const allowed = allowedPrefixes.some((re) => re.test(pathParam));
+    if (!allowed) {
+      return new Response('Access denied: path must start with /public, /Common, /Personal or /Shared', {
+        status: 403,
+        headers: { ...corsHeaders(origin) },
+      });
+    }
+
+    const username = Deno.env.get('HIDRIVE_USERNAME');
+    const password = Deno.env.get('HIDRIVE_PASSWORD');
+    if (!username || !password) {
+      return new Response('HiDrive credentials not configured', {
+        status: 503,
+        headers: { ...corsHeaders(origin) },
+      });
+    }
+
+    const owner = (() => {
+      const re = /^[a-zA-Z0-9._-]{1,64}$/;
+      if (ownerParam && re.test(ownerParam)) return ownerParam;
+      return username;
+    })();
+
+    const base = 'https://webdav.hidrive.strato.com';
+    const resolveUrl = (p: string, owner: string) => {
+      const lower = p.toLowerCase();
+      if (lower.startsWith('/public/')) {
+        return { url: `${base}${p}`, usedPath: p };
+      }
+      return { url: `${base}/users/${encodeURIComponent(owner)}${p}`, usedPath: p };
+    };
+
+    try {
+      const { url: targetUrl } = resolveUrl(pathParam, owner);
+      const body = await req.text();
+
+      const upstream = await fetch(targetUrl, {
+        method: 'PUT',
+        headers: {
+          Authorization: 'Basic ' + btoa(`${username}:${password}`),
+          'Content-Type': 'text/plain',
+          'User-Agent': 'Lovable-HiDrive-Proxy/1.0',
+        },
+        body,
+      });
+
+      console.log('hidrive-proxy-put', JSON.stringify({ owner, path: pathParam, status: upstream.status }));
+
+      if (!upstream.ok) {
+        const text = await upstream.text();
+        return new Response(text || 'Upload failed', { 
+          status: upstream.status, 
+          headers: { ...corsHeaders(origin) } 
+        });
+      }
+
+      return new Response('OK', { status: 200, headers: { ...corsHeaders(origin) } });
+    } catch (err) {
+      console.error('HiDrive PUT error', err);
+      return new Response('Upload error', { status: 500, headers: { ...corsHeaders(origin) } });
+    }
   }
 
   if (req.method !== 'GET' && req.method !== 'HEAD') {

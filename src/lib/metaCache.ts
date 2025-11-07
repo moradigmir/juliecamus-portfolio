@@ -43,3 +43,17 @@ export function clearMetaCache(owner: string) {
   } catch {}
 }
 
+/**
+ * Invalidate cache for a specific folder
+ */
+export function invalidateFolderCache(owner: string, folder: string) {
+  try {
+    const cache = loadMetaCache(owner);
+    if (!cache) return;
+    
+    // Remove the folder from cache
+    delete cache.metaByFolder[folder];
+    saveMetaCache(owner, cache.metaByFolder);
+  } catch {}
+}
+
