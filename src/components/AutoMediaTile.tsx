@@ -4,7 +4,7 @@ import { Play } from 'lucide-react';
 import type { MediaItem } from '../hooks/useMediaIndex';
 import { useIsTabletOrMobile } from '../hooks/use-tablet-mobile';
 import { useVideoSettings } from '../hooks/useVideoSettings';
-import { toProxy } from '../lib/hidrive';
+import { toProxy, findPreviewForFolder } from '../lib/hidrive';
 import { diag } from '../debug/diag';
 
 interface AutoMediaTileProps {
@@ -36,6 +36,11 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const tileRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsTabletOrMobile();
   const { autoplayEnabled, muteEnabled } = useVideoSettings();
+  
+  // Healed source when we auto-fix stale/broken URLs
+  const [healedSrc, setHealedSrc] = useState<string | null>(null);
+  const [healedType, setHealedType] = useState<'image' | 'video' | null>(null);
+  const [healing, setHealing] = useState(false);
 
   const handleClick = () => {
     if (hasError) return;
@@ -70,11 +75,20 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   // Force proxy mapping with toProxyStrict for consistent /public/ prefix
   const proxiedPreviewUrl = toProxy(media.previewUrl);
   const proxiedFullUrl = toProxy(media.fullUrl);
-  console.log('MEDIA_SRC_SET', { folder: media.folder, preview: proxiedPreviewUrl });
-  diag('NET', 'media_src_set', { folder: media.folder, preview: proxiedPreviewUrl });
   
-  const cacheBustedUrl = `${proxiedPreviewUrl}${proxiedPreviewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
-  const cacheBustedFullUrl = `${proxiedFullUrl}${proxiedFullUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
+  // If we healed this tile, prefer healed source
+  const basePreviewUrl = healedSrc ?? proxiedPreviewUrl;
+  const baseFullUrl = healedSrc ?? proxiedFullUrl;
+
+  // Effective media type if we healed to a different file kind
+  const effectivePreviewType = (healedType ?? media.previewType);
+  const effectiveFullType = (healedType ?? media.fullType);
+
+  console.log('MEDIA_SRC_SET', { folder: media.folder, preview: basePreviewUrl });
+  diag('NET', 'media_src_set', { folder: media.folder, preview: basePreviewUrl });
+  
+  const cacheBustedUrl = `${basePreviewUrl}${basePreviewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
+  const cacheBustedFullUrl = `${baseFullUrl}${baseFullUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
   const currentSrc = useFullSource ? cacheBustedFullUrl : cacheBustedUrl;
 
   const listUrl = (() => {
@@ -92,6 +106,36 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
       return '';
     }
   })();
+
+  // Attempt to heal a broken/stale URL by listing folder and picking preview or first media
+  const attemptHeal = useCallback(async () => {
+    if (healing) return;
+    setHealing(true);
+    try {
+      // Extract directory path from current preview URL
+      const u = new URL(basePreviewUrl);
+      const path = u.searchParams.get('path') || '';
+      const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '/';
+      const healed = await findPreviewForFolder(dir);
+      if (healed && healed !== basePreviewUrl) {
+        const lower = healed.toLowerCase();
+        const newType: 'image' | 'video' = /\.(mp4|mov|webm|m4v)(\?|$)/i.test(lower) ? 'video' : 'image';
+        setHealedSrc(healed);
+        setHealedType(newType);
+        setHasError(false);
+        setReloadKey((k) => k + 1);
+        if (newType === 'video' && videoRef.current) {
+          try { videoRef.current.load(); } catch {}
+        }
+        console.log('[HEAL] Healed media source', { folder: media.folder, healed, type: newType });
+        diag('NET', 'media_healed', { folder: media.folder, healed, type: newType });
+      }
+    } catch (e) {
+      console.warn('[HEAL] Failed to heal media', { folder: media.folder, err: String(e) });
+    } finally {
+      setHealing(false);
+    }
+  }, [basePreviewUrl, media.folder, healing]);
 
   // Video analysis effect
   useEffect(() => {
