@@ -220,12 +220,12 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     const startSecondStage = () => {
       const t2 = window.setTimeout(() => {
         if (!hasError && !videoReady) {
-          console.log(`[AutoMediaTile] ${media.folder}: +3s timeout, show error overlay (video not ready)`);
+          console.log(`[AutoMediaTile] ${media.folder}: +7s timeout, show error overlay (video not ready)`);
           setHasError(true);
         } else if (videoReady) {
           console.log(`[AutoMediaTile] ${media.folder}: Video ready, skipping error`);
         }
-      }, 3000);
+      }, 7000);
       timers.push(t2);
     };
 
