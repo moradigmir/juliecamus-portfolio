@@ -29,7 +29,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [autoPlayTimeout, setAutoPlayTimeout] = useState<NodeJS.Timeout | null>(null);
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [errorAttempts, setErrorAttempts] = useState(0);
-  const [useFullSource, setUseFullSource] = useState(false);
+  const [useFullSource, setUseFullSource] = useState(media.previewType === 'video');
   const [videoReady, setVideoReady] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -252,64 +252,28 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     };
   }, [media.previewType, isPlaying, autoplayEnabled]);
 
-  // For videos: mark loaded immediately so poster is always visible
-  // Timeout flow runs in parallel: 5s -> try full source, +3s -> show error overlay
+  // For videos: mark loaded immediately so poster is always visible; no artificial error timers
   useEffect(() => {
     if (media.previewType === 'image') {
       setIsLoaded(true);
       return;
     }
 
-    // Videos: show poster immediately (don't wait for canplay events)
     const initTimer = window.setTimeout(() => {
       setIsLoaded(true);
     }, 50);
 
-    const timers: number[] = [initTimer];
-
-    const startSecondStage = () => {
-      const t2 = window.setTimeout(() => {
-        if (!hasError && !videoReady) {
-          console.log(`[AutoMediaTile] ${media.folder}: +7s timeout, show error overlay (video not ready)`);
-          setHasError(true);
-        } else if (videoReady) {
-          console.log(`[AutoMediaTile] ${media.folder}: Video ready, skipping error`);
-        }
-      }, 7000);
-      timers.push(t2);
-    };
-
-    if (!useFullSource) {
-      const t1 = window.setTimeout(() => {
-        if (!hasError && !videoReady) {
-          console.log(`[AutoMediaTile] ${media.folder}: 5s timeout, swapping to full source`);
-          setUseFullSource(true);
-          setReloadKey((k) => k + 1);
-          if (videoRef.current) {
-            videoRef.current.load();
-          }
-          startSecondStage();
-        } else if (videoReady) {
-          console.log(`[AutoMediaTile] ${media.folder}: Video ready before 5s, skipping swap`);
-        }
-      }, 5000);
-      timers.push(t1);
-    } else if (!videoReady) {
-      // Already on full source, start the 3s error timer only if video not ready
-      startSecondStage();
-    }
-
     return () => {
-      timers.forEach(clearTimeout);
+      clearTimeout(initTimer);
     };
-  }, [media.previewType, media.folder, useFullSource, hasError, videoReady]);
+  }, [media.previewType, media.folder]);
 
   // Reset error state when media changes
   useEffect(() => {
     setHasError(false);
     setIsLoaded(false);
     setErrorAttempts(0);
-    setUseFullSource(false);
+    setUseFullSource(media.previewType === 'video');
     setSupabasePaused(false);
     setProxyMisrouted(false);
     setHttpStatus(null);
@@ -463,8 +427,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               muted={muteEnabled}
               loop
               playsInline
-              preload="metadata"
-              crossOrigin="anonymous"
+              preload="auto"
               poster={media.thumbnailUrl || '/placeholder.svg'}
               onLoadedMetadata={() => { 
                 console.log(`[AutoMediaTile] loadedMetadata: ${media.folder}`); 
