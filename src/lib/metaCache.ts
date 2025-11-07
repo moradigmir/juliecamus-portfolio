@@ -19,3 +19,14 @@ export function saveMetaCache(owner: string, metaByFolder: Record<Folder, Meta>)
   const blob: CacheBlob = { owner, updatedAt: Date.now(), metaByFolder };
   try { localStorage.setItem(KEY(owner), JSON.stringify(blob)); } catch {}
 }
+
+export function getMetaCacheStats(owner: string): { updatedAt: number; count: number } | null {
+  try {
+    const cache = loadMetaCache(owner);
+    if (!cache) return null;
+    const count = Object.keys(cache.metaByFolder).length;
+    return { updatedAt: cache.updatedAt, count };
+  } catch {
+    return null;
+  }
+}

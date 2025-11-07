@@ -208,6 +208,17 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   }, [media.previewType, media.thumbnailUrl]);
 
+  // Safety timeout: mark as loaded after 1.2s to prevent stuck spinners
+  useEffect(() => {
+    if (isLoaded) return;
+    const timeout = setTimeout(() => {
+      if (media.thumbnailUrl || videoRef.current?.readyState >= 2) {
+        setIsLoaded(true);
+      }
+    }, 1200);
+    return () => clearTimeout(timeout);
+  }, [isLoaded, media.thumbnailUrl]);
+
   // Reset error state when media changes
   useEffect(() => {
     setHasError(false);
@@ -294,14 +305,14 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                   href="https://supabase.com/dashboard/project/fvrgjyyflojdiklqepqt"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-1 text-xs rounded-md bg-primary text-primary-foreground"
+                  className="px-3 py-1 text-xs rounded-md bg-charcoal text-off-white"
                   onClick={(e) => e.stopPropagation()}
                 >
                   Resume Project
                 </a>
               ) : (
                 <button
-                  className="px-3 py-1 text-xs rounded-md bg-primary text-primary-foreground"
+                  className="px-3 py-1 text-xs rounded-md bg-charcoal text-off-white"
                   onClick={(e) => {
                     e.stopPropagation();
                     setHasError(false);
@@ -406,7 +417,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           
           {/* Order Badge - Only show in debug mode */}
           {isDebugMode && (
-            <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-full">
+            <div className="absolute top-2 left-2 bg-charcoal text-off-white text-xs font-medium px-2 py-1 rounded-full">
               {media.orderKey}
             </div>
           )}

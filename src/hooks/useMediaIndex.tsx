@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
 import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict, persistFolderMetaToCache } from '@/lib/hidrive';
 import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
@@ -104,12 +104,23 @@ export interface MediaManifest {
   source: 'hidrive';
 }
 
+export interface MetaStats {
+  processed: number;
+  total: number;
+  found: number;
+  missing: number;
+  errors: number;
+  lastRefreshTs: number;
+}
+
 interface UseMediaIndexReturn {
   mediaItems: MediaItem[];
   isLoading: boolean;
   error: string | null;
   isSupabasePaused: boolean;
   refetch: () => void;
+  metaStats: MetaStats;
+  forceRefreshManifests: () => void;
 }
 
 export const useMediaIndex = (): UseMediaIndexReturn => {
@@ -117,6 +128,14 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSupabasePaused, setIsSupabasePaused] = useState(false);
+  const [metaStats, setMetaStats] = useState<MetaStats>({
+    processed: 0,
+    total: 0,
+    found: 0,
+    missing: 0,
+    errors: 0,
+    lastRefreshTs: 0
+  });
 
   const fetchMediaManifest = async () => {
     try {
@@ -446,10 +465,13 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       setIsSupabasePaused(false); // Reset on success
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
-      // Background task: FORCE CHECK on first load to fetch all MANIFEST.txt files
-      // forceRefresh=true ignores cache completely and fetches everything
-      console.log('🚀 Starting FORCED MANIFEST check (ignoring cache)...');
-      backgroundManifestCheck(combined, setMediaItems, owner, true).catch(err => 
+      // Background task: Check if we should force refresh
+      const MANIFEST_REFRESH_KEY = 'manifest:last_refresh_ts';
+      const lastRefreshTs = parseInt(localStorage.getItem(MANIFEST_REFRESH_KEY) || '0', 10);
+      const shouldForce = !lastRefreshTs || Date.now() - lastRefreshTs > 24 * 60 * 60 * 1000; // Force if >24h
+      
+      console.log(`🚀 Starting MANIFEST check (force=${shouldForce})...`);
+      backgroundManifestCheck(combined, setMediaItems, owner, shouldForce, setMetaStats).catch(err => 
         console.error('❌ Background manifest check error:', err)
       );
 
@@ -548,6 +570,14 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
   const refetch = () => {
     fetchMediaManifest();
   };
+
+  const forceRefreshManifests = useCallback(() => {
+    console.log('⚡ Force refreshing MANIFEST.txt files...');
+    const owner = 'juliecamus';
+    backgroundManifestCheck(mediaItems, setMediaItems, owner, true, setMetaStats).catch(err =>
+      console.error('❌ Force refresh error:', err)
+    );
+  }, [mediaItems]);
 
   useEffect(() => {
     const DIAG = (msg: string, data?: any) =>
@@ -666,7 +696,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
     isLoading,
     error,
     isSupabasePaused,
-    refetch
+    refetch,
+    metaStats,
+    forceRefreshManifests
   };
 };
 
@@ -711,7 +743,8 @@ const backgroundManifestCheck = async (
   items: MediaItem[], 
   setMediaItems: (items: MediaItem[]) => void,
   owner: string,
-  forceRefresh = false
+  forceRefresh = false,
+  setMetaStats?: (stats: MetaStats) => void
 ) => {
   try {
     console.log(`🔍 [MANIFEST CHECK START] ${items.length} folders, forceRefresh=${forceRefresh}`);
@@ -720,6 +753,8 @@ const backgroundManifestCheck = async (
     const NEGATIVE_CACHE_TTL = 30 * 1000; // 30 seconds
     const POSITIVE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
     const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
+    const MANIFEST_REFRESH_KEY = 'manifest:last_refresh_ts';
+    const MANIFEST_RESULT_KEY = 'manifest:last_result';
     
     // Load existing cache
     let cachedData: any = {};
@@ -732,6 +767,12 @@ const backgroundManifestCheck = async (
     } catch {}
     
     const updatedItems = [...items];
+    
+    // Stats tracking
+    let statsProcessed = 0;
+    let statsFound = 0;
+    let statsMissing = 0;
+    let statsErrors = 0;
     
     // Sort indices to prioritize lower folder numbers
     const indices = updatedItems
@@ -747,6 +788,19 @@ const backgroundManifestCheck = async (
       const cachedMeta = cachedData[item.folder];
       
       console.log(`🔎 [MANIFEST ${item.folder}] Processing...`);
+      statsProcessed++;
+      
+      // Update stats
+      if (setMetaStats) {
+        setMetaStats({
+          processed: statsProcessed,
+          total: indices.length,
+          found: statsFound,
+          missing: statsMissing,
+          errors: statsErrors,
+          lastRefreshTs: Date.now()
+        });
+      }
       
       // Check if needs refresh (missing metadata)
       const needsRefresh = !item.title || item.title === item.folder || !item.meta?.title;
@@ -760,12 +814,14 @@ const backgroundManifestCheck = async (
         // Skip if negative cache is still valid
         if (cachedMeta.__absent && age < NEGATIVE_CACHE_TTL) {
           console.log(`⏭️ [MANIFEST ${item.folder}] Skip: absent cached (${Math.round(age/1000)}s ago)`);
+          statsMissing++;
           return;
         }
         
         // Skip if positive cache is fresh
         if (cachedMeta.title && age < POSITIVE_CACHE_TTL) {
           console.log(`⏭️ [MANIFEST ${item.folder}] Skip: cached (${Math.round(age/1000)}s ago)`);
+          statsFound++;
           return;
         }
       }
@@ -783,6 +839,7 @@ const backgroundManifestCheck = async (
           console.log(`📭 [MANIFEST ${item.folder}] NOT FOUND - no MANIFEST.txt file`);
           persistFolderMetaToCache(item.folder, { __absent: true });
           cachedData[item.folder] = { __absent: true, ts: Date.now() };
+          statsMissing++;
           return;
         }
         
@@ -791,6 +848,7 @@ const backgroundManifestCheck = async (
           descLen: currentMeta.description?.length || 0,
           tags: currentMeta.tags?.length || 0
         });
+        statsFound++;
         
         // Check for changes
         const itemMeta = item.meta || {};
@@ -823,6 +881,7 @@ const backgroundManifestCheck = async (
         }
       } catch (error) {
         console.error(`❌ [MANIFEST ${item.folder}] Error:`, error);
+        statsErrors++;
       }
     }
 
@@ -836,6 +895,26 @@ const backgroundManifestCheck = async (
 
     await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
     console.log(`✅ [MANIFEST CHECK COMPLETE] Processed all folders`);
+    
+    // Save final stats
+    const finalStats = {
+      processed: statsProcessed,
+      total: indices.length,
+      found: statsFound,
+      missing: statsMissing,
+      errors: statsErrors,
+      lastRefreshTs: Date.now()
+    };
+    
+    if (setMetaStats) {
+      setMetaStats(finalStats);
+    }
+    
+    // Persist last refresh timestamp and result
+    try {
+      localStorage.setItem(MANIFEST_REFRESH_KEY, Date.now().toString());
+      localStorage.setItem(MANIFEST_RESULT_KEY, JSON.stringify(finalStats));
+    } catch {}
   } catch (error) {
     console.error('❌ [MANIFEST CHECK FAILED]', error);
   }

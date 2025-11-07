@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import ProjectTile from './ProjectTile';
 import AutoMediaTile from './AutoMediaTile';
 import { useMediaIndex, type MediaItem, type MediaManifest } from '../hooks/useMediaIndex';
@@ -12,11 +12,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Save, Copy, Bug, ToggleLeft, Download, ArrowUp } from 'lucide-react';
+import { Settings, Save, Copy, Bug, ToggleLeft, Download, ArrowUp, RefreshCw, Clock, Tag, X } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
 import { diag, flushDiagToEdge, buildDiagSummary } from '../debug/diag';
+import { loadMetaCache, getMetaCacheStats } from '@/lib/metaCache';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 interface Project {
   slug: string;
@@ -48,6 +51,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [clearPlaceholders, setClearPlaceholders] = useState(false);
   const [proposedManifest, setProposedManifest] = useState<string>('');
   const [manifestDiff, setManifestDiff] = useState<string>('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchText, setSearchText] = useState('');
   const { toast } = useToast();
 
   // Show dev controls only on /?diagnostics=1 route
@@ -91,7 +96,9 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     isLoading: mediaLoading, 
     error: mediaError, 
     isSupabasePaused, 
-    refetch 
+    refetch,
+    metaStats,
+    forceRefreshManifests
   } = useMediaIndex();
 
   // Keep lightbox media in sync with latest metadata (e.g., MANIFEST updates)
@@ -470,11 +477,47 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }));
   }, [autoMediaItems, projects.length]);
 
+  // Compute all unique tags from media items
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    autoMediaItems.forEach(item => {
+      const tags = item.meta?.tags || item.tags || [];
+      tags.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [autoMediaItems]);
+
+  // Filter media items by selected tags and search text
+  const filteredMediaItems = useMemo(() => {
+    let filtered = autoMediaItems;
+    
+    // Apply tag filter
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(item => {
+        const itemTags = item.meta?.tags || item.tags || [];
+        return selectedTags.every(tag => itemTags.includes(tag));
+      });
+    }
+    
+    // Apply text search
+    if (searchText.trim()) {
+      const search = searchText.toLowerCase();
+      filtered = filtered.filter(item => {
+        const title = (item.meta?.title || item.title || '').toLowerCase();
+        const description = (item.meta?.description || item.description || '').toLowerCase();
+        const tags = (item.meta?.tags || item.tags || []).join(' ').toLowerCase();
+        return title.includes(search) || description.includes(search) || tags.includes(search);
+      });
+    }
+    
+    return filtered;
+  }, [autoMediaItems, selectedTags, searchText]);
+
   const createGridItems = useCallback((): GridItem[] => {
     const items: GridItem[] = [];
     
-    // FIRST: Add all real media items (sorted numerically by folder)
-    autoMediaItems.forEach((media, index) => {
+    // FIRST: Add all filtered real media items (sorted numerically by folder)
+    filteredMediaItems.forEach((media, index) => {
       items.push({ 
         type: 'media', 
         media, 
@@ -523,7 +566,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }));
     
     return items;
-  }, [projects, expandedTile, autoMediaItems, clearPlaceholders]);
+  }, [projects, expandedTile, filteredMediaItems, clearPlaceholders]);
 
   const gridItems = createGridItems();
 
@@ -544,8 +587,130 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
       {/* Diagnostic Panel - Only show when debug=1 */}
       {showDevControls && (
-        <div data-dev-toolbar className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div data-dev-toolbar className="mb-6 space-y-3">
+          {/* Cache Status & Controls Row */}
+          <div className="flex items-center justify-between gap-4 p-3 border rounded-lg bg-muted/20">
+            <div className="flex items-center gap-3">
+              {/* Cache Status */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 px-3 py-1.5 border rounded bg-background">
+                      <Clock className="w-3 h-3 text-muted-foreground" />
+                      <div className="text-xs space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Meta: {metaStats.found}/{autoMediaItems.length}</span>
+                          {metaStats.processed > 0 && metaStats.processed < metaStats.total && (
+                            <span className="text-muted-foreground">
+                              ({Math.round((metaStats.processed / metaStats.total) * 100)}%)
+                            </span>
+                          )}
+                        </div>
+                        {metaStats.lastRefreshTs > 0 && (
+                          <div className="text-muted-foreground">
+                            {(() => {
+                              const ago = Date.now() - metaStats.lastRefreshTs;
+                              if (ago < 60000) return `${Math.round(ago / 1000)}s ago`;
+                              if (ago < 3600000) return `${Math.round(ago / 60000)}m ago`;
+                              return `${Math.round(ago / 3600000)}h ago`;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1 text-xs">
+                      <p>MANIFEST.txt metadata cache</p>
+                      <p>Found: {metaStats.found} folders</p>
+                      <p>Missing: {metaStats.missing} folders</p>
+                      {metaStats.errors > 0 && <p className="text-destructive">Errors: {metaStats.errors}</p>}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
+              {/* Progress bar while refreshing */}
+              {metaStats.processed > 0 && metaStats.processed < metaStats.total && (
+                <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-charcoal transition-all duration-300"
+                    style={{ width: `${(metaStats.processed / metaStats.total) * 100}%` }}
+                  />
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={forceRefreshManifests}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                disabled={metaStats.processed > 0 && metaStats.processed < metaStats.total}
+              >
+                <RefreshCw className={`w-3 h-3 mr-1 ${metaStats.processed > 0 && metaStats.processed < metaStats.total ? 'animate-spin' : ''}`} />
+                Force Refresh
+              </Button>
+            </div>
+          </div>
+          
+          {/* Tag Filter Row */}
+          {allTags.length > 0 && (
+            <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/20">
+              <Tag className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 flex items-center gap-2 flex-wrap">
+                {allTags.map(tag => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => {
+                        setSelectedTags(prev => 
+                          isSelected 
+                            ? prev.filter(t => t !== tag)
+                            : [...prev, tag]
+                        );
+                      }}
+                      className={`
+                        px-2 py-1 text-xs rounded-full transition-colors
+                        ${isSelected 
+                          ? 'bg-charcoal text-off-white' 
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }
+                      `}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+                {selectedTags.length > 0 && (
+                  <button
+                    onClick={() => setSelectedTags([])}
+                    className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <Input
+                type="text"
+                placeholder="Search..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-40 h-8 text-xs"
+              />
+              {(selectedTags.length > 0 || searchText) && (
+                <Badge variant="outline" className="text-xs">
+                  {filteredMediaItems.length} of {autoMediaItems.length}
+                </Badge>
+              )}
+            </div>
+          )}
+          
+          {/* Controls Row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -593,13 +758,17 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                 const owner = 'juliecamus';
                 const cacheKey = `manifestMetaCache:v1:${owner}`;
                 localStorage.removeItem(cacheKey);
+                localStorage.removeItem('manifest:last_refresh_ts');
+                localStorage.removeItem('manifest:last_result');
                 console.log('🗑️ Cleared metadata cache');
                 toast({ 
                   title: 'Cache cleared', 
-                  description: 'Metadata cache cleared. Reload page to fetch fresh MANIFEST.txt files.' 
+                  description: 'Metadata cache cleared. Force refreshing...' 
                 });
-                // Optionally auto-reload
-                setTimeout(() => window.location.reload(), 1000);
+                // Force refresh after clearing
+                setTimeout(() => {
+                  forceRefreshManifests();
+                }, 500);
               }} 
               variant="outline" 
               size="sm"
@@ -683,6 +852,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               ) : (
                 'No media loaded'
               )}
+            </div>
             </div>
           </div>
         </div>

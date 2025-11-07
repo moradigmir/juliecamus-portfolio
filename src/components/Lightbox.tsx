@@ -38,8 +38,8 @@ const Lightbox: React.FC<LightboxProps> = ({
   const tags = media?.meta?.tags || media?.tags;
   const isVideo = media?.fullType === 'video';
   
-  // State for showing/hiding tags
-  const [showTags, setShowTags] = React.useState(true);
+  // State for showing/hiding tags (default hidden)
+  const [showTags, setShowTags] = React.useState(false);
   
   // Get all images/content
   let allContent: string[] = [];
