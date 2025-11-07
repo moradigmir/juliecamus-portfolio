@@ -90,7 +90,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
     });
   };
 
-  const saveSingleFolder = async (index: number) => {
+  const saveSingleFolder = async (index: number): Promise<boolean> => {
     const folder = folders[index];
     updateFolder(index, { status: 'saving' });
 
@@ -117,6 +117,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
       setTimeout(() => {
         updateFolder(index, { status: 'idle' });
       }, 2000);
+      return true;
     } else {
       updateFolder(index, { 
         status: 'error', 
@@ -127,6 +128,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
         description: `Folder ${folder.folder}: ${result.error}`,
         variant: 'destructive',
       });
+      return false;
     }
   };
 
@@ -148,8 +150,8 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
 
     for (let i = 0; i < folders.length; i++) {
       if (folders[i].isDirty) {
-        await saveSingleFolder(i);
-        if (folders[i].status === 'saved') successCount++;
+        const ok = await saveSingleFolder(i);
+        if (ok) successCount++;
         else errorCount++;
       }
     }

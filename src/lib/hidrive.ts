@@ -74,6 +74,7 @@ export const listDir = async (path: string): Promise<HiDriveItem[]> => {
   const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
   url.searchParams.set('path', normalized);
   url.searchParams.set('list', '1');
+  url.searchParams.set('owner', 'juliecamus');
   
   const res = await fetch(url.toString(), { method: 'GET' });
   const ct = res.headers.get('content-type') || '';
@@ -192,14 +193,14 @@ export const findPreviewForFolder = async (path: string): Promise<string | null>
     });
     
     if (previewFile) {
-      const previewUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + previewFile.name)}`;
+      const previewUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + previewFile.name)}&owner=juliecamus`;
       console.log('🎯 Found preview file', { folder: path, file: previewFile.name, url: previewUrl });
       return previewUrl;
     }
     
     // Fallback to first media file by lexicographic order
     const firstFile = mediaFiles.sort((a, b) => a.name.localeCompare(b.name))[0];
-    const firstUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + firstFile.name)}`;
+    const firstUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + firstFile.name)}&owner=juliecamus`;
     console.log('📄 Using first media file as preview', { folder: path, file: firstFile.name, url: firstUrl });
     return firstUrl;
     
@@ -227,6 +228,7 @@ const listDirAll = async (path: string): Promise<HiDriveItem[]> => {
   const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
   url.searchParams.set('path', normalized);
   url.searchParams.set('list', '1');
+  url.searchParams.set('owner', 'juliecamus');
   
   const res = await fetch(url.toString(), { method: 'GET' });
   const ct = res.headers.get('content-type') || '';
@@ -290,6 +292,7 @@ export const fetchText = async (path: string, noStore = true): Promise<string | 
   try {
     const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
     url.searchParams.set('path', path);
+    url.searchParams.set('owner', 'juliecamus');
     if (noStore) {
       url.searchParams.set('cb', Date.now().toString());
     }
@@ -340,6 +343,7 @@ export const findManifestMarkdown = async (folderPath: string): Promise<{ conten
         const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
         url.searchParams.set('path', manifestPath);
         url.searchParams.set('cb', Date.now().toString());
+        url.searchParams.set('owner', 'juliecamus');
         
         const res = await fetch(url.toString(), { 
           method: 'GET',
