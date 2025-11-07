@@ -152,6 +152,20 @@ export default function HeroSplashMatch() {
     };
   }, [collapsed]);
 
+  // Snap to the gallery start when hero collapses to avoid partial cropping
+  useEffect(() => {
+    if (!collapsed) return;
+    const gallery = document.getElementById('gallery');
+    if (!gallery) return;
+    // Wait a frame for the hero height transition to apply, then align
+    requestAnimationFrame(() => {
+      const rect = gallery.getBoundingClientRect();
+      if (Math.abs(rect.top) > 1) {
+        gallery.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }, [collapsed]);
+
   // track scroll (for fade only)
   useEffect(() => {
     const onScroll = () => {
