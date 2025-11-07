@@ -110,13 +110,11 @@ All colors MUST be HSL.
 
   html {
     scroll-behavior: smooth;
-    scroll-snap-type: y mandatory;
   }
 
   /* Enable scroll snapping for smooth section transitions */
   body {
-    /* Fallback for browsers that use body as the scroller */
-    scroll-snap-type: y mandatory;
+    scroll-snap-type: y proximity;
   }
 
   /* Hero section snap point */

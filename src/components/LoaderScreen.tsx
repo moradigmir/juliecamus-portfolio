@@ -71,27 +71,15 @@ export default function LoaderScreen({
           fontFamily: '"Helvetica Neue LT Std", "Helvetica Neue", Helvetica, Arial, sans-serif',
         }}
       >
-        <p style={{ fontWeight: 600, marginBottom: "0.75rem" }}>LOREM IPSUM</p>
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          <li>Lorem ipsum dolor sit amet</li>
-          <li>Consectetur adipiscing elit</li>
-          <li>Sed do eiusmod tempor incididunt</li>
-          <li>Ut labore et dolore magna aliqua</li>
-          <li>Quis nostrud exercitation ullamco</li>
-          <li>Laboris nisi ut aliquip ex ea commodo</li>
-          <li>Duis aute irure dolor in reprehenderit</li>
-          <li>In voluptate velit esse cillum dolore</li>
-          <li>Eu fugiat nulla pariatur</li>
-        </ul>
-
-        <p style={{ fontWeight: 600, marginTop: "2rem", marginBottom: "0.75rem" }}>
-          DOLOR SIT
-        </p>
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          <li>Excepteur sint occaecat cupidatat</li>
-          <li>Non proident, sunt in culpa</li>
-          <li>Qui officia deserunt mollit anim</li>
-        </ul>
+        <p style={{ fontWeight: 600, marginBottom: "0.75rem" }}>ABOUT JULIE</p>
+        <div style={{ display: "grid", gap: "0.75rem" }}>
+          <p>
+            With over 20 years of experience in fashion and beauty, Julie is a highly skilled makeup artist renowned for her refined technique and meticulous attention to detail. Her signature style blends flawless, imperceptible natural looks with a sophisticated creative vision.
+          </p>
+          <p>
+            Trusted by some of the most prestigious luxury brands, she has consistently delivered impeccable results for the most demanding clients. Throughout her career, she has worked alongside celebrated industry figures such as Lucia Pica, former Global Creative Director for Chanel, and Peter Philips, Creative and Image Director of Dior Makeup, with whom she has collaborated for over 15 years.
+          </p>
+        </div>
       </div>
     </div>
   );

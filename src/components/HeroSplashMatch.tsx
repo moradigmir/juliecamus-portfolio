@@ -131,14 +131,24 @@ export default function HeroSplashMatch() {
       }
     };
     if (window.scrollY > 0) collapse("at_load_scrollY>0");
-    const onWheel = () => collapse("wheel");
+    const onWheel = (e: WheelEvent) => {
+      if (!collapsed) {
+        e.preventDefault();
+        const gallery = document.getElementById("gallery");
+        if (gallery) {
+          const target = window.scrollY + gallery.getBoundingClientRect().top;
+          window.scrollTo({ top: target, behavior: "smooth" });
+        }
+      }
+      collapse("wheel");
+    };
     const onScroll = () => collapse("scroll");
     const onTouch = () => collapse("touch");
     const onKey = (e: KeyboardEvent) => {
       if (["ArrowDown", "PageDown", " ", "Spacebar", "End"].includes(e.key))
         collapse("keydown");
     };
-    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("wheel", onWheel, { passive: false });
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("touchstart", onTouch, { passive: true });
     window.addEventListener("touchmove", onTouch, { passive: true });
@@ -152,19 +162,6 @@ export default function HeroSplashMatch() {
     };
   }, [collapsed]);
 
-  // Snap to the gallery start when hero collapses to avoid partial cropping
-  useEffect(() => {
-    if (!collapsed) return;
-    const gallery = document.getElementById('gallery');
-    if (!gallery) return;
-    // Wait a frame for the hero height transition to apply, then align
-    requestAnimationFrame(() => {
-      const rect = gallery.getBoundingClientRect();
-      if (Math.abs(rect.top) > 1) {
-        gallery.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  }, [collapsed]);
 
   // track scroll (for fade only)
   useEffect(() => {
