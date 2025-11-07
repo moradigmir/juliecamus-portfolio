@@ -30,6 +30,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [errorAttempts, setErrorAttempts] = useState(0);
   const [useFullSource, setUseFullSource] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
@@ -218,9 +219,11 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
     const startSecondStage = () => {
       const t2 = window.setTimeout(() => {
-        if (!hasError) {
-          console.log(`[AutoMediaTile] ${media.folder}: +3s timeout, show error overlay`);
+        if (!hasError && !videoReady) {
+          console.log(`[AutoMediaTile] ${media.folder}: +3s timeout, show error overlay (video not ready)`);
           setHasError(true);
+        } else if (videoReady) {
+          console.log(`[AutoMediaTile] ${media.folder}: Video ready, skipping error`);
         }
       }, 3000);
       timers.push(t2);
@@ -228,7 +231,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
     if (!useFullSource) {
       const t1 = window.setTimeout(() => {
-        if (!hasError) {
+        if (!hasError && !videoReady) {
           console.log(`[AutoMediaTile] ${media.folder}: 5s timeout, swapping to full source`);
           setUseFullSource(true);
           setReloadKey((k) => k + 1);
@@ -236,18 +239,20 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             videoRef.current.load();
           }
           startSecondStage();
+        } else if (videoReady) {
+          console.log(`[AutoMediaTile] ${media.folder}: Video ready before 5s, skipping swap`);
         }
       }, 5000);
       timers.push(t1);
-    } else {
-      // Already on full source, start the 3s error timer immediately
+    } else if (!videoReady) {
+      // Already on full source, start the 3s error timer only if video not ready
       startSecondStage();
     }
 
     return () => {
       timers.forEach(clearTimeout);
     };
-  }, [media.previewType, media.folder, useFullSource, hasError]);
+  }, [media.previewType, media.folder, useFullSource, hasError, videoReady]);
 
   // Reset error state when media changes
   useEffect(() => {
@@ -258,6 +263,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     setSupabasePaused(false);
     setProxyMisrouted(false);
     setHttpStatus(null);
+    setVideoReady(false);
   }, [media.previewUrl, media.fullUrl, media.folder]);
   
   return (
@@ -385,9 +391,22 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               preload="metadata"
               crossOrigin="anonymous"
               poster={media.thumbnailUrl || '/placeholder.svg'}
-              onLoadedMetadata={() => { console.log(`[AutoMediaTile] loadedMetadata: ${media.folder}`); }}
-              onCanPlay={() => { console.log(`[AutoMediaTile] canPlay: ${media.folder}`); setHasError(false); setErrorAttempts(0); }}
-              onLoadedData={() => { console.log(`[AutoMediaTile] loadedData: ${media.folder}`); setHasError(false); setErrorAttempts(0); }}
+              onLoadedMetadata={() => { 
+                console.log(`[AutoMediaTile] loadedMetadata: ${media.folder}`); 
+                setVideoReady(true);
+              }}
+              onCanPlay={() => { 
+                console.log(`[AutoMediaTile] canPlay: ${media.folder}`); 
+                setVideoReady(true);
+                setHasError(false); 
+                setErrorAttempts(0); 
+              }}
+              onLoadedData={() => { 
+                console.log(`[AutoMediaTile] loadedData: ${media.folder}`); 
+                setVideoReady(true);
+                setHasError(false); 
+                setErrorAttempts(0); 
+              }}
               onError={() => {
                 setErrorAttempts((prev) => {
                   if (prev < 1) {
