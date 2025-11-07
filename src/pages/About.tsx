@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import Navigation from "../components/Navigation";
+import juliePortfolio from "@/assets/julie-portfolio-preview.png";
 const About = () => {
   const base = import.meta.env.BASE_URL || "/";
   const logos = [
@@ -40,12 +41,12 @@ const About = () => {
             }}
             className="grid lg:grid-cols-2 gap-12 items-center"
           >
-            {/* Portrait */}
+            {/* Portfolio Preview */}
             <div className="order-2 lg:order-1">
-              <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted">
+              <div className="rounded-lg overflow-hidden bg-muted shadow-lg">
                 <img
-                  src="https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?w=600&h=800&fit=crop&crop=face"
-                  alt="Julie Camus Portrait"
+                  src={juliePortfolio}
+                  alt="Julie Camus Portfolio"
                   className="w-full h-full object-cover"
                 />
               </div>
