@@ -14,6 +14,8 @@ const Index = () => {
   const isMobile = useIsMobile();
   const [editorOpen, setEditorOpen] = useState(false);
   const { mediaItems, refetch } = useMediaIndex();
+  const showEditButton = typeof window !== 'undefined' && 
+    new URLSearchParams(window.location.search).get('diagnostics') === '1';
   
   const handleEditorSave = () => {
     // Trigger refetch of media items to reflect updated metadata
@@ -25,15 +27,17 @@ const Index = () => {
       <Navigation />
       <HeroSplashMatch />
       
-      {/* Floating Edit Button */}
-      <Button
-        onClick={() => setEditorOpen(true)}
-        className="fixed bottom-6 right-6 z-50 shadow-lg"
-        size="lg"
-      >
-        <Edit3 className="w-5 h-5 mr-2" />
-        Edit Manifests
-      </Button>
+      {/* Floating Edit Button - only visible with ?diagnostics=1 */}
+      {showEditButton && (
+        <Button
+          onClick={() => setEditorOpen(true)}
+          className="fixed bottom-6 right-6 z-50 shadow-lg"
+          size="lg"
+        >
+          <Edit3 className="w-5 h-5 mr-2" />
+          Edit Manifests
+        </Button>
+      )}
 
       {/* Manifest Editor Dialog */}
       <ManifestEditor
@@ -44,7 +48,7 @@ const Index = () => {
       />
       
       {/* Projects Gallery - starts immediately after hero */}
-      <section style={{ paddingTop: "0px", marginTop: "0px", paddingBottom: "96px" }}>
+      <section style={{ paddingTop: "clamp(40px, 6vh, 80px)", marginTop: "0px", paddingBottom: "96px" }}>
         <MasonryGrid projects={projects} />
       </section>
       

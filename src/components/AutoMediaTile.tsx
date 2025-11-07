@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
 import type { MediaItem } from '../hooks/useMediaIndex';
-import { useIsMobile } from '../hooks/use-mobile';
+import { useIsTabletOrMobile } from '../hooks/use-tablet-mobile';
 import { useVideoSettings } from '../hooks/useVideoSettings';
 import { toProxy } from '../lib/hidrive';
 import { diag } from '../debug/diag';
@@ -34,7 +34,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
+  const isMobile = useIsTabletOrMobile();
   const { autoplayEnabled, muteEnabled } = useVideoSettings();
 
   const handleClick = () => {
@@ -269,7 +269,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   return (
     <motion.div
       ref={tileRef}
-      className="gallery-tile-wrapper video-tile cursor-pointer focus-ring"
+      className="gallery-tile-wrapper video-tile cursor-pointer focus-ring group"
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
