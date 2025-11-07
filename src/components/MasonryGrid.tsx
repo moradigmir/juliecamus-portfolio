@@ -53,6 +53,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [manifestDiff, setManifestDiff] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState('');
   const { toast } = useToast();
 
   // Show dev controls only on /?diagnostics=1 route
@@ -477,6 +479,118 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }));
   }, [autoMediaItems, projects.length]);
 
+  const handleFullRescan = useCallback(async () => {
+    setIsScanning(true);
+    setScanProgress('Starting full rescan...');
+    
+    try {
+      const discovered: MediaItem[] = [];
+      const SCAN_MAX = 99;
+      const CONCURRENCY = 12;
+      
+      console.log('🚀 FULL RESCAN: Scanning folders 01-99...');
+      toast({ title: 'Full Rescan Started', description: 'Discovering all folders...' });
+      
+      const queue = Array.from({ length: SCAN_MAX }, (_, i) => 
+        (i + 1).toString().padStart(2, '0')
+      );
+      
+      let processed = 0;
+      
+      async function processFolder(folderNum: string) {
+        try {
+          const folderPath = `/public/${folderNum}/`;
+          const previewUrl = await findPreviewForFolder(folderPath);
+          
+          if (previewUrl) {
+            const isVideo = /\.(mp4|mov)$/i.test(previewUrl);
+            discovered.push({
+              orderKey: folderNum,
+              folder: folderNum,
+              title: `Folder ${folderNum}`,
+              previewUrl,
+              previewType: isVideo ? 'video' : 'image',
+              fullUrl: previewUrl,
+              fullType: isVideo ? 'video' : 'image',
+              meta: {},
+            });
+            console.log(`✅ Discovered folder ${folderNum}`);
+          }
+        } catch (error) {
+          // Silently skip folders that don't exist
+        }
+        
+        processed++;
+        setScanProgress(`Scanned ${processed}/${SCAN_MAX} folders...`);
+      }
+      
+      async function worker() {
+        while (queue.length) {
+          const folder = queue.shift();
+          if (!folder) break;
+          await processFolder(folder);
+        }
+      }
+      
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+      
+      console.log(`✅ Full rescan complete: Found ${discovered.length} folders`);
+      setScanProgress('Generating manifest...');
+      
+      if (discovered.length === 0) {
+        toast({ 
+          title: 'No Folders Found', 
+          description: 'Could not find any valid media folders in /public/', 
+          variant: 'destructive' 
+        });
+        setIsScanning(false);
+        setScanProgress('');
+        return;
+      }
+      
+      // Sort by folder number
+      discovered.sort((a, b) => parseInt(a.folder, 10) - parseInt(b.folder, 10));
+      
+      // Generate new manifest
+      const newManifest = {
+        items: discovered,
+        generatedAt: new Date().toISOString(),
+        source: 'hidrive'
+      };
+      
+      const manifestJson = JSON.stringify(newManifest, null, 2);
+      console.log(`📄 Generated manifest with ${discovered.length} items`);
+      
+      // Download manifest file
+      const blob = new Blob([manifestJson], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'media.manifest.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({ 
+        title: 'Rescan Complete!', 
+        description: `Found ${discovered.length} folders. Manifest downloaded - replace public/media.manifest.json and refresh.`,
+        duration: 10000
+      });
+      
+    } catch (error) {
+      console.error('❌ Full rescan failed:', error);
+      toast({ 
+        title: 'Rescan Failed', 
+        description: error instanceof Error ? error.message : 'Unknown error', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsScanning(false);
+      setScanProgress('');
+    }
+  }, [toast]);
+
   // Compute all unique tags from media items
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -753,6 +867,25 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             >
               {isRefreshing ? 'Checking...' : 'Check Folders'}
             </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    onClick={handleFullRescan} 
+                    variant="default" 
+                    size="sm" 
+                    disabled={isScanning}
+                    className="text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <RefreshCw className={`w-3 h-3 mr-1 ${isScanning ? 'animate-spin' : ''}`} />
+                    {isScanning ? scanProgress : 'Full Rescan (01-99)'}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Scan ALL folders 01-99 and generate new manifest file</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button 
               onClick={() => {
                 const owner = 'juliecamus';
