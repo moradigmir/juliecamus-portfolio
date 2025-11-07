@@ -209,12 +209,14 @@ Deno.serve(async (req: Request) => {
       return new Response('Upstream authorization failed', { status: 502, headers: { ...corsHeaders(origin) } });
     }
 
-    // Prepare headers for client
+    // Prepare headers for client with FORCED CORS and Range support
     const headers = new Headers();
     headers.set('Cache-Control', 'public, max-age=3600');
-    headers.set('Accept-Ranges', upstream.headers.get('Accept-Ranges') || 'bytes');
+    
+    // FORCE Accept-Ranges for all responses (critical for video playback in iframes)
+    headers.set('Accept-Ranges', 'bytes');
 
-    // Content type
+    // Content type with better inference
     const upstreamCT = upstream.headers.get('Content-Type');
     const lowerPath = usedPath.toLowerCase();
     const mimeMap: Record<string, string> = {
@@ -233,20 +235,33 @@ Deno.serve(async (req: Request) => {
     const ext = Object.keys(mimeMap).find((e) => lowerPath.endsWith(e));
     const inferredCT = ext ? mimeMap[ext] : undefined;
     const finalCT = upstreamCT && upstreamCT !== 'application/octet-stream' ? upstreamCT : (inferredCT || upstreamCT);
-    if (finalCT) headers.set('Content-Type', finalCT);
+    if (finalCT) {
+      headers.set('Content-Type', finalCT);
+      console.log(`[hidrive-proxy] Content-Type: ${finalCT} (upstream: ${upstreamCT}, inferred: ${inferredCT})`);
+    }
 
     const cr = upstream.headers.get('Content-Range');
     if (cr) headers.set('Content-Range', cr);
+    
+    const cl = upstream.headers.get('Content-Length');
+    if (cl) headers.set('Content-Length', cl);
+    
     const lm = upstream.headers.get('Last-Modified');
     if (lm) headers.set('Last-Modified', lm);
 
-    // Inline
+    // Inline & cross-origin
     headers.set('Content-Disposition', 'inline');
     headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
 
-    // CORS
+    // FORCE CORS headers (critical for iframe video playback)
     const c = corsHeaders(origin);
     for (const [k, v] of Object.entries(c)) headers.set(k, v);
+    
+    // Extra log for debugging video loads
+    if (finalCT?.startsWith('video/')) {
+      console.log(`[hidrive-proxy] VIDEO response: status=${upstream.status}, range=${reqRange}, accept-ranges=bytes, content-type=${finalCT}`);
+    }
 
     if (req.method === 'HEAD') {
       return new Response(null, { status: upstream.status, headers });

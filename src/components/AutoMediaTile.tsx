@@ -201,7 +201,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     };
   }, [media.previewType, isPlaying, autoplayEnabled]);
 
-  // Simple load state management
+  // Improved timeout flow: try full source after 5s, show error after 3s more
   useEffect(() => {
     // Images load instantly
     if (media.previewType === 'image') {
@@ -209,15 +209,32 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
       return;
     }
     
-    // Videos: wait for onCanPlay/onLoadedData, but fallback after 5s
-    // (preview iframe may block events due to CORS/sandbox)
-    const timeout = setTimeout(() => {
-      console.log(`[AutoMediaTile] Video load timeout for ${media.folder}, showing anyway`);
-      setIsLoaded(true);
+    // Videos: Progressive timeout strategy for preview iframe CORS issues
+    // Step 1: Wait 5s for preview to load, then swap to full source
+    const firstTimeout = setTimeout(() => {
+      if (!isLoaded && !hasError && !useFullSource) {
+        console.log(`[AutoMediaTile] ${media.folder}: 5s timeout, swapping to full source`);
+        setUseFullSource(true);
+        setReloadKey((k) => k + 1);
+        if (videoRef.current) {
+          videoRef.current.load();
+        }
+      }
     }, 5000);
     
-    return () => clearTimeout(timeout);
-  }, [media.previewType, media.folder]);
+    // Step 2: If still not loaded after 3s more (8s total), show as loaded but may be broken
+    const secondTimeout = setTimeout(() => {
+      if (!isLoaded && !hasError) {
+        console.log(`[AutoMediaTile] ${media.folder}: 8s timeout, marking loaded (may show poster only)`);
+        setIsLoaded(true);
+      }
+    }, 8000);
+    
+    return () => {
+      clearTimeout(firstTimeout);
+      clearTimeout(secondTimeout);
+    };
+  }, [media.previewType, media.folder, isLoaded, hasError, useFullSource]);
 
   // Reset error state when media changes
   useEffect(() => {
