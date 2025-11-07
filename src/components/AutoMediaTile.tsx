@@ -137,7 +137,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   }, [basePreviewUrl, media.folder, healing]);
 
-  // Video analysis effect
+  // Video analysis effect - also triggers auto-heal on 404/403
   useEffect(() => {
     if (media.previewType !== 'video') return;
     const controller = new AbortController();
@@ -164,6 +164,13 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           return;
         }
         
+        // Auto-heal on 404 or 403
+        if (res.status === 404 || res.status === 403) {
+          console.log(`[AUTO-HEAL] Detected ${res.status}, attempting heal for ${media.folder}`);
+          attemptHeal();
+          return;
+        }
+        
         if (!(res.ok || res.status === 206)) return;
         const buf = new Uint8Array(await res.arrayBuffer());
         const ascii = new TextDecoder('ascii').decode(buf);
@@ -186,7 +193,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
       }
     })();
     return () => controller.abort();
-  }, [cacheBustedUrl, media.previewType]);
+  }, [cacheBustedUrl, media.previewType, attemptHeal]);
 
   // Generate thumbnail dynamically if not provided and it's a video
   const generateThumbnailFromVideo = useCallback((video: HTMLVideoElement): string | null => {
@@ -429,25 +436,11 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                 >
                   Resume Project
                 </a>
-              ) : (
-                <button
-                  className="px-3 py-1 text-xs rounded-md bg-charcoal text-off-white"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setHasError(false);
-                    setIsLoaded(false);
-                    setHttpStatus(null);
-                    setSupabasePaused(false);
-                    setProxyMisrouted(false);
-                    setReloadKey((k) => k + 1);
-                    if (videoRef.current) {
-                      videoRef.current.load();
-                    }
-                  }}
-                >
-                  Retry
-                </button>
-              )}
+              ) : healing ? (
+                <div className="px-3 py-1 text-xs text-muted-foreground">
+                  Healing...
+                </div>
+              ) : null}
               <a
                 href={currentSrc}
                 target="_blank"
@@ -464,7 +457,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
         {/* Media Content */}
         <div className="relative w-full h-full">
-          {media.previewType === 'video' ? (
+          {effectivePreviewType === 'video' ? (
             <video
               ref={videoRef}
               className="w-full h-full object-cover"
@@ -508,6 +501,9 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                   }
                   console.warn('MEDIA_ERROR', { folder: media.folder, src: currentSrc });
                   diag('NET', 'media_error', { folder: media.folder, src: currentSrc });
+                  // Auto-heal on video error
+                  console.log(`[AUTO-HEAL] Video error, attempting heal for ${media.folder}`);
+                  attemptHeal();
                   setHasError(true);
                   return prev + 1;
                 });
@@ -520,14 +516,17 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             </video>
           ) : (
             <img
-              src={proxiedPreviewUrl}
+              src={basePreviewUrl}
               alt={media.title}
               className="w-full h-full object-cover"
               onLoad={() => setIsLoaded(true)}
               onError={() => {
+                console.warn('MEDIA_ERROR', { folder: media.folder, preview: basePreviewUrl });
+                diag('NET', 'media_error', { folder: media.folder, preview: basePreviewUrl });
+                // Auto-heal on image error
+                console.log(`[AUTO-HEAL] Image error, attempting heal for ${media.folder}`);
+                attemptHeal();
                 setHasError(true);
-                console.warn('MEDIA_ERROR', { folder: media.folder, preview: proxiedPreviewUrl });
-                diag('NET', 'media_error', { folder: media.folder, preview: proxiedPreviewUrl });
               }}
               style={{ display: hasError ? 'none' : 'block' }}
             />
@@ -535,7 +534,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           
           
           {/* Video Indicator */}
-          {media.fullType === 'video' && (
+          {effectiveFullType === 'video' && (
             <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full p-1.5">
               <Play className={`w-3 h-3 text-foreground ${isPlaying ? 'animate-pulse' : ''}`} />
             </div>
