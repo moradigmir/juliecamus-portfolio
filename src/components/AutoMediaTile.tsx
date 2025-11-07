@@ -243,7 +243,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.1) {
             if (!isPlaying && videoReady) {
               video.currentTime = 0;
               video.play().then(() => {
@@ -265,7 +265,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           }
         });
       },
-      { threshold: [0, 0.2, 1] }
+      { threshold: [0, 0.1, 1] }
     );
 
     observer.observe(tile);
@@ -388,6 +388,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                 setIsLoaded(true);
               }}
               onError={async (e) => {
+                const img = e.currentTarget as HTMLImageElement;
                 console.warn('[TILE] image error', { folder: media.folder, src: resolvedSrc });
                 diag('TILE', 'image_error', { folder: media.folder, src: resolvedSrc });
                 if (!triedImageHeal) {
@@ -401,7 +402,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                     if (healCandidate) {
                       const hp = await probeStream(healCandidate);
                       if (hp.ok && (hp.ct || '').startsWith('image/')) {
-                        (e.currentTarget as HTMLImageElement).src = healCandidate;
+                        img.src = healCandidate;
                         setIsLoaded(true);
                         return;
                       }
@@ -410,7 +411,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                     console.warn('[RECOVER] image heal failed', { folder: media.folder, err: String(err) });
                   }
                 }
-                (e.currentTarget as HTMLImageElement).src = '/placeholder.svg';
+                img.src = '/placeholder.svg';
                 setIsLoaded(true);
               }}
               style={{ display: 'block' }}

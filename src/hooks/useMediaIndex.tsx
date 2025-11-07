@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, SetStateAction, Dispatch } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
-import { findPreviewForFolder, findPosterForFolder, probeStream, getFolderMetadata, toProxyStrict, persistFolderMetaToCache } from '@/lib/hidrive';
+import { findPreviewForFolder, findPosterForFolder, findFirstVideoForFolder, probeStream, getFolderMetadata, toProxyStrict, persistFolderMetaToCache } from '@/lib/hidrive';
 import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
 
 // HARD BOOT TRACER – proves this file is the one actually running
@@ -542,37 +542,59 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             async function processOne(nn: string) {
               try {
                 const folderNum = parseInt(nn, 10);
-                const firstPath = await findPreviewForFolder(`/public/${nn}/`);
                 
-                if (!firstPath) {
-                  // Track consecutive 404s (only if we're checking in order)
-                  if (folderNum > lastCheckedFolder) {
-                    consecutive404s++;
-                    lastCheckedFolder = folderNum;
-                    if (consecutive404s >= CONSECUTIVE_404_LIMIT) {
-                      console.log(`⚠️ Discovery stopped: ${consecutive404s} consecutive 404s at folder ${nn}`);
-                      queue.length = 0; // clear queue to stop workers
-                      return;
+                // Find poster image and first playable video
+                const poster = await findPosterForFolder(`/public/${nn}/`);
+                const playable = await findFirstVideoForFolder(`/public/${nn}/`);
+                
+                let fullUrl: string;
+                let fullType: 'image' | 'video';
+                let previewUrl: string;
+                let previewType: 'image' | 'video';
+                
+                if (playable) {
+                  // Video folder: fullUrl points to playable video
+                  fullUrl = playable;
+                  fullType = 'video';
+                  // Preview prefers poster image for fast paint, else the playable
+                  previewUrl = poster || playable;
+                  previewType = poster ? 'image' : 'video';
+                  console.log('DISCOVERED', { folder: nn, previewType, fullType, previewUrl, fullUrl, poster: !!poster });
+                } else {
+                  // Image-only folder: fallback to findPreviewForFolder
+                  const fallbackImage = await findPreviewForFolder(`/public/${nn}/`);
+                  if (!fallbackImage) {
+                    // Track consecutive 404s (only if we're checking in order)
+                    if (folderNum > lastCheckedFolder) {
+                      consecutive404s++;
+                      lastCheckedFolder = folderNum;
+                      if (consecutive404s >= CONSECUTIVE_404_LIMIT) {
+                        console.log(`⚠️ Discovery stopped: ${consecutive404s} consecutive 404s at folder ${nn}`);
+                        queue.length = 0; // clear queue to stop workers
+                        return;
+                      }
                     }
+                    return;
                   }
-                  return;
+                  fullUrl = fallbackImage;
+                  fullType = 'image';
+                  previewUrl = fallbackImage;
+                  previewType = 'image';
+                  console.log('DISCOVERED', { folder: nn, previewType, fullType, previewUrl, fullUrl, poster: !!poster });
                 }
                 
                 // Reset consecutive 404 counter on success
                 consecutive404s = 0;
                 lastCheckedFolder = folderNum;
                 
-                // firstPath is a proxied URL already
-                const isVideo = /\.(mp4|mov)$/i.test(firstPath);
-                const poster = await findPosterForFolder(`/public/${nn}/`);
                 const extra: MediaItem = {
                   orderKey: nn,
                   folder: nn,
                   title: `Folder ${nn}`,
-                  previewUrl: firstPath,
-                  previewType: isVideo ? 'video' : 'image',
-                  fullUrl: firstPath,
-                  fullType: isVideo ? 'video' : 'image',
+                  previewUrl,
+                  previewType,
+                  fullUrl,
+                  fullType,
                   thumbnailUrl: poster || undefined,
                   meta: {},
                 };

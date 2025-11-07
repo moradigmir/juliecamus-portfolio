@@ -211,7 +211,8 @@ export const findPosterForFolder = async (path: string): Promise<string | null> 
 
 /**
  * Find a preview file for a folder using directory listing.
- * Prefers preview.* files (case-insensitive), falls back to first media file by lexicographic order.
+ * Prefers preview.* files (case-insensitive), prioritizes video over images for preview.
+ * Falls back to first video, then first media file by lexicographic order.
  */
 export const findPreviewForFolder = async (path: string): Promise<string | null> => {
   try {
@@ -227,8 +228,8 @@ export const findPreviewForFolder = async (path: string): Promise<string | null>
       return null;
     }
     
-    // Look for preview.* files (case-insensitive)
-    const previewExtensions = ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov'];
+    // Look for preview.* files (case-insensitive), prioritize videos
+    const previewExtensions = ['mp4', 'mov', 'webm', 'm4v', 'jpg', 'jpeg', 'png', 'webp'];
     const previewFile = mediaFiles.find(file => {
       const nameLower = file.name.toLowerCase(); 
       return previewExtensions.some(ext => 
@@ -242,14 +243,45 @@ export const findPreviewForFolder = async (path: string): Promise<string | null>
       return previewUrl;
     }
     
-    // Fallback to first media file by lexicographic order
-    const firstFile = mediaFiles.sort((a, b) => a.name.localeCompare(b.name))[0];
+    // Fallback: prefer first video, else first media file
+    const videoFiles = mediaFiles.filter(f => f.contentType?.startsWith('video/'));
+    const firstFile = videoFiles.length > 0 
+      ? videoFiles.sort((a, b) => a.name.localeCompare(b.name))[0]
+      : mediaFiles.sort((a, b) => a.name.localeCompare(b.name))[0];
+    
     const firstUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + firstFile.name)}&owner=juliecamus`;
     console.log('📄 Using first media file as preview', { folder: path, file: firstFile.name, url: firstUrl });
     return firstUrl;
     
   } catch (error) {
     console.error('❌ Failed to find preview for folder', path, error);
+    return null;
+  }
+};
+
+/**
+ * Find the first video file in a folder, returning its proxied URL.
+ * Returns null if no video files are found.
+ */
+export const findFirstVideoForFolder = async (path: string): Promise<string | null> => {
+  try {
+    const items = await listDir(path);
+    const videoFiles = items.filter(item => 
+      item.type === 'file' && 
+      item.contentType?.startsWith('video/')
+    );
+    
+    if (videoFiles.length === 0) {
+      return null;
+    }
+    
+    // Return first video by lexicographic order
+    const firstVideo = videoFiles.sort((a, b) => a.name.localeCompare(b.name))[0];
+    const videoUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + firstVideo.name)}&owner=juliecamus`;
+    console.log('🎬 Found first video', { folder: path, file: firstVideo.name, url: videoUrl });
+    return videoUrl;
+  } catch (error) {
+    console.error('❌ Failed to find video in folder', path, error);
     return null;
   }
 };

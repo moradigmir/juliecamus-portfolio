@@ -38,7 +38,9 @@ const Lightbox: React.FC<LightboxProps> = ({
     ? ((media.meta?.source === 'file' && media.meta?.description) || media.description)
     : undefined;
   const tags = media && media.meta?.source === 'file' ? (media.meta?.tags || media.tags) : media?.tags;
-  const isVideo = media?.fullType === 'video';
+  // Determine if this is a video
+  const isVideoUrl = (u?: string) => !!u && /\.(mp4|mov|webm|m4v)(\?|$)/i.test(u);
+  const isVideo = media?.fullType === 'video' || isVideoUrl(media?.fullUrl);
   
   // State for showing/hiding tags (default visible if tags exist)
   const [showTags, setShowTags] = React.useState(true);
