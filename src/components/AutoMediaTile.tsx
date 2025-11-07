@@ -137,62 +137,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     }
   }, [basePreviewUrl, media.folder, healing]);
 
-  // Video analysis effect - also triggers auto-heal on 404/403
-  useEffect(() => {
-    if (media.previewType !== 'video') return;
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const res = await fetch(cacheBustedUrl, {
-          method: 'GET',
-          headers: { Range: 'bytes=0-2047' },
-          signal: controller.signal,
-        });
-        setHttpStatus(res.status);
-        
-        const contentType = res.headers.get('content-type') || '';
-        
-        // Check if Supabase project is paused (404 + HTML response)
-        if (res.status === 404 && contentType.includes('text/html')) {
-          setSupabasePaused(true);
-          return;
-        }
-        
-        // Check if proxy returned HTML (misrouted)
-        if (contentType.includes('text/html')) {
-          setProxyMisrouted(true);
-          return;
-        }
-        
-        // Auto-heal disabled - let videos load naturally
-        if (res.status === 404 || res.status === 403) {
-          console.log(`[DEBUG] Detected ${res.status} for ${media.folder}`);
-          return;
-        }
-        
-        if (!(res.ok || res.status === 206)) return;
-        const buf = new Uint8Array(await res.arrayBuffer());
-        const ascii = new TextDecoder('ascii').decode(buf);
-        
-        // Check if it starts with HTML
-        if (ascii.trim().startsWith('<!DOCTYPE html') || ascii.trim().startsWith('<html')) {
-          setProxyMisrouted(true);
-          return;
-        }
-        
-        let hint: string | null = null;
-        if (ascii.includes('hvc1') || ascii.includes('hev1')) hint = 'HEVC (hvc1/hev1)';
-        else if (ascii.includes('av01')) hint = 'AV1 (av01)';
-        else if (ascii.includes('vp09')) hint = 'VP9 (vp09)';
-        else if (ascii.includes('avc1') || ascii.includes('isom') || ascii.includes('mp41') || ascii.includes('mp42')) hint = 'H.264/AVC (avc1)';
-        setCodecHint(hint);
-        setHttpStatus(res.status);
-      } catch (_) {
-        // ignore
-      }
-    })();
-    return () => controller.abort();
-  }, [cacheBustedUrl, media.previewType, attemptHeal]);
+  // Video analysis removed - videos load directly without probing
 
   // Generate thumbnail dynamically if not provided and it's a video
   const generateThumbnailFromVideo = useCallback((video: HTMLVideoElement): string | null => {
@@ -224,7 +169,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
             if (!isPlaying) {
               video.currentTime = 0;
               video.play().then(() => {
@@ -242,7 +187,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
           }
         });
       },
-      { threshold: [0, 0.5, 1] }
+      { threshold: [0, 0.2, 1] }
     );
 
     observer.observe(tile);
@@ -430,47 +375,41 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               preload="auto"
               poster={media.thumbnailUrl || '/placeholder.svg'}
               onLoadedMetadata={() => { 
-                console.log(`[AutoMediaTile] loadedMetadata: ${media.folder}`); 
+                console.log(`[AutoMediaTile] loadedMetadata: ${media.folder}, src: ${currentSrc}`); 
                 setVideoReady(true);
               }}
               onCanPlay={() => { 
-                console.log(`[AutoMediaTile] canPlay: ${media.folder}`); 
+                console.log(`[AutoMediaTile] canPlay: ${media.folder}, src: ${currentSrc}`); 
                 setVideoReady(true);
                 setHasError(false); 
                 setErrorAttempts(0); 
               }}
               onLoadedData={() => { 
-                console.log(`[AutoMediaTile] loadedData: ${media.folder}`); 
+                console.log(`[AutoMediaTile] loadedData: ${media.folder}, src: ${currentSrc}`); 
                 setVideoReady(true);
                 setHasError(false); 
-                setErrorAttempts(0); 
+                setErrorAttempts(0);
               }}
               onError={() => {
                 setErrorAttempts((prev) => {
                   if (prev < 1) {
-                    setUseFullSource(true);
-                    setHasError(false);
-                    setSupabasePaused(false);
-                    setProxyMisrouted(false);
-                    setHttpStatus(null);
+                    // One retry with cache bust, but no error overlay
                     setReloadKey((k) => k + 1);
                     if (videoRef.current) {
                       videoRef.current.load();
                     }
-                    console.warn('MEDIA_RETRY_WITH_FULL_SOURCE', { folder: media.folder, preview: proxiedPreviewUrl, full: proxiedFullUrl });
-                    diag('NET', 'media_retry_full', { folder: media.folder, preview: proxiedPreviewUrl, full: proxiedFullUrl });
+                    console.warn('[AutoMediaTile] video error, retrying with cache bust', { folder: media.folder, src: currentSrc });
                     return prev + 1;
                   }
-                  console.warn('MEDIA_ERROR', { folder: media.folder, src: currentSrc });
-                  diag('NET', 'media_error', { folder: media.folder, src: currentSrc });
-                  setHasError(true);
+                  // Keep poster visible, no error overlay
+                  console.warn('[AutoMediaTile] video error after retry', { folder: media.folder, src: currentSrc });
                   return prev + 1;
                 });
               }}
               style={{ display: 'block' }}
               key={`${media.folder}-${useFullSource ? 'full' : 'preview'}-${reloadKey}`}
             >
-              <source src={currentSrc} type={mimeType} />
+              <source src={currentSrc} />
               Your browser does not support video playback.
             </video>
           ) : (

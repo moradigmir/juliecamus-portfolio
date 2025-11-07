@@ -477,6 +477,35 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       setIsSupabasePaused(false);
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
+      // Video pre-warmer: prime browser cache for faster playback
+      setTimeout(() => {
+        (async () => {
+          const videos = combined.filter(item => item.previewType === 'video');
+          console.log(`🔥 Pre-warming ${videos.length} videos...`);
+          
+          const PREFETCH_CONCURRENCY = 4;
+          const queue = [...videos];
+          
+          async function warmOne() {
+            while (queue.length) {
+              const item = queue.shift();
+              if (!item) break;
+              
+              try {
+                const url = toProxy(item.previewUrl || item.fullUrl);
+                await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-1' } });
+                console.log(`✓ Pre-warmed: ${item.folder}`);
+              } catch {
+                // Ignore errors
+              }
+            }
+          }
+          
+          await Promise.all(Array.from({ length: PREFETCH_CONCURRENCY }, () => warmOne()));
+          console.log(`✅ Pre-warming complete`);
+        })();
+      }, 500);
+
       // FORCE MANIFEST CHECK on every load to prove it runs
       console.log(`🚀 [CRITICAL] FORCING MANIFEST CHECK NOW`);
       setTimeout(() => {
@@ -501,7 +530,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 
             console.log(`🔍 Discovery range: 01-99 (${missing.length} missing folders to check)`);
 
-            const CONCURRENCY = 8; // increased concurrency for speed
+            const CONCURRENCY = 6; // Leave headroom for video loads
             const CONSECUTIVE_404_LIMIT = Number.POSITIVE_INFINITY; // do not early stop
             const queue = [...missing]; // check all missing folders
             let consecutive404s = 0;
@@ -683,7 +712,7 @@ const backgroundManifestCheck = async (
   try {
     console.log(`🔍 [MANIFEST CHECK START] ${items.length} folders, forceRefresh=${forceRefresh}`);
     
-    const CONCURRENCY = 8;
+    const CONCURRENCY = 2; // Reduced to avoid starving video loads
     const NEGATIVE_CACHE_TTL = 30 * 1000; // 30 seconds
     const POSITIVE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
     const KEY = (o:string) => `manifestMetaCache:v2:${o}`;
