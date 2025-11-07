@@ -184,6 +184,32 @@ export async function probeStream(urlOrPath: string) {
 }
 
 /**
+ * Find a poster image for a folder (preview.webp, preview.jpg, preview.png).
+ * Returns proxied URL if found, null otherwise.
+ */
+export const findPosterForFolder = async (path: string): Promise<string | null> => {
+  try {
+    const items = await listDir(path);
+    const posterExtensions = ['webp', 'jpg', 'jpeg', 'png'];
+    const posterFile = items.find(item => {
+      const nameLower = item.name.toLowerCase();
+      return posterExtensions.some(ext => nameLower === `preview.${ext}`);
+    });
+    
+    if (posterFile) {
+      const posterUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + posterFile.name)}&owner=juliecamus`;
+      console.log('🖼️ Found poster', { folder: path, file: posterFile.name });
+      return posterUrl;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ Failed to find poster', path, error);
+    return null;
+  }
+};
+
+/**
  * Find a preview file for a folder using directory listing.
  * Prefers preview.* files (case-insensitive), falls back to first media file by lexicographic order.
  */
