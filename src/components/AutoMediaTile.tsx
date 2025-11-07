@@ -188,6 +188,12 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         else if (ascii.includes('avc1') || ascii.includes('isom') || ascii.includes('mp41') || ascii.includes('mp42')) hint = 'H.264/AVC (avc1)';
         setCodecHint(hint);
         setHttpStatus(res.status);
+        
+        // If codec is likely unsupported (HEVC/AV1), attempt image-based heal immediately
+        if (hint && (hint.includes('HEVC') || hint.includes('AV1'))) {
+          console.log(`[AUTO-HEAL] Unsupported codec (${hint}), attempting image fallback for ${media.folder}`);
+          attemptHeal();
+        }
       } catch (_) {
         // ignore
       }
