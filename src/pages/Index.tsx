@@ -14,7 +14,7 @@ const Index = () => {
       <HeroSplashMatch />
       
       {/* Projects Gallery - starts immediately after hero */}
-      <section style={{ paddingTop: isMobile ? "20px" : "64px", marginTop: "0px", paddingBottom: "96px" }}>
+      <section style={{ paddingTop: "0px", marginTop: "0px", paddingBottom: "96px" }}>
         <MasonryGrid projects={projects} />
       </section>
       

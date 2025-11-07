@@ -206,15 +206,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     // Images load instantly
     if (media.previewType === 'image') {
       setIsLoaded(true);
-      return;
     }
-    
-    // Videos: wait for actual load, but timeout after 2s
-    const timeout = setTimeout(() => {
-      setIsLoaded(true);
-    }, 2000);
-    
-    return () => clearTimeout(timeout);
+    // Videos: wait for onCanPlay/onLoadedData events only
   }, [media.previewType, media.folder]);
 
   // Reset error state when media changes

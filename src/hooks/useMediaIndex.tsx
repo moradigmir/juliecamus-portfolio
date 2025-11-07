@@ -14,6 +14,14 @@ try {
   const cacheKey = `manifestMetaCache:v2:${owner}`;
   const raw = localStorage.getItem(cacheKey);
 
+  // Nuclear cache clear if ?clearcache=1 URL param is present
+  if (new URLSearchParams(window.location.search).get('clearcache') === '1') {
+    console.log("[HARD-DIAG:MANIFEST] NUCLEAR_CACHE_CLEAR", { reason: 'URL param' });
+    ['manifestMetaCache:v1:juliecamus', 'manifestMetaCache:v2:juliecamus', 'manifest:last_refresh_ts', 'manifest:last_result']
+      .forEach(k => localStorage.removeItem(k));
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
   if (raw) {
     const parsed = JSON.parse(raw);
     const folders = Object.keys(parsed?.metaByFolder || {});
@@ -780,8 +788,8 @@ const backgroundManifestCheck = async (
             meta: { ...(item.meta ?? {}), ...currentMeta, source: 'file' },
           };
           
-          // Persist to cache
-          persistFolderMetaToCache(item.folder, { ...currentMeta });
+          // Persist to cache with source marker
+          persistFolderMetaToCache(item.folder, { ...currentMeta, source: 'file' });
           cachedData[item.folder] = { ...currentMeta, source: 'file', ts: Date.now() };
           
           // Incremental UI update
