@@ -4,7 +4,7 @@ import { Play } from 'lucide-react';
 import type { MediaItem } from '../hooks/useMediaIndex';
 import { useIsMobile } from '../hooks/use-mobile';
 import { useVideoSettings } from '../hooks/useVideoSettings';
-import { toProxy } from '../lib/hidrive';
+import { toProxy, listDir } from '../lib/hidrive';
 import { diag } from '../debug/diag';
 
 interface AutoMediaTileProps {
@@ -30,6 +30,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
   const [errorAttempts, setErrorAttempts] = useState(0);
   const [useFullSource, setUseFullSource] = useState(false);
+  const [fallbackImageUrl, setFallbackImageUrl] = useState<string | null>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
@@ -227,7 +228,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     setSupabasePaused(false);
     setProxyMisrouted(false);
     setHttpStatus(null);
-  }, [media.previewUrl, media.fullUrl]);
+    setFallbackImageUrl(null);
+  }, [media.previewUrl, media.fullUrl, media.folder]);
   
   return (
     <motion.div
