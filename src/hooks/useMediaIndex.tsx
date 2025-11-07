@@ -227,7 +227,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return url;
       };
       
-      // Map to proxy URLs and immediately attach cached meta before setState
+      // Map to proxy URLs and immediately attach meta
       let applied = 0;
       const proxiedItems = sortedItems.map((entry) => {
         // Map URLs to proxy using toProxyStrict function for guaranteed /public/ prefix
@@ -237,13 +237,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           fullUrl: toProxy(entry.fullUrl),
         };
         
-        // Strip any build-time meta to avoid poisoning
-        if (item.meta) delete item.meta;
-        
-        // Attach cached meta only if it came from a real MANIFEST file
+        // Keep build-time meta as an immediate fallback (title/description/tags)
+        // Then overlay any cached MANIFEST file meta on top when available
         const m = mergedMeta[entry.folder];
         if (m && m.source === 'file') {
-          item.meta = { ...(item.meta ?? {}), ...m };
+          item.meta = { ...(entry.meta ?? {}), ...m };
           if (m.title) item.title = m.title;
           if (m.description) item.description = m.description;
           if (m.tags) item.tags = m.tags;
@@ -251,6 +249,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           emit('MANIFEST','CACHED_ATTACH_APPLIED', {
             folder: entry.folder, title: item.title, descriptionLen: item.description?.length ?? 0
           });
+        } else {
+          // Ensure meta object exists if manifest provided at build time
+          if (entry.meta) item.meta = { ...(entry.meta), source: (entry.meta.source as any) ?? 'build' };
         }
         
         return item as typeof entry;
