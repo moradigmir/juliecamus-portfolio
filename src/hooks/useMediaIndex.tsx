@@ -507,6 +507,8 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             let consecutive404s = 0;
             let lastCheckedFolder = 0;
 
+            const discoveredFolders: string[] = [];
+
             async function processOne(nn: string) {
               try {
                 const folderNum = parseInt(nn, 10);
@@ -543,6 +545,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
                   meta: {},
                 };
                 setMediaItems((prev) => sortMedia(mergeByFolder(prev, [extra])));
+                discoveredFolders.push(nn);
                 console.log(`✅ Discovered folder ${nn}`);
               } catch (e) {
                 // ignore individual errors
@@ -558,7 +561,20 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
             }
 
             await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
-            console.log(`✅ Discovery complete`);
+            console.log(`✅ Discovery complete (${discoveredFolders.length} new folders)`);
+            
+            // Fetch metadata for newly discovered folders
+            if (discoveredFolders.length > 0) {
+              console.log(`🔍 Fetching metadata for ${discoveredFolders.length} discovered folders...`);
+              setTimeout(() => {
+                setMediaItems(currentItems => {
+                  backgroundManifestCheck(currentItems, setMediaItems, owner, false, setMetaStats)
+                    .then(() => console.log('✅ [MANIFEST] Post-discovery check COMPLETED'))
+                    .catch(err => console.error('❌ [MANIFEST] Post-discovery check FAILED:', err));
+                  return currentItems;
+                });
+              }, 100);
+            }
           } catch (e) {
             console.warn('Background discovery failed:', e);
           }

@@ -201,21 +201,26 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     };
   }, [media.previewType, isPlaying, autoplayEnabled]);
 
-  // Improved timeout flow: try full source after 5s, then show error 3s later
+  // For videos: mark loaded immediately so poster is always visible
+  // Timeout flow runs in parallel: 5s -> try full source, +3s -> show error overlay
   useEffect(() => {
     if (media.previewType === 'image') {
       setIsLoaded(true);
       return;
     }
 
-    const timers: number[] = [];
+    // Videos: show poster immediately (don't wait for canplay events)
+    const initTimer = window.setTimeout(() => {
+      setIsLoaded(true);
+    }, 50);
+
+    const timers: number[] = [initTimer];
 
     const startSecondStage = () => {
       const t2 = window.setTimeout(() => {
-        if (!isLoaded && !hasError) {
-          console.log(`[AutoMediaTile] ${media.folder}: +3s timeout, show error + poster fallback`);
+        if (!hasError) {
+          console.log(`[AutoMediaTile] ${media.folder}: +3s timeout, show error overlay`);
           setHasError(true);
-          setIsLoaded(true);
         }
       }, 3000);
       timers.push(t2);
@@ -223,7 +228,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
     if (!useFullSource) {
       const t1 = window.setTimeout(() => {
-        if (!isLoaded && !hasError) {
+        if (!hasError) {
           console.log(`[AutoMediaTile] ${media.folder}: 5s timeout, swapping to full source`);
           setUseFullSource(true);
           setReloadKey((k) => k + 1);
@@ -242,7 +247,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     return () => {
       timers.forEach(clearTimeout);
     };
-  }, [media.previewType, media.folder, useFullSource, isLoaded, hasError]);
+  }, [media.previewType, media.folder, useFullSource, hasError]);
 
   // Reset error state when media changes
   useEffect(() => {
@@ -280,8 +285,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
       }}
     >
       <div className="gallery-tile bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-        {/* Loading State */}
-        {!isLoaded && !hasError && (
+        {/* Loading State - Only for images without poster */}
+        {!isLoaded && !hasError && media.previewType === 'image' && (
           <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
             <div className="w-8 h-8 border-2 border-charcoal border-t-transparent rounded-full animate-spin" />
           </div>
@@ -380,9 +385,9 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               preload="metadata"
               crossOrigin="anonymous"
               poster={media.thumbnailUrl || '/placeholder.svg'}
-              onLoadedMetadata={() => { console.log(`[AutoMediaTile] loadedMetadata: ${media.folder}`); setIsLoaded(true); }}
-              onCanPlay={() => { console.log(`[AutoMediaTile] canPlay: ${media.folder}`); setIsLoaded(true); setHasError(false); setErrorAttempts(0); }}
-              onLoadedData={() => { console.log(`[AutoMediaTile] loadedData: ${media.folder}`); setIsLoaded(true); setHasError(false); setErrorAttempts(0); }}
+              onLoadedMetadata={() => { console.log(`[AutoMediaTile] loadedMetadata: ${media.folder}`); }}
+              onCanPlay={() => { console.log(`[AutoMediaTile] canPlay: ${media.folder}`); setHasError(false); setErrorAttempts(0); }}
+              onLoadedData={() => { console.log(`[AutoMediaTile] loadedData: ${media.folder}`); setHasError(false); setErrorAttempts(0); }}
               onError={() => {
                 setErrorAttempts((prev) => {
                   if (prev < 1) {
@@ -426,12 +431,6 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             />
           )}
           
-          {/* Loading State - Show while video loads */}
-          {!isLoaded && !hasError && !media.thumbnailUrl && (
-            <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-charcoal border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
           
           {/* Video Indicator */}
           {media.fullType === 'video' && (
