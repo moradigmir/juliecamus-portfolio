@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Save, RefreshCw, Search, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Save, RefreshCw, Search, CheckCircle2, AlertCircle, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -38,6 +38,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
   const [folders, setFolders] = useState<FolderEdit[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingAll, setIsLoadingAll] = useState(false);
+  const [previewFolderIndex, setPreviewFolderIndex] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Extract unique folders from media items
@@ -212,140 +213,242 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
 
   const dirtyCount = folders.filter(f => f.isDirty).length;
 
+  // Get preview media item
+  const previewFolder = previewFolderIndex !== null ? folders[previewFolderIndex] : null;
+  const previewMediaItem = previewFolder 
+    ? mediaItems.find(m => m.folder === previewFolder.folder)
+    : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Manifest Editor</span>
-            <div className="flex items-center gap-2">
-              {dirtyCount > 0 && (
-                <span className="text-sm font-normal text-amber-500">
-                  {dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}
-                </span>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={refreshFromHiDrive}
-                disabled={isLoadingAll}
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-              <Button
-                size="sm"
-                onClick={saveAllFolders}
-                disabled={isLoadingAll || dirtyCount === 0}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Save All ({dirtyCount})
-              </Button>
+      <DialogContent className="max-w-7xl h-[85vh] flex flex-col p-0">
+        <div className="flex h-full">
+          {/* Left Panel - Editor */}
+          <div className="flex-1 flex flex-col border-r">
+            <DialogHeader className="px-6 pt-6">
+              <DialogTitle className="flex items-center justify-between">
+                <span>Manifest Editor</span>
+                <div className="flex items-center gap-2">
+                  {dirtyCount > 0 && (
+                    <span className="text-sm font-normal text-amber-500">
+                      {dirtyCount} unsaved change{dirtyCount > 1 ? 's' : ''}
+                    </span>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={refreshFromHiDrive}
+                    disabled={isLoadingAll}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={saveAllFolders}
+                    disabled={isLoadingAll || dirtyCount === 0}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Save All ({dirtyCount})
+                  </Button>
+                </div>
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="flex items-center gap-2 px-6 py-4">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search folders..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1"
+              />
             </div>
-          </DialogTitle>
-        </DialogHeader>
 
-        <div className="flex items-center gap-2 px-1">
-          <Search className="w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search folders..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1"
-          />
-        </div>
-
-        <ScrollArea className="flex-1 -mx-6 px-6">
-          <div className="space-y-6 py-4">
-            {filteredFolders.map((folder, index) => {
-              const actualIndex = folders.indexOf(folder);
-              return (
-                <div
-                  key={folder.folder}
-                  className={`p-4 rounded-lg border ${
-                    folder.isDirty ? 'border-amber-500 bg-amber-500/5' : 'border-border'
-                  } ${folder.status === 'error' ? 'border-destructive' : ''}`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-sm text-muted-foreground">
-                        Folder {folder.folder}
-                      </h3>
-                      {folder.status === 'saved' && (
-                        <div className="flex items-center gap-1 text-xs text-green-500 mt-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>Saved</span>
-                        </div>
-                      )}
-                      {folder.status === 'error' && (
-                        <div className="flex items-center gap-1 text-xs text-destructive mt-1">
-                          <AlertCircle className="w-3 h-3" />
-                          <span>{folder.error || 'Save failed'}</span>
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => saveSingleFolder(actualIndex)}
-                      disabled={!folder.isDirty || folder.status === 'saving'}
+            <ScrollArea className="flex-1 px-6">
+              <div className="space-y-6 py-4">
+                {filteredFolders.map((folder, index) => {
+                  const actualIndex = folders.indexOf(folder);
+                  const isPreviewActive = previewFolderIndex === actualIndex;
+                  return (
+                    <div
+                      key={folder.folder}
+                      className={`p-4 rounded-lg border transition-all ${
+                        isPreviewActive 
+                          ? 'border-primary bg-primary/5 shadow-md' 
+                          : folder.isDirty 
+                            ? 'border-amber-500 bg-amber-500/5' 
+                            : 'border-border'
+                      } ${folder.status === 'error' ? 'border-destructive' : ''}`}
+                      onMouseEnter={() => setPreviewFolderIndex(actualIndex)}
+                      onMouseLeave={() => setPreviewFolderIndex(null)}
                     >
-                      {folder.status === 'saving' ? (
-                        <>
-                          <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-3 h-3 mr-1" />
-                          Save
-                        </>
-                      )}
-                    </Button>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          {isPreviewActive && (
+                            <Eye className="w-4 h-4 text-primary" />
+                          )}
+                          <div>
+                            <h3 className="font-semibold text-sm text-muted-foreground">
+                              Folder {folder.folder}
+                            </h3>
+                            {folder.status === 'saved' && (
+                              <div className="flex items-center gap-1 text-xs text-green-500 mt-1">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Saved</span>
+                              </div>
+                            )}
+                            {folder.status === 'error' && (
+                              <div className="flex items-center gap-1 text-xs text-destructive mt-1">
+                                <AlertCircle className="w-3 h-3" />
+                                <span>{folder.error || 'Save failed'}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => saveSingleFolder(actualIndex)}
+                          disabled={!folder.isDirty || folder.status === 'saving'}
+                        >
+                          {folder.status === 'saving' ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-3 h-3 mr-1" />
+                              Save
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Title *
+                          </label>
+                          <Input
+                            value={folder.title}
+                            onChange={(e) => updateFolder(actualIndex, { title: e.target.value })}
+                            placeholder="Enter title..."
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Description
+                          </label>
+                          <Textarea
+                            value={folder.description}
+                            onChange={(e) => updateFolder(actualIndex, { description: e.target.value })}
+                            placeholder="Enter description..."
+                            className="mt-1 min-h-[60px]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Tags (comma-separated)
+                          </label>
+                          <Input
+                            value={folder.tags}
+                            onChange={(e) => updateFolder(actualIndex, { tags: e.target.value })}
+                            placeholder="tag1, tag2, tag3..."
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Right Panel - Live Preview */}
+          <div className="w-96 flex flex-col bg-muted/30">
+            <div className="p-6 border-b">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Live Preview
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Hover over a folder to see how the tile will look
+              </p>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center p-6">
+              {previewFolder && previewMediaItem ? (
+                <div className="w-full max-w-[280px]">
+                  <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-card border border-border shadow-lg group">
+                    {/* Media Content */}
+                    {previewMediaItem.previewType === 'video' ? (
+                      <video
+                        src={previewMediaItem.previewUrl}
+                        className="w-full h-full object-cover"
+                        muted
+                        loop
+                        playsInline
+                        poster={previewMediaItem.thumbnailUrl || '/placeholder.svg'}
+                      />
+                    ) : (
+                      <img
+                        src={previewMediaItem.previewUrl}
+                        alt={previewFolder.title}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+
+                    {/* Preview Overlay - Always visible to show the effect */}
+                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                      <h3 className="text-sm font-semibold text-white truncate drop-shadow-lg">
+                        {previewFolder.title || `Folder ${previewFolder.folder}`}
+                      </h3>
+                    </div>
+
+                    {/* Preview Badge */}
+                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-full">
+                      Preview
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
+                  {/* Metadata Info */}
+                  <div className="mt-4 space-y-2 text-xs">
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Title *
-                      </label>
-                      <Input
-                        value={folder.title}
-                        onChange={(e) => updateFolder(actualIndex, { title: e.target.value })}
-                        placeholder="Enter title..."
-                        className="mt-1"
-                      />
+                      <span className="font-medium text-muted-foreground">Title:</span>
+                      <p className="text-foreground mt-0.5">{previewFolder.title || 'No title'}</p>
                     </div>
-
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Description
-                      </label>
-                      <Textarea
-                        value={folder.description}
-                        onChange={(e) => updateFolder(actualIndex, { description: e.target.value })}
-                        placeholder="Enter description..."
-                        className="mt-1 min-h-[60px]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Tags (comma-separated)
-                      </label>
-                      <Input
-                        value={folder.tags}
-                        onChange={(e) => updateFolder(actualIndex, { tags: e.target.value })}
-                        placeholder="tag1, tag2, tag3..."
-                        className="mt-1"
-                      />
-                    </div>
+                    {previewFolder.description && (
+                      <div>
+                        <span className="font-medium text-muted-foreground">Description:</span>
+                        <p className="text-foreground mt-0.5 line-clamp-3">{previewFolder.description}</p>
+                      </div>
+                    )}
+                    {previewFolder.tags && (
+                      <div>
+                        <span className="font-medium text-muted-foreground">Tags:</span>
+                        <p className="text-foreground mt-0.5">{previewFolder.tags}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              );
-            })}
+              ) : (
+                <div className="text-center text-muted-foreground space-y-2">
+                  <Eye className="w-12 h-12 mx-auto opacity-20" />
+                  <p className="text-sm">Hover over a folder to preview</p>
+                  <p className="text-xs opacity-70">
+                    See how your changes will look before saving
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
