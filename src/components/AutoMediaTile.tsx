@@ -24,6 +24,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [triedImageHeal, setTriedImageHeal] = useState(false);
+  const [triedVideoRecover, setTriedVideoRecover] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
@@ -150,8 +152,46 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
       setResolvedSrc(candidateFull);
       setValidated(true);
     } else {
-      // For images: just use preview URL directly
-      setResolvedSrc(candidatePreview);
+      // For images: probe preview and heal if needed
+      const dir = getFolderDir(candidatePreview || candidateFull || media.previewUrl || media.fullUrl);
+      let useUrl = candidatePreview;
+      let p = await probeStream(useUrl);
+      const isImage = (ct?: string) => (ct || '').startsWith('image/');
+      if (!(p.ok && isImage(p.ct))) {
+        // Try poster first (preview.webp/jpg/png)
+        const poster = await findPosterForFolder(dir);
+        if (poster) {
+          const pp = await probeStream(poster);
+          if (pp.ok && isImage(pp.ct)) {
+            useUrl = poster;
+          } else {
+            const previewHeal = await findPreviewForFolder(dir);
+            if (previewHeal) {
+              const hp = await probeStream(previewHeal);
+              if (hp.ok && isImage(hp.ct)) {
+                useUrl = previewHeal;
+              } else {
+                useUrl = '/placeholder.svg';
+              }
+            } else {
+              useUrl = '/placeholder.svg';
+            }
+          }
+        } else {
+          const previewHeal = await findPreviewForFolder(dir);
+          if (previewHeal) {
+            const hp = await probeStream(previewHeal);
+            if (hp.ok && isImage(hp.ct)) {
+              useUrl = previewHeal;
+            } else {
+              useUrl = '/placeholder.svg';
+            }
+          } else {
+            useUrl = '/placeholder.svg';
+          }
+        }
+      }
+      setResolvedSrc(useUrl);
       setValidated(true);
     }
   }, [media.folder, media.fullUrl, media.previewUrl, media.previewType, isVideo, getFolderDir, tryCaseVariants]);
@@ -263,6 +303,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         <div className="relative w-full h-full">
           {isVideo ? (
             <video
+              key={reloadKey}
               ref={videoRef}
               className="w-full h-full object-cover"
               src={resolvedSrc}
@@ -283,7 +324,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                 setVideoReady(true);
                 setIsLoaded(true);
               }}
-              onError={(e) => {
+              onError={async (e) => {
                 console.error('[TILE] video error', { 
                   folder: media.folder, 
                   src: resolvedSrc,
@@ -294,8 +335,46 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                   src: resolvedSrc,
                   code: e.currentTarget.error?.code 
                 });
-                // Keep poster visible, don't block tile
                 setIsLoaded(true);
+                if (triedVideoRecover) return;
+                setTriedVideoRecover(true);
+                try {
+                  const candidateFull = toProxy(media.fullUrl);
+                  const candidatePreview = toProxy(media.previewUrl);
+                  const dir = getFolderDir(candidateFull || candidatePreview);
+
+                  // Try preview if it's a video and different from current src
+                  if (media.previewType === 'video' && candidatePreview !== resolvedSrc) {
+                    const pr = await probeStream(candidatePreview);
+                    if ((pr.ok) && (pr.ct || '').startsWith('video/')) {
+                      console.log('[RECOVER] Using preview video URL', { folder: media.folder });
+                      setResolvedSrc(candidatePreview);
+                      setReloadKey((k) => k + 1);
+                      setValidated(true);
+                      return;
+                    }
+                  }
+
+                  // Heal: find first playable in folder
+                  const healed = await findPreviewForFolder(dir);
+                  if (healed) {
+                    const hr = await probeStream(healed);
+                    if ((hr.ok) && (hr.ct || '').startsWith('video/')) {
+                      console.log('[RECOVER] Using healed video URL', { folder: media.folder });
+                      setResolvedSrc(healed);
+                      setReloadKey((k) => k + 1);
+                      setValidated(true);
+                      return;
+                    }
+                    // If it's an image, at least update poster
+                    if ((hr.ok) && (hr.ct || '').startsWith('image/')) {
+                      console.log('[RECOVER] Healed image found; using as poster', { folder: media.folder });
+                      setPosterSrc(healed);
+                    }
+                  }
+                } catch (err) {
+                  console.warn('[RECOVER] video recovery failed', { folder: media.folder, err: String(err) });
+                }
               }}
               style={{ display: 'block' }}
             />
@@ -308,9 +387,29 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                 console.log('[TILE] image loaded', { folder: media.folder });
                 setIsLoaded(true);
               }}
-              onError={(e) => {
+              onError={async (e) => {
                 console.warn('[TILE] image error', { folder: media.folder, src: resolvedSrc });
                 diag('TILE', 'image_error', { folder: media.folder, src: resolvedSrc });
+                if (!triedImageHeal) {
+                  setTriedImageHeal(true);
+                  try {
+                    const candidatePreview = toProxy(media.previewUrl);
+                    const dir = getFolderDir(candidatePreview || media.previewUrl || '');
+                    // Prefer poster (image), then generic preview that is image
+                    const poster = await findPosterForFolder(dir);
+                    const healCandidate = poster || (await findPreviewForFolder(dir));
+                    if (healCandidate) {
+                      const hp = await probeStream(healCandidate);
+                      if (hp.ok && (hp.ct || '').startsWith('image/')) {
+                        (e.currentTarget as HTMLImageElement).src = healCandidate;
+                        setIsLoaded(true);
+                        return;
+                      }
+                    }
+                  } catch (err) {
+                    console.warn('[RECOVER] image heal failed', { folder: media.folder, err: String(err) });
+                  }
+                }
                 (e.currentTarget as HTMLImageElement).src = '/placeholder.svg';
                 setIsLoaded(true);
               }}

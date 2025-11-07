@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, SetStateAction, Dispatch } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
-import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict, persistFolderMetaToCache } from '@/lib/hidrive';
+import { findPreviewForFolder, findPosterForFolder, probeStream, getFolderMetadata, toProxyStrict, persistFolderMetaToCache } from '@/lib/hidrive';
 import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
 
 // HARD BOOT TRACER – proves this file is the one actually running
@@ -564,6 +564,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
                 
                 // firstPath is a proxied URL already
                 const isVideo = /\.(mp4|mov)$/i.test(firstPath);
+                const poster = await findPosterForFolder(`/public/${nn}/`);
                 const extra: MediaItem = {
                   orderKey: nn,
                   folder: nn,
@@ -572,6 +573,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
                   previewType: isVideo ? 'video' : 'image',
                   fullUrl: firstPath,
                   fullType: isVideo ? 'video' : 'image',
+                  thumbnailUrl: poster || undefined,
                   meta: {},
                 };
                 setMediaItems((prev) => sortMedia(mergeByFolder(prev, [extra])));
