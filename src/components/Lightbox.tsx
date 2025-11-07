@@ -34,7 +34,12 @@ const Lightbox: React.FC<LightboxProps> = ({
   const title = media 
     ? (media.meta?.title || media.title) 
     : project?.title || '';
+  const description = media?.meta?.description || media?.description;
+  const tags = media?.meta?.tags || media?.tags;
   const isVideo = media?.fullType === 'video';
+  
+  // State for showing/hiding tags
+  const [showTags, setShowTags] = React.useState(true);
   
   // Get all images/content
   let allContent: string[] = [];
@@ -206,9 +211,38 @@ const Lightbox: React.FC<LightboxProps> = ({
             </div>
           )}
 
-          {/* Title overlay: gradient white with only title */}
+          {/* Title and tags overlay: gradient white */}
           <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-card/90 via-card/50 to-transparent rounded-b-lg">
-            <h2 className="text-base font-medium text-foreground">{title}</h2>
+            <div className="space-y-2">
+              <h2 className="text-base font-medium text-foreground">{title}</h2>
+              
+              {/* Tags as chips */}
+              {tags && tags.length > 0 && showTags && (
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag, idx) => (
+                    <span 
+                      key={idx}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted/80 text-muted-foreground border border-border/20"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              {/* Toggle tags button (only show if tags exist) */}
+              {tags && tags.length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTags(!showTags);
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showTags ? 'Hide tags' : `Show tags (${tags.length})`}
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
       )}

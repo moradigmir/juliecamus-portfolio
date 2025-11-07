@@ -446,10 +446,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       setIsSupabasePaused(false); // Reset on success
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
-      // Background task: Check for MANIFEST.md updates IMMEDIATELY (no delay)
-      // This ensures metadata is cached before user might reload
-      backgroundManifestCheck(combined, setMediaItems, owner).catch(err => 
-        console.warn('Background manifest check error:', err)
+      // Background task: FORCE CHECK on first load to fetch all MANIFEST.txt files
+      // forceRefresh=true ignores cache completely and fetches everything
+      console.log('🚀 Starting FORCED MANIFEST check (ignoring cache)...');
+      backgroundManifestCheck(combined, setMediaItems, owner, true).catch(err => 
+        console.error('❌ Background manifest check error:', err)
       );
 
       // Background discovery (non-blocking, concurrency-limited, smart range)
@@ -705,15 +706,19 @@ function sortMedia(items: MediaItem[]): MediaItem[] {
 }
 
 // Background task to check for MANIFEST updates (prioritized, cached, concurrency-limited)
+// FORCE MODE: On first load, ignores all cache and fetches MANIFEST.txt for ALL folders
 const backgroundManifestCheck = async (
   items: MediaItem[], 
   setMediaItems: (items: MediaItem[]) => void,
-  owner: string
+  owner: string,
+  forceRefresh = false
 ) => {
   try {
-    const CONCURRENCY = 8; // increased for faster processing
-    const NEGATIVE_CACHE_TTL = 30 * 1000; // 30 seconds for negative cache (faster retry)
-    const POSITIVE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for positive cache (more aggressive refresh)
+    console.log(`🔍 [MANIFEST CHECK START] ${items.length} folders, forceRefresh=${forceRefresh}`);
+    
+    const CONCURRENCY = 8;
+    const NEGATIVE_CACHE_TTL = 30 * 1000; // 30 seconds
+    const POSITIVE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
     const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
     
     // Load existing cache
@@ -728,56 +733,66 @@ const backgroundManifestCheck = async (
     
     const updatedItems = [...items];
     
-    // Sort indices to prioritize lower folder numbers (visible first)
+    // Sort indices to prioritize lower folder numbers
     const indices = updatedItems
       .map((item, i) => ({ i, folder: parseInt(item.folder, 10) || 999 }))
       .sort((a, b) => a.folder - b.folder)
       .map(x => x.i);
     
-    console.log(`📋 Manifest check queue: ${indices.length} folders (prioritized by folder number)`);
+    console.log(`📋 [MANIFEST QUEUE] ${indices.length} folders prioritized by number`);
 
     async function processIndex(i: number) {
       const item = updatedItems[i];
       const folderPath = `/public/${item.folder}/`;
       const cachedMeta = cachedData[item.folder];
       
-      // Always check if item is missing title/description, even if cached
+      console.log(`🔎 [MANIFEST ${item.folder}] Processing...`);
+      
+      // Check if needs refresh (missing metadata)
       const needsRefresh = !item.title || item.title === item.folder || !item.meta?.title;
       
-      // Skip only if cache is recent AND item already has good metadata
-      if (cachedMeta?.ts && !needsRefresh) {
+      // FORCE MODE: Skip cache completely on first load
+      if (forceRefresh) {
+        console.log(`⚡ [MANIFEST ${item.folder}] FORCE FETCH (initial load)`);
+      } else if (cachedMeta?.ts && !needsRefresh) {
         const age = Date.now() - cachedMeta.ts;
         
         // Skip if negative cache is still valid
         if (cachedMeta.__absent && age < NEGATIVE_CACHE_TTL) {
-          console.log(`⏭️ Skip folder ${item.folder}: absent cached (${Math.round(age/1000)}s ago)`);
+          console.log(`⏭️ [MANIFEST ${item.folder}] Skip: absent cached (${Math.round(age/1000)}s ago)`);
           return;
         }
         
-        // Skip if positive cache is fresh and has title
+        // Skip if positive cache is fresh
         if (cachedMeta.title && age < POSITIVE_CACHE_TTL) {
-          console.log(`⏭️ Skip folder ${item.folder}: meta cached (${Math.round(age/1000)}s ago)`);
+          console.log(`⏭️ [MANIFEST ${item.folder}] Skip: cached (${Math.round(age/1000)}s ago)`);
           return;
         }
       }
       
-      // Force fetch if item doesn't have proper metadata
       if (needsRefresh) {
-        console.log(`🔄 Force refresh folder ${item.folder}: missing or default title`);
+        console.log(`🔄 [MANIFEST ${item.folder}] Needs refresh: missing metadata`);
       }
       
       try {
+        console.log(`📡 [MANIFEST ${item.folder}] Fetching MANIFEST.txt...`);
         const currentMeta = await getFolderMetadata(folderPath);
         
-        // No manifest found - store negative cache
-        if (!currentMeta.title && !currentMeta.description) {
-          console.log(`📭 Folder ${item.folder}: no manifest found`);
+        // No manifest found
+        if (!currentMeta.title && !currentMeta.description && !currentMeta.tags) {
+          console.log(`📭 [MANIFEST ${item.folder}] NOT FOUND - no MANIFEST.txt file`);
           persistFolderMetaToCache(item.folder, { __absent: true });
           cachedData[item.folder] = { __absent: true, ts: Date.now() };
           return;
         }
         
-        // Manifest found - check for changes
+        console.log(`✅ [MANIFEST ${item.folder}] FOUND!`, { 
+          title: currentMeta.title, 
+          descLen: currentMeta.description?.length || 0,
+          tags: currentMeta.tags?.length || 0
+        });
+        
+        // Check for changes
         const itemMeta = item.meta || {};
         const hasChanges = (
           !itemMeta.title ||
@@ -786,8 +801,8 @@ const backgroundManifestCheck = async (
           JSON.stringify(currentMeta.tags || []) !== JSON.stringify(itemMeta.tags || [])
         );
         
-        if (hasChanges) {
-          console.log(`📝 Folder ${item.folder}: manifest updated`, { title: currentMeta.title });
+        if (hasChanges || forceRefresh) {
+          console.log(`📝 [MANIFEST ${item.folder}] UPDATING UI`, { title: currentMeta.title });
           
           updatedItems[i] = {
             ...item,
@@ -801,13 +816,13 @@ const backgroundManifestCheck = async (
           persistFolderMetaToCache(item.folder, currentMeta);
           cachedData[item.folder] = { ...currentMeta, ts: Date.now() };
           
-          // Incremental UI update for faster feedback
+          // Incremental UI update
           setMediaItems(sortMedia(updatedItems));
         } else {
-          console.log(`✓ Folder ${item.folder}: manifest unchanged`);
+          console.log(`✓ [MANIFEST ${item.folder}] No changes`);
         }
       } catch (error) {
-        console.warn(`⚠️ Manifest check failed for folder ${item.folder}:`, error);
+        console.error(`❌ [MANIFEST ${item.folder}] Error:`, error);
       }
     }
 
@@ -820,8 +835,8 @@ const backgroundManifestCheck = async (
     }
 
     await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
-    console.log(`✅ Manifest check complete`);
+    console.log(`✅ [MANIFEST CHECK COMPLETE] Processed all folders`);
   } catch (error) {
-    console.warn('Background manifest check failed:', error);
+    console.error('❌ [MANIFEST CHECK FAILED]', error);
   }
 };
