@@ -48,7 +48,7 @@ const Index = () => {
       />
       
       {/* Projects Gallery - starts immediately after hero */}
-      <section id="gallery" style={{ paddingTop: "clamp(40px, 6vh, 80px)", marginTop: "0px", paddingBottom: "96px" }}>
+      <section id="gallery" style={{ paddingTop: "clamp(120px, 15vh, 180px)", marginTop: "0px", paddingBottom: "96px" }}>
         <MasonryGrid projects={projects} />
       </section>
       

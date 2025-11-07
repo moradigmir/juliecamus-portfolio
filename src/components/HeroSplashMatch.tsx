@@ -131,24 +131,14 @@ export default function HeroSplashMatch() {
       }
     };
     if (window.scrollY > 0) collapse("at_load_scrollY>0");
-    const onWheel = (e: WheelEvent) => {
-      if (!collapsed) {
-        e.preventDefault();
-        const gallery = document.getElementById("gallery");
-        if (gallery) {
-          const target = window.scrollY + gallery.getBoundingClientRect().top;
-          window.scrollTo({ top: target, behavior: "smooth" });
-        }
-      }
-      collapse("wheel");
-    };
+    const onWheel = () => collapse("wheel");
     const onScroll = () => collapse("scroll");
     const onTouch = () => collapse("touch");
     const onKey = (e: KeyboardEvent) => {
       if (["ArrowDown", "PageDown", " ", "Spacebar", "End"].includes(e.key))
         collapse("keydown");
     };
-    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("wheel", onWheel, { passive: true });
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("touchstart", onTouch, { passive: true });
     window.addEventListener("touchmove", onTouch, { passive: true });

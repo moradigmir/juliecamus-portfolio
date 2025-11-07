@@ -111,23 +111,6 @@ All colors MUST be HSL.
   html {
     scroll-behavior: smooth;
   }
-
-  /* Enable scroll snapping for smooth section transitions */
-  body {
-    scroll-snap-type: y proximity;
-  }
-
-  /* Hero section snap point */
-  #hero {
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-  }
-
-  /* Gallery section snap point */
-  #gallery {
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-  }
 }
 
 /* Helvetica Neue LT Std is used as a system font */
