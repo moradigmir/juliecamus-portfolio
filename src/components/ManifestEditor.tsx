@@ -391,6 +391,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
                       <video
                         src={previewMediaItem.previewUrl}
                         className="w-full h-full object-cover"
+                        autoPlay
                         muted
                         loop
                         playsInline
