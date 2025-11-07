@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Save, RefreshCw, Search, CheckCircle2, AlertCircle, Eye } from 'lucide-react';
+import { X, Save, RefreshCw, Search, CheckCircle2, AlertCircle, Eye, Maximize2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,6 +39,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [previewFolderIndex, setPreviewFolderIndex] = useState<number | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const { toast } = useToast();
 
   // Extract unique folders from media items
@@ -416,6 +417,15 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
                     <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-full">
                       Preview
                     </div>
+
+                    {/* Fullscreen Button */}
+                    <button
+                      onClick={() => setIsFullscreen(true)}
+                      className="absolute top-2 left-2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="View fullscreen"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </button>
                   </div>
 
                   {/* Metadata Info */}
@@ -451,6 +461,80 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
           </div>
         </div>
       </DialogContent>
+
+      {/* Fullscreen Preview Dialog */}
+      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+        <DialogContent className="max-w-6xl h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="flex items-center justify-between">
+              <div>
+                <span className="text-lg">
+                  {previewFolder?.title || `Folder ${previewFolder?.folder}`}
+                </span>
+                <span className="text-sm font-normal text-muted-foreground ml-3">
+                  Folder {previewFolder?.folder}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsFullscreen(false)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex-1 flex items-center justify-center bg-black/5 p-6">
+            {previewFolder && previewMediaItem ? (
+              <div className="w-full h-full flex items-center justify-center">
+                {previewMediaItem.previewType === 'video' ? (
+                  <video
+                    src={previewMediaItem.fullUrl || previewMediaItem.previewUrl}
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    controls
+                    poster={previewMediaItem.thumbnailUrl || '/placeholder.svg'}
+                  />
+                ) : (
+                  <img
+                    src={previewMediaItem.fullUrl || previewMediaItem.previewUrl}
+                    alt={previewFolder.title}
+                    className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                  />
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          {/* Metadata Info */}
+          {previewFolder && (
+            <div className="px-6 py-4 border-t bg-background space-y-2">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Title</span>
+                  <p className="text-sm mt-0.5">{previewFolder.title || 'No title'}</p>
+                </div>
+                {previewFolder.description && (
+                  <div className="col-span-2">
+                    <span className="text-xs font-medium text-muted-foreground">Description</span>
+                    <p className="text-sm mt-0.5 line-clamp-2">{previewFolder.description}</p>
+                  </div>
+                )}
+                {previewFolder.tags && (
+                  <div className={previewFolder.description ? 'col-span-3' : 'col-span-2'}>
+                    <span className="text-xs font-medium text-muted-foreground">Tags</span>
+                    <p className="text-sm mt-0.5">{previewFolder.tags}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
