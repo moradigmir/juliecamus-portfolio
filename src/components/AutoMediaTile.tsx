@@ -169,7 +169,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
   // Viewport-based autoplay (same behavior on mobile and desktop)
   useEffect(() => {
-    if (media.previewType !== 'video' || !videoRef.current || !tileRef.current || !autoplayEnabled) {
+    if (!isVideo || !videoRef.current || !tileRef.current || !autoplayEnabled) {
       return;
     }
 
@@ -205,7 +205,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     return () => {
       observer.disconnect();
     };
-  }, [media.previewType, isPlaying, autoplayEnabled]);
+  }, [isVideo, isPlaying, autoplayEnabled]);
 
   // For videos: mark loaded immediately so poster is always visible; no artificial error timers
   useEffect(() => {
@@ -259,45 +259,9 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         }
       }}
     >
-      <div className="gallery-tile bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-        {/* Loading State - Only for images without poster */}
-        {!isLoaded && !hasError && media.previewType === 'image' && (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
-            <div className="w-8 h-8 border-2 border-charcoal border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-        
-        {/* Error State - never block videos */}
-        {(() => { const showErrorOverlay = hasError && !isVideo; return showErrorOverlay; })() && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted text-muted-foreground p-4 text-center overflow-y-auto">
-            <div className="w-full max-w-[90%]">
-              <div className="w-12 h-12 mx-auto mb-3 opacity-50">⚠️</div>
-              <p className="text-sm font-semibold text-destructive">Unable to Load Media</p>
-              {/* Source Info */}
-              <div className="mt-2 px-2 py-1 bg-background/50 rounded text-xs break-all">
-                <span className="font-medium">Source:</span>{' '}
-                <span className="opacity-70">Preview URL</span>
-                <p className="mt-1 text-[10px] opacity-50 font-mono leading-tight">
-                  {currentSrc.length > 80 ? currentSrc.substring(0, 77) + '...' : currentSrc}
-                </p>
-              </div>
-            </div>
-            <a
-              href={currentSrc}
-              target="_blank"
-              rel="noopener noreferrer"
-              download
-              className="px-3 py-1 text-xs rounded-md bg-secondary text-secondary-foreground"
-              onClick={(e) => e.stopPropagation()}
-            >
-              Download
-            </a>
-          </div>
-        )}
-
-        {/* Media Content */}
-        <div className="relative w-full h-full">
-          {effectivePreviewType === 'video' ? (
+      <div className="gallery-tile relative bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+        {/* Error overlay removed to prevent blocking tiles */}
+          {isVideo ? (
             <video
               ref={videoRef}
               className="w-full h-full object-cover"
@@ -350,12 +314,14 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               alt={media.title}
               className="w-full h-full object-cover"
               onLoad={() => setIsLoaded(true)}
-              onError={() => {
-                console.warn('MEDIA_ERROR', { folder: media.folder, preview: basePreviewUrl });
-                diag('NET', 'media_error', { folder: media.folder, preview: basePreviewUrl });
-                setHasError(true);
+              onError={(e) => {
+                console.warn('MEDIA_IMAGE_ERROR', { folder: media.folder, preview: basePreviewUrl });
+                diag('NET', 'media_image_error', { folder: media.folder, preview: basePreviewUrl });
+                try { (e.currentTarget as HTMLImageElement).src = '/placeholder.svg'; } catch {}
+                setHasError(false);
+                setIsLoaded(true);
               }}
-              style={{ display: hasError ? 'none' : 'block' }}
+              style={{ display: 'block' }}
             />
           )}
           
