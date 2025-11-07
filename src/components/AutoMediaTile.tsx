@@ -260,6 +260,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
       }}
     >
       <div className="gallery-tile relative bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+        <div className="relative w-full h-full">
         {/* Error overlay removed to prevent blocking tiles */}
           {isVideo ? (
             <video
