@@ -201,40 +201,48 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     };
   }, [media.previewType, isPlaying, autoplayEnabled]);
 
-  // Improved timeout flow: try full source after 5s, show error after 3s more
+  // Improved timeout flow: try full source after 5s, then show error 3s later
   useEffect(() => {
-    // Images load instantly
     if (media.previewType === 'image') {
       setIsLoaded(true);
       return;
     }
-    
-    // Videos: Progressive timeout strategy for preview iframe CORS issues
-    // Step 1: Wait 5s for preview to load, then swap to full source
-    const firstTimeout = setTimeout(() => {
-      if (!isLoaded && !hasError && !useFullSource) {
-        console.log(`[AutoMediaTile] ${media.folder}: 5s timeout, swapping to full source`);
-        setUseFullSource(true);
-        setReloadKey((k) => k + 1);
-        if (videoRef.current) {
-          videoRef.current.load();
+
+    const timers: number[] = [];
+
+    const startSecondStage = () => {
+      const t2 = window.setTimeout(() => {
+        if (!isLoaded && !hasError) {
+          console.log(`[AutoMediaTile] ${media.folder}: +3s timeout, show error + poster fallback`);
+          setHasError(true);
+          setIsLoaded(true);
         }
-      }
-    }, 5000);
-    
-    // Step 2: If still not loaded after 3s more (8s total), show as loaded but may be broken
-    const secondTimeout = setTimeout(() => {
-      if (!isLoaded && !hasError) {
-        console.log(`[AutoMediaTile] ${media.folder}: 8s timeout, marking loaded (may show poster only)`);
-        setIsLoaded(true);
-      }
-    }, 8000);
-    
-    return () => {
-      clearTimeout(firstTimeout);
-      clearTimeout(secondTimeout);
+      }, 3000);
+      timers.push(t2);
     };
-  }, [media.previewType, media.folder, isLoaded, hasError, useFullSource]);
+
+    if (!useFullSource) {
+      const t1 = window.setTimeout(() => {
+        if (!isLoaded && !hasError) {
+          console.log(`[AutoMediaTile] ${media.folder}: 5s timeout, swapping to full source`);
+          setUseFullSource(true);
+          setReloadKey((k) => k + 1);
+          if (videoRef.current) {
+            videoRef.current.load();
+          }
+          startSecondStage();
+        }
+      }, 5000);
+      timers.push(t1);
+    } else {
+      // Already on full source, start the 3s error timer immediately
+      startSecondStage();
+    }
+
+    return () => {
+      timers.forEach(clearTimeout);
+    };
+  }, [media.previewType, media.folder, useFullSource, isLoaded, hasError]);
 
   // Reset error state when media changes
   useEffect(() => {
@@ -397,7 +405,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
                   return prev + 1;
                 });
               }}
-              style={{ display: hasError ? 'none' : 'block' }}
+              style={{ display: 'block' }}
               key={`${media.folder}-${useFullSource ? 'full' : 'preview'}-${reloadKey}`}
             >
               <source src={currentSrc} type={mimeType} />
