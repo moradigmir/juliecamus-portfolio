@@ -675,12 +675,14 @@ function mergeByFolder<T extends { folder:string; title?:string; description?:st
   inc.forEach(n => {
     const prev = map.get(n.folder);
     if (!prev) { map.set(n.folder, n); return; }
+    // IMPORTANT: prefer incoming values (e.g., MANIFEST-derived title) over previous placeholder
     map.set(n.folder, {
+      ...prev,
       ...n,
-      meta: prev.meta ?? n.meta,
-      title: prev.title ?? n.title,
-      description: prev.description ?? n.description,
-      tags: prev.tags ?? n.tags,
+      meta: { ...(prev.meta ?? {}), ...(n.meta ?? {}) },
+      title: (n.title ?? prev.title),
+      description: (n.description ?? prev.description),
+      tags: (n.tags ?? prev.tags),
     });
   });
   const out = Array.from(map.values());

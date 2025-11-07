@@ -306,7 +306,7 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
               style={{ display: 'block' }}
               key={`${media.folder}-${useFullSource ? 'full' : 'preview'}-${reloadKey}`}
             >
-              <source src={currentSrc} />
+              <source src={currentSrc} type={mimeType} />
               Your browser does not support video playback.
             </video>
           ) : (
