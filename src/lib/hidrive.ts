@@ -5,13 +5,31 @@ import { supabase } from '@/integrations/supabase/client';
  * Ensures exact working shape with /public/ prefix and owner=juliecamus.
  */
 export function toProxyStrict(input: string): string {
-  // Already proxied?
-  if (input.includes('/hidrive-proxy?')) return input;
+  // If already pointing to our proxy, normalize query params (ensure owner + path starts with /public)
+  if (input.includes('/hidrive-proxy?')) {
+    try {
+      const u = new URL(input);
+      // Ensure owner
+      if (!u.searchParams.get('owner')) u.searchParams.set('owner', 'juliecamus');
+      // Ensure path param exists and starts with /public/
+      const p = u.searchParams.get('path') || '';
+      if (p) {
+        let fixed = p;
+        if (!fixed.startsWith('/')) fixed = '/' + fixed;
+        if (!/^\/public\//i.test(fixed)) fixed = '/public' + fixed;
+        fixed = fixed.replace(/\/{2,}/g, '/');
+        u.searchParams.set('path', fixed);
+      }
+      return u.toString();
+    } catch {
+      // fall through to rebuild from scratch
+    }
+  }
 
   // Accept raw path, hidrive://, or full URL. We only keep the PATH part.
-  let p = input.trim();
+  let p = (input || '').trim();
 
-  // If it's a full URL to webdav or anywhere, strip to pathname starting at /public
+  // If it's a full URL, keep only pathname starting at /public
   try {
     if (p.startsWith('http')) {
       const u = new URL(p);
