@@ -481,7 +481,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
     autoMediaItems.forEach(item => {
-      const tags = item.meta?.tags || item.tags || [];
+      const tags = (item.meta?.source === 'file' ? item.meta?.tags : undefined) || [];
       tags.forEach(tag => tagSet.add(tag));
     });
     return Array.from(tagSet).sort();
@@ -756,26 +756,28 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             <Button 
               onClick={() => {
                 const owner = 'juliecamus';
-                const cacheKey = `manifestMetaCache:v1:${owner}`;
-                localStorage.removeItem(cacheKey);
+                const keyV1 = `manifestMetaCache:v1:${owner}`;
+                const keyV2 = `manifestMetaCache:v2:${owner}`;
+                localStorage.removeItem(keyV1);
+                localStorage.removeItem(keyV2);
                 localStorage.removeItem('manifest:last_refresh_ts');
                 localStorage.removeItem('manifest:last_result');
-                console.log('🗑️ Cleared metadata cache');
+                console.log('🗑️ Nuked metadata cache (v1+v2)');
                 toast({ 
-                  title: 'Cache cleared', 
-                  description: 'Metadata cache cleared. Force refreshing...' 
+                  title: 'Meta cache nuked', 
+                  description: 'Cleared v1+v2. Force refreshing...' 
                 });
                 // Force refresh after clearing
                 setTimeout(() => {
                   forceRefreshManifests();
-                }, 500);
+                }, 300);
               }} 
               variant="outline" 
               size="sm"
               className="text-xs"
             >
               <Download className="w-3 h-3 mr-1" />
-              Clear Cache
+              Nuke Meta Cache
             </Button>
             {autoMediaItems.length > 0 && (
               <Dialog open={showManifestDialog} onOpenChange={setShowManifestDialog}>

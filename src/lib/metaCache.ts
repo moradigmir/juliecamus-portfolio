@@ -1,6 +1,6 @@
 // src/lib/metaCache.ts
 type Folder = string;
-export type Meta = { title?: string; description?: string; tags?: string[] };
+export type Meta = { title?: string; description?: string; tags?: string[]; source?: 'file' | 'absent'; ts?: number };
 type CacheBlob = { owner: string; updatedAt: number; metaByFolder: Record<Folder, Meta> };
 
 const KEY = (owner: string) => `manifestMetaCache:v2:${owner}`;
@@ -24,7 +24,7 @@ export function getMetaCacheStats(owner: string): { updatedAt: number; count: nu
   try {
     const cache = loadMetaCache(owner);
     if (!cache) return null;
-    const count = Object.keys(cache.metaByFolder).length;
+    const count = Object.values(cache.metaByFolder || {}).filter((m: any) => m && m.source === 'file').length;
     return { updatedAt: cache.updatedAt, count };
   } catch {
     return null;

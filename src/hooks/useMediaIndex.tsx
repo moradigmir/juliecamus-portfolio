@@ -95,6 +95,7 @@ export interface MediaItem {
     title?: string;
     description?: string;
     tags?: string[];
+    source?: 'file' | 'absent';
   };
 }
 
@@ -190,7 +191,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         }
       } catch {}
 
-      const mergedMeta: Record<string, any> = { ...sessionMeta };
+      const mergedMeta: Record<string, any> = Object.fromEntries(
+        Object.entries(sessionMeta).filter(([_, v]: any) => v && v.source === 'file')
+      );
       
       const mapHiDriveUrlToProxy = (url: string): string => {
         if (!url) return url;
@@ -220,26 +223,29 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       let applied = 0;
       const proxiedItems = sortedItems.map((entry) => {
         // Map URLs to proxy using toProxyStrict function for guaranteed /public/ prefix
-        const item = {
+        const item: any = {
           ...entry,
           previewUrl: toProxy(entry.previewUrl),
           fullUrl: toProxy(entry.fullUrl),
         };
         
-        // Attach cached meta immediately if it exists
+        // Strip any build-time meta to avoid poisoning
+        if (item.meta) delete item.meta;
+        
+        // Attach cached meta only if it came from a real MANIFEST file
         const m = mergedMeta[entry.folder];
-        if (!m) return item;
+        if (m && m.source === 'file') {
+          item.meta = { ...(item.meta ?? {}), ...m };
+          if (m.title) item.title = m.title;
+          if (m.description) item.description = m.description;
+          if (m.tags) item.tags = m.tags;
+          applied++;
+          emit('MANIFEST','CACHED_ATTACH_APPLIED', {
+            folder: entry.folder, title: item.title, descriptionLen: item.description?.length ?? 0
+          });
+        }
         
-        item.meta = { ...(item.meta ?? {}), ...m };
-        if (m.title) item.title = m.title;
-        if (m.description) item.description = m.description;
-        if (m.tags) item.tags = m.tags;
-        applied++;
-        emit('MANIFEST','CACHED_ATTACH_APPLIED', {
-          folder: entry.folder, title: item.title, descriptionLen: item.description?.length ?? 0
-        });
-        
-        return item;
+        return item as typeof entry;
       });
       
       emit('MANIFEST','manifest_meta_cached_scan', { count: applied });
@@ -722,8 +728,8 @@ const backgroundManifestCheck = async (
           return;
         }
         
-        // Skip if positive cache is fresh
-        if (cachedMeta.title && age < POSITIVE_CACHE_TTL) {
+        // Skip if positive cache is fresh AND came from a real MANIFEST file
+        if (cachedMeta.source === 'file' && cachedMeta.title && age < POSITIVE_CACHE_TTL) {
           console.log(`⏭️ [MANIFEST ${item.folder}] Skip: cached (${Math.round(age/1000)}s ago)`);
           statsFound++;
           return;
@@ -742,7 +748,7 @@ const backgroundManifestCheck = async (
         if (!currentMeta.title && !currentMeta.description && !currentMeta.tags) {
           console.log(`📭 [MANIFEST ${item.folder}] NOT FOUND - no MANIFEST.txt file`);
           persistFolderMetaToCache(item.folder, { __absent: true });
-          cachedData[item.folder] = { __absent: true, ts: Date.now() };
+          cachedData[item.folder] = { __absent: true, source: 'absent', ts: Date.now() };
           statsMissing++;
           return;
         }
@@ -771,12 +777,12 @@ const backgroundManifestCheck = async (
             title: currentMeta.title || item.title,
             description: currentMeta.description || item.description,
             tags: currentMeta.tags || item.tags,
-            meta: { ...(item.meta ?? {}), ...currentMeta },
+            meta: { ...(item.meta ?? {}), ...currentMeta, source: 'file' },
           };
           
           // Persist to cache
-          persistFolderMetaToCache(item.folder, currentMeta);
-          cachedData[item.folder] = { ...currentMeta, ts: Date.now() };
+          persistFolderMetaToCache(item.folder, { ...currentMeta });
+          cachedData[item.folder] = { ...currentMeta, source: 'file', ts: Date.now() };
           
           // Incremental UI update
           setMediaItems(sortMedia(updatedItems));

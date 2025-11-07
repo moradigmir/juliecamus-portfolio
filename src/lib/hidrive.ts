@@ -576,13 +576,13 @@ export function persistFolderMetaToCache(folder: string, meta: any) {
     old.owner = OWNER;
     old.metaByFolder = old.metaByFolder || {};
     
-    // Support negative cache with __absent marker
+    // Support negative cache with __absent marker and provenance
     if (meta && meta.__absent) {
-      old.metaByFolder[folder] = { __absent: true, ts: Date.now() };
+      old.metaByFolder[folder] = { __absent: true, source: 'absent', ts: Date.now() };
       console.log("[HARD-DIAG:MANIFEST] manifest_absent_cached", { folder });
     } else {
-      old.metaByFolder[folder] = { ...(old.metaByFolder[folder] ?? {}), ...(meta ?? {}), ts: Date.now() };
-      console.log("[HARD-DIAG:MANIFEST] manifest_meta_persisted", { folder, source: "probe" });
+      old.metaByFolder[folder] = { ...(old.metaByFolder[folder] ?? {}), ...(meta ?? {}), source: 'file', ts: Date.now() };
+      console.log("[HARD-DIAG:MANIFEST] manifest_meta_persisted", { folder, source: "file" });
     }
     
     old.updatedAt = Date.now();

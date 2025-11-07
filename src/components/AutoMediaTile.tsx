@@ -413,8 +413,8 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             </div>
           )}
           
-          {/* MANIFEST indicator - show if metadata exists */}
-          {media.meta?.title && (
+          {/* MANIFEST indicator - show only if metadata comes from MANIFEST file */}
+          {media.meta?.title && media.meta?.source === 'file' && (
             <div className="absolute top-2 left-2 bg-charcoal/90 text-off-white text-xs font-medium px-2 py-0.5 rounded-full border border-off-white/20">
               ✓ Meta
             </div>

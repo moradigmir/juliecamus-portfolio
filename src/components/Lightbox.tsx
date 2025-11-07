@@ -32,10 +32,12 @@ const Lightbox: React.FC<LightboxProps> = ({
 }) => {
   // Handle media vs project content
   const title = media 
-    ? (media.meta?.title || media.title) 
+    ? ((media.meta?.source === 'file' && media.meta?.title) || media.title)
     : project?.title || '';
-  const description = media?.meta?.description || media?.description;
-  const tags = media?.meta?.tags || media?.tags;
+  const description = media
+    ? ((media.meta?.source === 'file' && media.meta?.description) || media.description)
+    : undefined;
+  const tags = media && media.meta?.source === 'file' ? (media.meta?.tags || media.tags) : media?.tags;
   const isVideo = media?.fullType === 'video';
   
   // State for showing/hiding tags (default visible if tags exist)
