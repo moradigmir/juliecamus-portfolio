@@ -2,8 +2,9 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
 import type { MediaItem } from '../hooks/useMediaIndex';
-import { useIsMobile } from '../hooks/use-mobile';
-import { toProxy } from '../lib/hidrive';
+import { useIsTabletOrMobile } from '../hooks/use-tablet-mobile';
+import { useVideoSettings } from '../hooks/useVideoSettings';
+import { toProxy, findPreviewForFolder, findPosterForFolder, probeStream } from '../lib/hidrive';
 import { diag } from '../debug/diag';
 
 interface AutoMediaTileProps {
@@ -15,149 +16,224 @@ interface AutoMediaTileProps {
 }
 
 const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTileProps) => {
-  // Check if in debug mode
-  const isDebugMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
+  const isDebugMode = new URLSearchParams(window.location.search).get('diagnostics') === '1';
   const [isLoaded, setIsLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [codecHint, setCodecHint] = useState<string | null>(null);
-  const [proxyMisrouted, setProxyMisrouted] = useState(false);
-  const [supabasePaused, setSupabasePaused] = useState(false);
-  const [httpStatus, setHttpStatus] = useState<number | null>(null);
+  const [resolvedSrc, setResolvedSrc] = useState<string>('');
+  const [posterSrc, setPosterSrc] = useState<string>(media.thumbnailUrl || '/placeholder.svg');
+  const [validated, setValidated] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [autoPlayTimeout, setAutoPlayTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [thumbnailGenerated, setThumbnailGenerated] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [triedImageHeal, setTriedImageHeal] = useState(false);
+  const [triedVideoRecover, setTriedVideoRecover] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const tileRef = useRef<HTMLDivElement>(null);
-  const isMobile = useIsMobile();
+  const isMobile = useIsTabletOrMobile();
+  const { autoplayEnabled, muteEnabled } = useVideoSettings();
 
-  const handleClick = () => {
-    if (hasError) return;
-    onClick?.(media);
-  };
+  const handleClick = () => onClick?.(media);
+  const handleMouseEnter = useCallback(() => onHover?.(index), [index, onHover]);
+  const handleMouseLeave = useCallback(() => onLeave?.(), [onLeave]);
 
-  const handleMouseEnter = useCallback(() => {
-    onHover?.(index);
-  }, [index, onHover]);
-
-  const handleMouseLeave = useCallback(() => {
-    onLeave?.();
-  }, [onLeave]);
-
-  const mimeType = (() => {
-    try {
-      const u = new URL(media.previewUrl, window.location.origin);
-      const p = u.searchParams.get('path') || '';
-      const lower = p.toLowerCase();
-      if (lower.endsWith('.mp4')) return 'video/mp4';
-      if (lower.endsWith('.mov')) return 'video/quicktime';
-      if (lower.endsWith('.webm')) return 'video/webm';
-      if (lower.endsWith('.m4v')) return 'video/x-m4v';
-      // Fallback: if path looks like an image
-      if (lower.match(/\.(jpg|jpeg|png|gif|webp)$/)) return 'image/*';
-      return 'video/mp4';
-    } catch {
-      return 'video/mp4';
-    }
+  // Determine if this is a video based on URL/type
+  const isVideo = (() => {
+    if (media.fullType === 'video' || media.previewType === 'video') return true;
+    const url = media.fullUrl || media.previewUrl;
+    return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url.toLowerCase());
   })();
 
-  // Force proxy mapping with toProxyStrict for consistent /public/ prefix
-  const proxiedPreviewUrl = toProxy(media.previewUrl);
-  const proxiedFullUrl = toProxy(media.fullUrl);
-  console.log('MEDIA_SRC_SET', { folder: media.folder, preview: proxiedPreviewUrl });
-  diag('NET', 'media_src_set', { folder: media.folder, preview: proxiedPreviewUrl });
-  
-  const cacheBustedUrl = `${proxiedPreviewUrl}${proxiedPreviewUrl.includes('?') ? '&' : '?'}r=${reloadKey}`;
-
-  const listUrl = (() => {
+  // Extract folder directory for poster/preview discovery
+  const getFolderDir = useCallback((url: string): string => {
     try {
-      const u = new URL(proxiedPreviewUrl);
-      const owner = u.searchParams.get('owner') || '';
-      const path = u.searchParams.get('path') || '';
+      const u = new URL(url, window.location.origin);
+      const path = u.searchParams.get('path') || url;
       const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : '/';
-      const list = new URL(u.origin + u.pathname);
-      list.searchParams.set('path', dir);
-      if (owner) list.searchParams.set('owner', owner);
-      list.searchParams.set('list', '1');
-      return list.toString();
+      return dir;
     } catch {
-      return '';
-    }
-  })();
-
-  // Video analysis effect
-  useEffect(() => {
-    if (media.previewType !== 'video') return;
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const res = await fetch(cacheBustedUrl, {
-          method: 'GET',
-          headers: { Range: 'bytes=0-2047' },
-          signal: controller.signal,
-        });
-        setHttpStatus(res.status);
-        
-        const contentType = res.headers.get('content-type') || '';
-        
-        // Check if Supabase project is paused (404 + HTML response)
-        if (res.status === 404 && contentType.includes('text/html')) {
-          setSupabasePaused(true);
-          return;
-        }
-        
-        // Check if proxy returned HTML (misrouted)
-        if (contentType.includes('text/html')) {
-          setProxyMisrouted(true);
-          return;
-        }
-        
-        if (!(res.ok || res.status === 206)) return;
-        const buf = new Uint8Array(await res.arrayBuffer());
-        const ascii = new TextDecoder('ascii').decode(buf);
-        
-        // Check if it starts with HTML
-        if (ascii.trim().startsWith('<!DOCTYPE html') || ascii.trim().startsWith('<html')) {
-          setProxyMisrouted(true);
-          return;
-        }
-        
-        let hint: string | null = null;
-        if (ascii.includes('hvc1') || ascii.includes('hev1')) hint = 'HEVC (hvc1/hev1)';
-        else if (ascii.includes('av01')) hint = 'AV1 (av01)';
-        else if (ascii.includes('vp09')) hint = 'VP9 (vp09)';
-        else if (ascii.includes('avc1') || ascii.includes('isom') || ascii.includes('mp41') || ascii.includes('mp42')) hint = 'H.264/AVC (avc1)';
-        setCodecHint(hint);
-        setHttpStatus(res.status);
-      } catch (_) {
-        // ignore
-      }
-    })();
-    return () => controller.abort();
-  }, [cacheBustedUrl, media.previewType]);
-
-  // Generate thumbnail dynamically if not provided and it's a video
-  const generateThumbnailFromVideo = useCallback((video: HTMLVideoElement): string | null => {
-    try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return null;
-
-      canvas.width = 320;
-      canvas.height = 240;
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      return canvas.toDataURL('image/webp', 0.8);
-    } catch (error) {
-      console.warn('Failed to generate video thumbnail:', error);
-      return null;
+      return '/';
     }
   }, []);
 
-  // Viewport-based autoplay (same behavior on mobile and desktop)
+  // Try case variants of a URL (uppercase/lowercase extension)
+  const tryCaseVariants = useCallback(async (url: string): Promise<string | null> => {
+    try {
+      const u = new URL(url);
+      const path = u.searchParams.get('path') || '';
+      const ext = path.split('.').pop() || '';
+      
+      const variants = [
+        path.replace(new RegExp(`\\.${ext}$`, 'i'), `.${ext.toUpperCase()}`),
+        path.replace(new RegExp(`\\.${ext}$`, 'i'), `.${ext.toLowerCase()}`)
+      ];
+      
+      for (const variant of variants) {
+        if (variant === path) continue;
+        u.searchParams.set('path', variant);
+        const testUrl = u.toString();
+        console.log('[PROBE] Trying case variant', { folder: media.folder, variant });
+        const probe = await probeStream(testUrl);
+        if (probe.ok) {
+          console.log('[PROBE] Case variant success', { folder: media.folder, variant, status: probe.status });
+          diag('TILE', 'probe_ok_variant', { folder: media.folder, url: testUrl, status: probe.status });
+          return testUrl;
+        }
+      }
+    } catch (e) {
+      console.warn('[PROBE] Case variant error', { folder: media.folder, err: String(e) });
+    }
+    return null;
+  }, [media.folder]);
+
+  // Main validation and probing logic
+  const validateAndResolve = useCallback(async () => {
+    console.log('[TILE] Starting validation', { folder: media.folder, isVideo });
+    
+    const candidateFull = toProxy(media.fullUrl);
+    const candidatePreview = toProxy(media.previewUrl);
+    
+    // For videos: probe → case variants → preview fallback → heal
+    if (isVideo) {
+      // Step 1: Probe full URL
+      console.log('[PROBE] Probing full URL', { folder: media.folder, url: candidateFull });
+      let probe = await probeStream(candidateFull);
+      
+      if (probe.ok) {
+        console.log('[PROBE] Full URL ok', { folder: media.folder, status: probe.status, ct: probe.ct });
+        diag('TILE', 'probe_ok_full', { folder: media.folder, url: candidateFull, status: probe.status });
+        setResolvedSrc(candidateFull);
+        setValidated(true);
+        return;
+      }
+      
+      console.log('[PROBE] Full URL failed', { folder: media.folder, status: probe.status });
+      diag('TILE', 'probe_fail_full', { folder: media.folder, url: candidateFull, status: probe.status });
+      
+      // Step 2: Try case variants
+      const variantUrl = await tryCaseVariants(candidateFull);
+      if (variantUrl) {
+        setResolvedSrc(variantUrl);
+        setValidated(true);
+        return;
+      }
+      
+      // Step 3: Try preview URL if video
+      if (media.previewType === 'video' && candidatePreview !== candidateFull) {
+        console.log('[PROBE] Trying preview URL', { folder: media.folder, url: candidatePreview });
+        probe = await probeStream(candidatePreview);
+        if (probe.ok) {
+          console.log('[PROBE] Preview URL ok', { folder: media.folder, status: probe.status });
+          diag('TILE', 'probe_ok_preview', { folder: media.folder, url: candidatePreview, status: probe.status });
+          setResolvedSrc(candidatePreview);
+          setValidated(true);
+          return;
+        }
+      }
+      
+      // Step 4: Attempt heal (find new preview in folder)
+      console.log('[HEAL] Attempting heal', { folder: media.folder });
+      const dir = getFolderDir(candidateFull);
+      const healed = await findPreviewForFolder(dir);
+      if (healed) {
+        console.log('[HEAL] Found healed URL', { folder: media.folder, healed });
+        probe = await probeStream(healed);
+        if (probe.ok) {
+          console.log('[HEAL] Healed URL ok', { folder: media.folder, status: probe.status });
+          diag('TILE', 'using_healed', { folder: media.folder, url: healed, status: probe.status });
+          setResolvedSrc(healed);
+          setValidated(true);
+          return;
+        }
+      }
+      
+      // Fallback: use original full URL anyway (poster will show)
+      console.warn('[TILE] All probes failed, using original', { folder: media.folder });
+      diag('TILE', 'probe_fail_all', { folder: media.folder });
+      setResolvedSrc(candidateFull);
+      setValidated(true);
+    } else {
+      // For images: probe preview and heal if needed
+      const dir = getFolderDir(candidatePreview || candidateFull || media.previewUrl || media.fullUrl);
+      let useUrl = candidatePreview;
+      let p = await probeStream(useUrl);
+      const isImage = (ct?: string) => (ct || '').startsWith('image/');
+      if (!(p.ok && isImage(p.ct))) {
+        // Try poster first (preview.webp/jpg/png)
+        const poster = await findPosterForFolder(dir);
+        if (poster) {
+          const pp = await probeStream(poster);
+          if (pp.ok && isImage(pp.ct)) {
+            useUrl = poster;
+          } else {
+            const previewHeal = await findPreviewForFolder(dir);
+            if (previewHeal) {
+              const hp = await probeStream(previewHeal);
+              if (hp.ok && isImage(hp.ct)) {
+                useUrl = previewHeal;
+              } else {
+                useUrl = '/placeholder.svg';
+              }
+            } else {
+              useUrl = '/placeholder.svg';
+            }
+          }
+        } else {
+          const previewHeal = await findPreviewForFolder(dir);
+          if (previewHeal) {
+            const hp = await probeStream(previewHeal);
+            if (hp.ok && isImage(hp.ct)) {
+              useUrl = previewHeal;
+            } else {
+              useUrl = '/placeholder.svg';
+            }
+          } else {
+            useUrl = '/placeholder.svg';
+          }
+        }
+      }
+      setResolvedSrc(useUrl);
+      setValidated(true);
+    }
+  }, [media.folder, media.fullUrl, media.previewUrl, media.previewType, isVideo, getFolderDir, tryCaseVariants]);
+
+  // Discover poster image
+  const discoverPoster = useCallback(async () => {
+    if (!isVideo) return;
+    
+    const dir = getFolderDir(media.fullUrl);
+    console.log('[POSTER] Looking for poster', { folder: media.folder, dir });
+    const poster = await findPosterForFolder(dir);
+    if (poster) {
+      console.log('[POSTER] Found poster', { folder: media.folder, poster });
+      diag('TILE', 'poster_found', { folder: media.folder, url: poster });
+      setPosterSrc(poster);
+    } else {
+      console.log('[POSTER] No poster found, using thumbnail', { folder: media.folder });
+      setPosterSrc(media.thumbnailUrl || '/placeholder.svg');
+    }
+  }, [isVideo, media.folder, media.fullUrl, media.thumbnailUrl, getFolderDir]);
+
+  // Run validation and poster discovery on mount/media change
   useEffect(() => {
-    if (media.previewType !== 'video' || !videoRef.current || !tileRef.current) {
+    setValidated(false);
+    setVideoReady(false);
+    setIsLoaded(false);
+    
+    validateAndResolve();
+    discoverPoster();
+  }, [media.folder, media.fullUrl, media.previewUrl, validateAndResolve, discoverPoster]);
+
+  // Reload video when src changes
+  useEffect(() => {
+    if (isVideo && videoRef.current && resolvedSrc && validated) {
+      console.log('[TILE] Loading video with resolved src', { folder: media.folder, src: resolvedSrc });
+      videoRef.current.load();
+    }
+  }, [isVideo, resolvedSrc, validated, media.folder]);
+
+  // Viewport-based autoplay (only after validated)
+  useEffect(() => {
+    if (!isVideo || !videoRef.current || !tileRef.current || !autoplayEnabled || !validated) {
       return;
     }
 
@@ -167,25 +243,29 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            if (!isPlaying) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.1) {
+            if (!isPlaying && videoReady) {
               video.currentTime = 0;
               video.play().then(() => {
+                console.log('[TILE] Play started', { folder: media.folder, ratio: entry.intersectionRatio });
+                diag('TILE', 'play_start', { folder: media.folder, ratio: entry.intersectionRatio });
                 setIsPlaying(true);
-              }).catch(() => {
-                // Ignore autoplay errors
+              }).catch((err) => {
+                console.warn('[TILE] Play failed', { folder: media.folder, err: String(err) });
               });
             }
           } else {
             if (isPlaying) {
               video.pause();
               video.currentTime = 0;
+              console.log('[TILE] Play stopped', { folder: media.folder });
+              diag('TILE', 'play_stop', { folder: media.folder });
               setIsPlaying(false);
             }
           }
         });
       },
-      { threshold: [0, 0.5, 1] }
+      { threshold: [0, 0.1, 1] }
     );
 
     observer.observe(tile);
@@ -193,19 +273,12 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
     return () => {
       observer.disconnect();
     };
-  }, [media.previewType, isPlaying]);
-
-  // Ensure poster is visible immediately if provided (avoid blocking overlay)
-  useEffect(() => {
-    if (media.previewType === 'video' && media.thumbnailUrl) {
-      setIsLoaded(true);
-    }
-  }, [media.previewType, media.thumbnailUrl]);
-
+  }, [isVideo, isPlaying, videoReady, autoplayEnabled, validated, media.folder]);
+  
   return (
     <motion.div
       ref={tileRef}
-      className="gallery-tile-wrapper video-tile cursor-pointer focus-ring"
+      className="gallery-tile-wrapper video-tile cursor-pointer focus-ring group"
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -226,165 +299,159 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
         }
       }}
     >
-      <div className="gallery-tile bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-        {/* Loading State */}
-        {!isLoaded && !hasError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-muted animate-pulse">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-        
-        {/* Error State */}
-        {hasError && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-muted text-muted-foreground p-4 text-center">
-            <div>
-              <div className="w-12 h-12 mx-auto mb-2 opacity-50">⚠️</div>
-              {supabasePaused ? (
-                <>
-                  <p className="text-sm font-medium text-destructive">Supabase Project Paused</p>
-                  <p className="text-xs opacity-70 mt-1">Backend services are unavailable. The project may be paused.</p>
-                  <p className="text-xs opacity-80 mt-1">Go to Supabase dashboard to resume the project.</p>
-                </>
-              ) : proxyMisrouted ? (
-                <>
-                  <p className="text-sm font-medium">Proxy misrouted</p>
-                  <p className="text-xs opacity-70 mt-1">The proxy returned HTML instead of media. Check function deployment.</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-medium">Failed to load</p>
-                  {httpStatus !== null && (
-                    <p className="text-xs opacity-70 mt-1">HTTP {httpStatus}</p>
-                  )}
-                  {codecHint && (
-                    <p className="text-xs opacity-80 mt-1">Detected codec: {codecHint}</p>
-                  )}
-                  <p className="text-xs opacity-70 mt-1">If your browser doesn't support this codec, try Safari or download the file.</p>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {supabasePaused ? (
-                <a
-                  href="https://supabase.com/dashboard/project/fvrgjyyflojdiklqepqt"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1 text-xs rounded-md bg-primary text-primary-foreground"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Resume Project
-                </a>
-              ) : (
-                <button
-                  className="px-3 py-1 text-xs rounded-md bg-primary text-primary-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setHasError(false);
-                    setIsLoaded(false);
-                    setHttpStatus(null);
-                    setSupabasePaused(false);
-                    setProxyMisrouted(false);
-                    setReloadKey((k) => k + 1);
-                    if (videoRef.current) {
-                      videoRef.current.load();
-                    }
-                  }}
-                >
-                  Retry
-                </button>
-              )}
-              <a
-                href={cacheBustedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                download
-                className="px-3 py-1 text-xs rounded-md bg-secondary text-secondary-foreground"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Download
-              </a>
-            </div>
-          </div>
-        )}
-
-        {/* Media Content */}
+      <div className="gallery-tile relative bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
         <div className="relative w-full h-full">
-          {media.previewType === 'video' ? (
+          {isVideo ? (
             <video
+              key={reloadKey}
               ref={videoRef}
               className="w-full h-full object-cover"
-              muted
+              src={resolvedSrc}
+              crossOrigin="anonymous"
+              preload="metadata"
+              poster={posterSrc}
+              muted={muteEnabled}
               loop
               playsInline
-              preload="metadata"
-              poster={media.thumbnailUrl || '/placeholder.svg'}
-              onLoadedMetadata={() => setIsLoaded(true)}
-              onLoadedData={() => setIsLoaded(true)}
-              onError={() => {
-                setHasError(true);
-                console.warn('MEDIA_ERROR', { folder: media.folder, preview: proxiedPreviewUrl });
-                diag('NET', 'media_error', { folder: media.folder, preview: proxiedPreviewUrl });
+              onLoadedMetadata={() => { 
+                console.log('[TILE] loadedMetadata', { folder: media.folder, src: resolvedSrc }); 
+                setVideoReady(true);
+                setIsLoaded(true);
+                if (videoRef.current) videoRef.current.currentTime = 0;
               }}
-              style={{ display: hasError ? 'none' : 'block' }}
-            >
-              <source src={cacheBustedUrl} type={mimeType} />
-              Your browser does not support video playback.
-            </video>
+              onCanPlay={() => { 
+                console.log('[TILE] canPlay', { folder: media.folder }); 
+                setVideoReady(true);
+                setIsLoaded(true);
+              }}
+              onError={async (e) => {
+                console.error('[TILE] video error', { 
+                  folder: media.folder, 
+                  src: resolvedSrc,
+                  error: e.currentTarget.error?.message 
+                });
+                diag('TILE', 'video_error', { 
+                  folder: media.folder, 
+                  src: resolvedSrc,
+                  code: e.currentTarget.error?.code 
+                });
+                setIsLoaded(true);
+                if (triedVideoRecover) return;
+                setTriedVideoRecover(true);
+                try {
+                  const candidateFull = toProxy(media.fullUrl);
+                  const candidatePreview = toProxy(media.previewUrl);
+                  const dir = getFolderDir(candidateFull || candidatePreview);
+
+                  // Try preview if it's a video and different from current src
+                  if (media.previewType === 'video' && candidatePreview !== resolvedSrc) {
+                    const pr = await probeStream(candidatePreview);
+                    if ((pr.ok) && (pr.ct || '').startsWith('video/')) {
+                      console.log('[RECOVER] Using preview video URL', { folder: media.folder });
+                      setResolvedSrc(candidatePreview);
+                      setReloadKey((k) => k + 1);
+                      setValidated(true);
+                      return;
+                    }
+                  }
+
+                  // Heal: find first playable in folder
+                  const healed = await findPreviewForFolder(dir);
+                  if (healed) {
+                    const hr = await probeStream(healed);
+                    if ((hr.ok) && (hr.ct || '').startsWith('video/')) {
+                      console.log('[RECOVER] Using healed video URL', { folder: media.folder });
+                      setResolvedSrc(healed);
+                      setReloadKey((k) => k + 1);
+                      setValidated(true);
+                      return;
+                    }
+                    // If it's an image, at least update poster
+                    if ((hr.ok) && (hr.ct || '').startsWith('image/')) {
+                      console.log('[RECOVER] Healed image found; using as poster', { folder: media.folder });
+                      setPosterSrc(healed);
+                    }
+                  }
+                } catch (err) {
+                  console.warn('[RECOVER] video recovery failed', { folder: media.folder, err: String(err) });
+                }
+              }}
+              style={{ display: 'block' }}
+            />
           ) : (
             <img
-              src={proxiedPreviewUrl}
+              src={resolvedSrc}
               alt={media.title}
               className="w-full h-full object-cover"
-              onLoad={() => setIsLoaded(true)}
-              onError={() => {
-                setHasError(true);
-                console.warn('MEDIA_ERROR', { folder: media.folder, preview: proxiedPreviewUrl });
-                diag('NET', 'media_error', { folder: media.folder, preview: proxiedPreviewUrl });
+              onLoad={() => {
+                console.log('[TILE] image loaded', { folder: media.folder });
+                setIsLoaded(true);
               }}
-              style={{ display: hasError ? 'none' : 'block' }}
+              onError={async (e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                console.warn('[TILE] image error', { folder: media.folder, src: resolvedSrc });
+                diag('TILE', 'image_error', { folder: media.folder, src: resolvedSrc });
+                if (!triedImageHeal) {
+                  setTriedImageHeal(true);
+                  try {
+                    const candidatePreview = toProxy(media.previewUrl);
+                    const dir = getFolderDir(candidatePreview || media.previewUrl || '');
+                    // Prefer poster (image), then generic preview that is image
+                    const poster = await findPosterForFolder(dir);
+                    const healCandidate = poster || (await findPreviewForFolder(dir));
+                    if (healCandidate) {
+                      const hp = await probeStream(healCandidate);
+                      if (hp.ok && (hp.ct || '').startsWith('image/')) {
+                        img.src = healCandidate;
+                        setIsLoaded(true);
+                        return;
+                      }
+                    }
+                  } catch (err) {
+                    console.warn('[RECOVER] image heal failed', { folder: media.folder, err: String(err) });
+                  }
+                }
+                img.src = '/placeholder.svg';
+                setIsLoaded(true);
+              }}
+              style={{ display: 'block' }}
             />
           )}
           
-          {/* Loading State - Show while video loads */}
-          {!isLoaded && !hasError && !media.thumbnailUrl && (
-            <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-          )}
-          
           {/* Video Indicator */}
-          {media.fullType === 'video' && (
+          {isVideo && (
             <div className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full p-1.5">
               <Play className={`w-3 h-3 text-foreground ${isPlaying ? 'animate-pulse' : ''}`} />
             </div>
           )}
           
+          {/* MANIFEST indicator - show only if metadata comes from MANIFEST file */}
+          {media.meta?.title && media.meta?.source === 'file' && (
+            <div className="absolute top-2 left-2 bg-charcoal/90 text-off-white text-xs font-medium px-2 py-0.5 rounded-full border border-off-white/20">
+              ✓ Meta
+            </div>
+          )}
+          
           {/* Order Badge - Only show in debug mode */}
           {isDebugMode && (
-            <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-full">
+            <div className="absolute bottom-2 right-2 bg-charcoal text-off-white text-xs font-medium px-2 py-1 rounded-full">
               {media.orderKey}
             </div>
           )}
           
-          {/* Overlay with Title */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300">
-            <div className="absolute bottom-0 left-0 right-0 p-3">
-              <h3 className="font-medium text-foreground text-sm mb-1">
-                {media.title ?? media.meta?.title ?? media.folder}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {(media.description ?? media.meta?.description ?? '') && (
-                  <span className="block mb-1 opacity-90">
-                    {(media.description ?? media.meta?.description ?? '').length > 60 
-                      ? (media.description ?? media.meta?.description ?? '').slice(0, 60) + '...'
-                      : (media.description ?? media.meta?.description ?? '')
-                    }
-                  </span>
-                )}
-                {media.previewType === 'video' ? 'Video Preview' : 'Image'} • 
-                {media.fullType === 'video' ? ' Video Content' : ' Image Content'}
-              </p>
-            </div>
+          {/* Title overlay - hover on desktop, always visible on mobile/tablet */}
+          <div
+            className={`absolute bottom-0 left-0 right-0 p-2 sm:p-3 transition-opacity duration-300 pointer-events-none ${
+              isMobile 
+                ? 'bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-100' 
+                : 'bg-gradient-to-t from-white/95 via-white/80 to-transparent opacity-0 group-hover:opacity-100'
+            }`}
+          >
+            <h3 className={`text-xs sm:text-sm font-semibold line-clamp-2 drop-shadow-lg ${
+              isMobile ? 'text-white' : 'text-charcoal'
+            }`}>
+              {media.title ?? media.meta?.title ?? media.folder}
+            </h3>
           </div>
         </div>
       </div>

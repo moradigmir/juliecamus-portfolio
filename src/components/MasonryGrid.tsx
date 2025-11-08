@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import ProjectTile from './ProjectTile';
 import AutoMediaTile from './AutoMediaTile';
 import { useMediaIndex, type MediaItem, type MediaManifest } from '../hooks/useMediaIndex';
@@ -12,11 +12,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Save, Copy, Bug, ToggleLeft, Download } from 'lucide-react';
+import { Settings, Save, Copy, Bug, ToggleLeft, Download, ArrowUp, RefreshCw, Clock, Tag, X } from 'lucide-react';
 import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
 import { diag, flushDiagToEdge, buildDiagSummary } from '../debug/diag';
+import { loadMetaCache, getMetaCacheStats } from '@/lib/metaCache';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 interface Project {
   slug: string;
@@ -48,29 +51,45 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [clearPlaceholders, setClearPlaceholders] = useState(false);
   const [proposedManifest, setProposedManifest] = useState<string>('');
   const [manifestDiff, setManifestDiff] = useState<string>('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [searchText, setSearchText] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState('');
   const { toast } = useToast();
 
-  // Check if in dev mode or debug URL param  
-  const isDevMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('debug') === '1';
-  const showDevControls = isDevMode;
+  // Show dev controls only on /?diagnostics=1 route
+  const showDevControls = window.location.pathname === '/' && new URLSearchParams(window.location.search).get('diagnostics') === '1';
+  
+  // Track dev toolbar height and expose as CSS variable
+  useEffect(() => {
+    if (!showDevControls) {
+      document.documentElement.style.setProperty('--dev-toolbar-h', '0px');
+      return;
+    }
+    const toolbar = document.querySelector('[data-dev-toolbar]');
+    if (!toolbar) return;
+    
+    const updateHeight = () => {
+      const h = toolbar.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--dev-toolbar-h', `${h}px`);
+    };
+    updateHeight();
+    const obs = new ResizeObserver(updateHeight);
+    obs.observe(toolbar);
+    return () => obs.disconnect();
+  }, [showDevControls]);
 
-  // Auto-open diagnostics if ?debug=1 in URL
+  // Auto-open diagnostics if on /?diagnostics=1 route
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('debug') === '1') {
+    const isDiagnosticsMode = params.get('diagnostics') === '1';
+    
+    if (window.location.pathname === '/' && isDiagnosticsMode) {
       setShowDiagnostics(true);
     }
 
-    // Read clear placeholders setting from sessionStorage and URL override
-    const storedClearPlaceholders = sessionStorage.getItem('hidrive:clearPlaceholders') === '1';
-    const urlNoPlaceholders = params.get('noplaceholders') === '1';
-    
-    if (urlNoPlaceholders) {
-      sessionStorage.setItem('hidrive:clearPlaceholders', '1');
-      setClearPlaceholders(true);
-    } else {
-      setClearPlaceholders(storedClearPlaceholders);
-    }
+    // Hide placeholders by default, only show when ?diagnostics=1
+    setClearPlaceholders(!isDiagnosticsMode);
   }, []);
   
   // Load auto-discovered media from HiDrive
@@ -79,8 +98,19 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     isLoading: mediaLoading, 
     error: mediaError, 
     isSupabasePaused, 
-    refetch 
+    refetch,
+    metaStats,
+    forceRefreshManifests
   } = useMediaIndex();
+
+  // Keep lightbox media in sync with latest metadata (e.g., MANIFEST updates)
+  useEffect(() => {
+    if (!lightboxMedia) return;
+    const latest = autoMediaItems.find((m) => m.folder === lightboxMedia.folder);
+    if (latest && (latest.meta !== lightboxMedia.meta || latest.title !== lightboxMedia.title)) {
+      setLightboxMedia(latest);
+    }
+  }, [autoMediaItems, lightboxMedia]);
 
   // Debounced hover handlers to prevent mouse chase flicker
   const handleTileHover = useCallback((index: number) => {
@@ -116,7 +146,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           // Use proper HiDrive directory listing instead of naive text parsing
           const hidriveItems = await listDir(directory);
           
-          // Filter to image files only
+          // Filter to image files only and EXCLUDE preview.* files from gallery
           const imageFiles = hidriveItems
             .filter(item => item.type === 'file' && (
               isMediaContentType(item.contentType || '') ||
@@ -126,8 +156,18 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               const ct = item.contentType || '';
               return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif)$/i.test(item.name);
             })
+            .filter(item => !/^preview\./i.test(item.name)) // Skip preview.* files in gallery
             .map(item => item.name)
             .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+          
+          // Diagnostic: Log preview filter
+          const totalFiles = hidriveItems.filter(item => item.type === 'file').length;
+          console.log('[MANIFEST] preview_filter_applied', {
+            folder: media.folder,
+            total: totalFiles,
+            shownInGallery: imageFiles.length,
+            skippedPreviewCount: totalFiles - imageFiles.length
+          });
           
           if (imageFiles.length > 1) {
             // Create a project-like structure with all images
@@ -160,7 +200,8 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }
     
     // Fallback: treat as single media item (for videos or single images)
-    setLightboxMedia(media);
+    const latest = autoMediaItems.find((m) => m.folder === media.folder) || media;
+    setLightboxMedia(latest);
     setLightboxProject(null);
     setLightboxImageIndex(0);
     setLightboxOpen(true);
@@ -424,7 +465,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
   const handleClearPlaceholdersToggle = useCallback((checked: boolean) => {
     setClearPlaceholders(checked);
-    sessionStorage.setItem('hidrive:clearPlaceholders', checked ? '1' : '0');
     
     // Diagnostics: Log toggle change
     diag('ORDER', 'clear_placeholders_toggled', { on: checked });
@@ -439,11 +479,159 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }));
   }, [autoMediaItems, projects.length]);
 
+  const handleFullRescan = useCallback(async () => {
+    setIsScanning(true);
+    setScanProgress('Starting full rescan...');
+    
+    try {
+      const discovered: MediaItem[] = [];
+      const SCAN_MAX = 99;
+      const CONCURRENCY = 12;
+      
+      console.log('🚀 FULL RESCAN: Scanning folders 01-99...');
+      toast({ title: 'Full Rescan Started', description: 'Discovering all folders...' });
+      
+      const queue = Array.from({ length: SCAN_MAX }, (_, i) => 
+        (i + 1).toString().padStart(2, '0')
+      );
+      
+      let processed = 0;
+      
+      async function processFolder(folderNum: string) {
+        try {
+          const folderPath = `/public/${folderNum}/`;
+          const previewUrl = await findPreviewForFolder(folderPath);
+          
+          if (previewUrl) {
+            const isVideo = /\.(mp4|mov)$/i.test(previewUrl);
+            discovered.push({
+              orderKey: folderNum,
+              folder: folderNum,
+              title: `Folder ${folderNum}`,
+              previewUrl,
+              previewType: isVideo ? 'video' : 'image',
+              fullUrl: previewUrl,
+              fullType: isVideo ? 'video' : 'image',
+              meta: {},
+            });
+            console.log(`✅ Discovered folder ${folderNum}`);
+          }
+        } catch (error) {
+          // Silently skip folders that don't exist
+        }
+        
+        processed++;
+        setScanProgress(`Scanned ${processed}/${SCAN_MAX} folders...`);
+      }
+      
+      async function worker() {
+        while (queue.length) {
+          const folder = queue.shift();
+          if (!folder) break;
+          await processFolder(folder);
+        }
+      }
+      
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+      
+      console.log(`✅ Full rescan complete: Found ${discovered.length} folders`);
+      setScanProgress('Generating manifest...');
+      
+      if (discovered.length === 0) {
+        toast({ 
+          title: 'No Folders Found', 
+          description: 'Could not find any valid media folders in /public/', 
+          variant: 'destructive' 
+        });
+        setIsScanning(false);
+        setScanProgress('');
+        return;
+      }
+      
+      // Sort by folder number
+      discovered.sort((a, b) => parseInt(a.folder, 10) - parseInt(b.folder, 10));
+      
+      // Generate new manifest
+      const newManifest = {
+        items: discovered,
+        generatedAt: new Date().toISOString(),
+        source: 'hidrive'
+      };
+      
+      const manifestJson = JSON.stringify(newManifest, null, 2);
+      console.log(`📄 Generated manifest with ${discovered.length} items`);
+      
+      // Download manifest file
+      const blob = new Blob([manifestJson], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'media.manifest.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({ 
+        title: 'Rescan Complete!', 
+        description: `Found ${discovered.length} folders. Manifest downloaded - replace public/media.manifest.json and refresh.`,
+        duration: 10000
+      });
+      
+    } catch (error) {
+      console.error('❌ Full rescan failed:', error);
+      toast({ 
+        title: 'Rescan Failed', 
+        description: error instanceof Error ? error.message : 'Unknown error', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsScanning(false);
+      setScanProgress('');
+    }
+  }, [toast]);
+
+  // Compute all unique tags from media items
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    autoMediaItems.forEach(item => {
+      const tags = (item.meta?.source === 'file' ? item.meta?.tags : undefined) || [];
+      tags.forEach(tag => tagSet.add(tag));
+    });
+    return Array.from(tagSet).sort();
+  }, [autoMediaItems]);
+
+  // Filter media items by selected tags and search text
+  const filteredMediaItems = useMemo(() => {
+    let filtered = autoMediaItems;
+    
+    // Apply tag filter
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(item => {
+        const itemTags = item.meta?.tags || item.tags || [];
+        return selectedTags.every(tag => itemTags.includes(tag));
+      });
+    }
+    
+    // Apply text search
+    if (searchText.trim()) {
+      const search = searchText.toLowerCase();
+      filtered = filtered.filter(item => {
+        const title = (item.meta?.title || item.title || '').toLowerCase();
+        const description = (item.meta?.description || item.description || '').toLowerCase();
+        const tags = (item.meta?.tags || item.tags || []).join(' ').toLowerCase();
+        return title.includes(search) || description.includes(search) || tags.includes(search);
+      });
+    }
+    
+    return filtered;
+  }, [autoMediaItems, selectedTags, searchText]);
+
   const createGridItems = useCallback((): GridItem[] => {
     const items: GridItem[] = [];
     
-    // FIRST: Add all real media items (sorted numerically by folder)
-    autoMediaItems.forEach((media, index) => {
+    // FIRST: Add all filtered real media items (sorted numerically by folder)
+    filteredMediaItems.forEach((media, index) => {
       items.push({ 
         type: 'media', 
         media, 
@@ -492,7 +680,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }));
     
     return items;
-  }, [projects, expandedTile, autoMediaItems, clearPlaceholders]);
+  }, [projects, expandedTile, filteredMediaItems, clearPlaceholders]);
 
   const gridItems = createGridItems();
 
@@ -513,8 +701,130 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
       {/* Diagnostic Panel - Only show when debug=1 */}
       {showDevControls && (
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div data-dev-toolbar className="mb-6 space-y-3">
+          {/* Cache Status & Controls Row */}
+          <div className="flex items-center justify-between gap-4 p-3 border rounded-lg bg-muted/20">
+            <div className="flex items-center gap-3">
+              {/* Cache Status */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 px-3 py-1.5 border rounded bg-background">
+                      <Clock className="w-3 h-3 text-muted-foreground" />
+                      <div className="text-xs space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Meta: {metaStats.found}/{autoMediaItems.length}</span>
+                          {metaStats.processed > 0 && metaStats.processed < metaStats.total && (
+                            <span className="text-muted-foreground">
+                              ({Math.round((metaStats.processed / metaStats.total) * 100)}%)
+                            </span>
+                          )}
+                        </div>
+                        {metaStats.lastRefreshTs > 0 && (
+                          <div className="text-muted-foreground">
+                            {(() => {
+                              const ago = Date.now() - metaStats.lastRefreshTs;
+                              if (ago < 60000) return `${Math.round(ago / 1000)}s ago`;
+                              if (ago < 3600000) return `${Math.round(ago / 60000)}m ago`;
+                              return `${Math.round(ago / 3600000)}h ago`;
+                            })()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1 text-xs">
+                      <p>MANIFEST.txt metadata cache</p>
+                      <p>Found: {metaStats.found} folders</p>
+                      <p>Missing: {metaStats.missing} folders</p>
+                      {metaStats.errors > 0 && <p className="text-destructive">Errors: {metaStats.errors}</p>}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              
+              {/* Progress bar while refreshing */}
+              {metaStats.processed > 0 && metaStats.processed < metaStats.total && (
+                <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-charcoal transition-all duration-300"
+                    style={{ width: `${(metaStats.processed / metaStats.total) * 100}%` }}
+                  />
+                </div>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={forceRefreshManifests}
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                disabled={metaStats.processed > 0 && metaStats.processed < metaStats.total}
+              >
+                <RefreshCw className={`w-3 h-3 mr-1 ${metaStats.processed > 0 && metaStats.processed < metaStats.total ? 'animate-spin' : ''}`} />
+                Force Refresh
+              </Button>
+            </div>
+          </div>
+          
+          {/* Tag Filter Row */}
+          {allTags.length > 0 && (
+            <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/20">
+              <Tag className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1 flex items-center gap-2 flex-wrap">
+                {allTags.map(tag => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => {
+                        setSelectedTags(prev => 
+                          isSelected 
+                            ? prev.filter(t => t !== tag)
+                            : [...prev, tag]
+                        );
+                      }}
+                      className={`
+                        px-2 py-1 text-xs rounded-full transition-colors
+                        ${isSelected 
+                          ? 'bg-charcoal text-off-white' 
+                          : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }
+                      `}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+                {selectedTags.length > 0 && (
+                  <button
+                    onClick={() => setSelectedTags([])}
+                    className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <Input
+                type="text"
+                placeholder="Search..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-40 h-8 text-xs"
+              />
+              {(selectedTags.length > 0 || searchText) && (
+                <Badge variant="outline" className="text-xs">
+                  {filteredMediaItems.length} of {autoMediaItems.length}
+                </Badge>
+              )}
+            </div>
+          )}
+          
+          {/* Controls Row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -556,6 +866,51 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               className="text-xs"
             >
               {isRefreshing ? 'Checking...' : 'Check Folders'}
+            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    onClick={handleFullRescan} 
+                    variant="default" 
+                    size="sm" 
+                    disabled={isScanning}
+                    className="text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <RefreshCw className={`w-3 h-3 mr-1 ${isScanning ? 'animate-spin' : ''}`} />
+                    {isScanning ? scanProgress : 'Full Rescan (01-99)'}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Scan ALL folders 01-99 and generate new manifest file</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Button 
+              onClick={() => {
+                const owner = 'juliecamus';
+                const keyV1 = `manifestMetaCache:v1:${owner}`;
+                const keyV2 = `manifestMetaCache:v2:${owner}`;
+                localStorage.removeItem(keyV1);
+                localStorage.removeItem(keyV2);
+                localStorage.removeItem('manifest:last_refresh_ts');
+                localStorage.removeItem('manifest:last_result');
+                console.log('🗑️ Nuked metadata cache (v1+v2)');
+                toast({ 
+                  title: 'Meta cache nuked', 
+                  description: 'Cleared v1+v2. Force refreshing...' 
+                });
+                // Force refresh after clearing
+                setTimeout(() => {
+                  forceRefreshManifests();
+                }, 300);
+              }} 
+              variant="outline" 
+              size="sm"
+              className="text-xs"
+            >
+              <Download className="w-3 h-3 mr-1" />
+              Nuke Meta Cache
             </Button>
             {autoMediaItems.length > 0 && (
               <Dialog open={showManifestDialog} onOpenChange={setShowManifestDialog}>
@@ -633,6 +988,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                 'No media loaded'
               )}
             </div>
+            </div>
           </div>
         </div>
       )}
@@ -647,7 +1003,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       {/* Show loading or error states */}
       {mediaLoading && !isSupabasePaused && (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-charcoal mx-auto mb-2"></div>
           <p className="text-muted-foreground">Loading media...</p>
         </div>
       )}
@@ -720,6 +1076,20 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           }
         })}
       </div>
+
+      {/* Back to top button */}
+      {gridItems.length > 0 && (
+        <div className="flex justify-center mt-16 mb-8">
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="group flex flex-col items-center gap-2 px-6 py-4 bg-muted hover:bg-accent rounded-lg transition-all duration-300 hover:scale-105"
+            aria-label="Back to top"
+          >
+            <ArrowUp className="w-6 h-6 text-foreground animate-bounce" />
+            <span className="text-sm font-inter text-foreground">Back to top</span>
+          </button>
+        </div>
+      )}
 
       {/* Lightbox */}
       <Lightbox

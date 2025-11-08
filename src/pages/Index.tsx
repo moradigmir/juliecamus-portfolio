@@ -1,38 +1,58 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { Edit3 } from 'lucide-react';
 import Navigation from '../components/Navigation';
+import HeroSplashMatch from '../components/HeroSplashMatch';
 import MasonryGrid from '../components/MasonryGrid';
+import ManifestEditor from '../components/ManifestEditor';
+import ScrollToTop from '../components/ScrollToTop';
+import { Button } from '@/components/ui/button';
 import { projects } from '../data/projects';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useMediaIndex } from '@/hooks/useMediaIndex';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      
-      {/* Hero Section */}
-      <motion.section
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="pt-16 pb-6 md:pt-24 md:pb-12 text-center"
-      >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="font-playfair text-3xl md:text-6xl font-bold text-foreground mb-3 md:mb-6">
-            Julie Camus
-          </h1>
-          <p className="font-inter text-sm md:text-2xl text-muted-foreground mb-3 md:mb-8">
-            French High-End Makeup Artist
-          </p>
-          <p className="font-inter text-xs md:text-lg text-muted-foreground max-w-2xl mx-auto">
-            Specializing in editorial, fashion, and artistic makeup with over a decade of experience 
-            in the luxury beauty industry across Paris, Milan, and New York.
-          </p>
-        </div>
-      </motion.section>
+  const isMobile = useIsMobile();
+  const [editorOpen, setEditorOpen] = useState(false);
+  const { mediaItems, refetch } = useMediaIndex();
+  const showEditButton = typeof window !== 'undefined' && 
+    new URLSearchParams(window.location.search).get('diagnostics') === '1';
+  
+  const handleEditorSave = () => {
+    // Trigger refetch of media items to reflect updated metadata
+    refetch();
+  };
 
-      {/* Projects Gallery */}
-      <section className="pb-24">
+  return (
+    <div className="min-h-screen">
+      <Navigation />
+      <HeroSplashMatch />
+      
+      {/* Floating Edit Button - only visible with ?diagnostics=1 */}
+      {showEditButton && (
+        <Button
+          onClick={() => setEditorOpen(true)}
+          className="fixed bottom-6 right-6 z-50 shadow-lg"
+          size="lg"
+        >
+          <Edit3 className="w-5 h-5 mr-2" />
+          Edit Manifests
+        </Button>
+      )}
+
+      {/* Manifest Editor Dialog */}
+      <ManifestEditor
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        mediaItems={mediaItems}
+        onSave={handleEditorSave}
+      />
+      
+      {/* Projects Gallery - starts immediately after hero */}
+      <section id="gallery" style={{ paddingTop: "clamp(120px, 15vh, 180px)", marginTop: "0px", paddingBottom: "96px" }}>
         <MasonryGrid projects={projects} />
       </section>
+      
+      <ScrollToTop />
     </div>
   );
 };

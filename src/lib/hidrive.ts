@@ -5,13 +5,31 @@ import { supabase } from '@/integrations/supabase/client';
  * Ensures exact working shape with /public/ prefix and owner=juliecamus.
  */
 export function toProxyStrict(input: string): string {
-  // Already proxied?
-  if (input.includes('/hidrive-proxy?')) return input;
+  // If already pointing to our proxy, normalize query params (ensure owner + path starts with /public)
+  if (input.includes('/hidrive-proxy?')) {
+    try {
+      const u = new URL(input);
+      // Ensure owner
+      if (!u.searchParams.get('owner')) u.searchParams.set('owner', 'juliecamus');
+      // Ensure path param exists and starts with /public/
+      const p = u.searchParams.get('path') || '';
+      if (p) {
+        let fixed = p;
+        if (!fixed.startsWith('/')) fixed = '/' + fixed;
+        if (!/^\/public\//i.test(fixed)) fixed = '/public' + fixed;
+        fixed = fixed.replace(/\/{2,}/g, '/');
+        u.searchParams.set('path', fixed);
+      }
+      return u.toString();
+    } catch {
+      // fall through to rebuild from scratch
+    }
+  }
 
   // Accept raw path, hidrive://, or full URL. We only keep the PATH part.
-  let p = input.trim();
+  let p = (input || '').trim();
 
-  // If it's a full URL to webdav or anywhere, strip to pathname starting at /public
+  // If it's a full URL, keep only pathname starting at /public
   try {
     if (p.startsWith('http')) {
       const u = new URL(p);
@@ -74,6 +92,7 @@ export const listDir = async (path: string): Promise<HiDriveItem[]> => {
   const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
   url.searchParams.set('path', normalized);
   url.searchParams.set('list', '1');
+  url.searchParams.set('owner', 'juliecamus');
   
   const res = await fetch(url.toString(), { method: 'GET' });
   const ct = res.headers.get('content-type') || '';
@@ -165,8 +184,35 @@ export async function probeStream(urlOrPath: string) {
 }
 
 /**
+ * Find a poster image for a folder (preview.webp, preview.jpg, preview.png).
+ * Returns proxied URL if found, null otherwise.
+ */
+export const findPosterForFolder = async (path: string): Promise<string | null> => {
+  try {
+    const items = await listDir(path);
+    const posterExtensions = ['webp', 'jpg', 'jpeg', 'png'];
+    const posterFile = items.find(item => {
+      const nameLower = item.name.toLowerCase();
+      return posterExtensions.some(ext => nameLower === `preview.${ext}`);
+    });
+    
+    if (posterFile) {
+      const posterUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + posterFile.name)}&owner=juliecamus`;
+      console.log('🖼️ Found poster', { folder: path, file: posterFile.name });
+      return posterUrl;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ Failed to find poster', path, error);
+    return null;
+  }
+};
+
+/**
  * Find a preview file for a folder using directory listing.
- * Prefers preview.* files (case-insensitive), falls back to first media file by lexicographic order.
+ * Prefers preview.* files (case-insensitive), prioritizes video over images for preview.
+ * Falls back to first video, then first media file by lexicographic order.
  */
 export const findPreviewForFolder = async (path: string): Promise<string | null> => {
   try {
@@ -182,8 +228,8 @@ export const findPreviewForFolder = async (path: string): Promise<string | null>
       return null;
     }
     
-    // Look for preview.* files (case-insensitive)
-    const previewExtensions = ['jpg', 'jpeg', 'png', 'webp', 'mp4', 'mov'];
+    // Look for preview.* files (case-insensitive), prioritize videos
+    const previewExtensions = ['mp4', 'mov', 'webm', 'm4v', 'jpg', 'jpeg', 'png', 'webp'];
     const previewFile = mediaFiles.find(file => {
       const nameLower = file.name.toLowerCase(); 
       return previewExtensions.some(ext => 
@@ -192,19 +238,50 @@ export const findPreviewForFolder = async (path: string): Promise<string | null>
     });
     
     if (previewFile) {
-      const previewUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + previewFile.name)}`;
+      const previewUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + previewFile.name)}&owner=juliecamus`;
       console.log('🎯 Found preview file', { folder: path, file: previewFile.name, url: previewUrl });
       return previewUrl;
     }
     
-    // Fallback to first media file by lexicographic order
-    const firstFile = mediaFiles.sort((a, b) => a.name.localeCompare(b.name))[0];
-    const firstUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + firstFile.name)}`;
+    // Fallback: prefer first video, else first media file
+    const videoFiles = mediaFiles.filter(f => f.contentType?.startsWith('video/'));
+    const firstFile = videoFiles.length > 0 
+      ? videoFiles.sort((a, b) => a.name.localeCompare(b.name))[0]
+      : mediaFiles.sort((a, b) => a.name.localeCompare(b.name))[0];
+    
+    const firstUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + firstFile.name)}&owner=juliecamus`;
     console.log('📄 Using first media file as preview', { folder: path, file: firstFile.name, url: firstUrl });
     return firstUrl;
     
   } catch (error) {
     console.error('❌ Failed to find preview for folder', path, error);
+    return null;
+  }
+};
+
+/**
+ * Find the first video file in a folder, returning its proxied URL.
+ * Returns null if no video files are found.
+ */
+export const findFirstVideoForFolder = async (path: string): Promise<string | null> => {
+  try {
+    const items = await listDir(path);
+    const videoFiles = items.filter(item => 
+      item.type === 'file' && 
+      item.contentType?.startsWith('video/')
+    );
+    
+    if (videoFiles.length === 0) {
+      return null;
+    }
+    
+    // Return first video by lexicographic order
+    const firstVideo = videoFiles.sort((a, b) => a.name.localeCompare(b.name))[0];
+    const videoUrl = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?path=${encodeURIComponent(path + firstVideo.name)}&owner=juliecamus`;
+    console.log('🎬 Found first video', { folder: path, file: firstVideo.name, url: videoUrl });
+    return videoUrl;
+  } catch (error) {
+    console.error('❌ Failed to find video in folder', path, error);
     return null;
   }
 };
@@ -227,6 +304,7 @@ const listDirAll = async (path: string): Promise<HiDriveItem[]> => {
   const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
   url.searchParams.set('path', normalized);
   url.searchParams.set('list', '1');
+  url.searchParams.set('owner', 'juliecamus');
   
   const res = await fetch(url.toString(), { method: 'GET' });
   const ct = res.headers.get('content-type') || '';
@@ -290,6 +368,7 @@ export const fetchText = async (path: string, noStore = true): Promise<string | 
   try {
     const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
     url.searchParams.set('path', path);
+    url.searchParams.set('owner', 'juliecamus');
     if (noStore) {
       url.searchParams.set('cb', Date.now().toString());
     }
@@ -312,16 +391,60 @@ export const fetchText = async (path: string, noStore = true): Promise<string | 
 };
 
 /**
- * Find and fetch MANIFEST.md file in a folder (case-insensitive).
+ * Find and fetch MANIFEST file in a folder (case-insensitive, multiple formats).
+ * Tries: MANIFEST.md, MANIFEST.txt, MANIFEST, README.md, INFO.md
  * Returns { content, matchedFilename } if found, null if not found.
  */
 export const findManifestMarkdown = async (folderPath: string): Promise<{ content: string; matchedFilename: string } | null> => {
   try {
     // Ensure trailing slash
     const normalizedPath = folderPath.endsWith('/') ? folderPath : folderPath + '/';
-    const manifestVariants = ['MANIFEST.md', 'Manifest.md', 'manifest.md'];
     
-    // First try: listing-based search (case-insensitive, no media filter)
+    // Priority order: MANIFEST variants first, then README/INFO as low-priority fallback
+    const manifestVariants = [
+      'MANIFEST.md', 'Manifest.md', 'manifest.md',
+      'MANIFEST.txt', 'Manifest.txt', 'manifest.txt',
+      'MANIFEST', 'Manifest', 'manifest',
+      'README.md', 'INFO.md'
+    ];
+    
+    // PRIORITY: Direct GET first with 5s timeout (WebDAV listing may not show .md files)
+    for (const variant of manifestVariants) {
+      const manifestPath = normalizedPath + variant;
+      
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+        
+        const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
+        url.searchParams.set('path', manifestPath);
+        url.searchParams.set('cb', Date.now().toString());
+        url.searchParams.set('owner', 'juliecamus');
+        
+        const res = await fetch(url.toString(), { 
+          method: 'GET',
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (res.ok) {
+          const content = await res.text();
+          if (content && content.trim()) {
+            console.log('✅ Found manifest via direct GET', { folder: normalizedPath, file: variant });
+            return { content, matchedFilename: variant };
+          }
+        }
+      } catch (fetchError: any) {
+        if (fetchError.name === 'AbortError') {
+          console.log('⏱️ Manifest fetch timeout', { folder: normalizedPath, file: variant });
+        }
+        // Continue to next variant
+      }
+    }
+    
+    // Fallback: listing-based search (in case direct GET fails but listing works)
     try {
       const items = await listDirAll(normalizedPath);
       const manifestFile = items.find(item => 
@@ -333,35 +456,29 @@ export const findManifestMarkdown = async (folderPath: string): Promise<{ conten
         const manifestPath = normalizedPath + manifestFile.name;
         const content = await fetchText(manifestPath);
         if (content) {
+          console.log('✅ Found manifest via listing', { folder: normalizedPath, file: manifestFile.name });
           return { content, matchedFilename: manifestFile.name };
         }
       }
     } catch (listError) {
-      console.log('❌ Listing failed, trying direct GET', { folderPath: normalizedPath, listError });
-    }
-    
-    // Second try: direct GET fallback for all variants
-    for (const variant of manifestVariants) {
-      const manifestPath = normalizedPath + variant;
-      const content = await fetchText(manifestPath);
-      if (content) {
-        return { content, matchedFilename: variant };
-      }
+      console.log('⚠️ Listing failed for manifest search', { folderPath: normalizedPath });
     }
     
     return null;
   } catch (error) {
-    console.error('❌ Failed to find manifest markdown', { folderPath, error });
+    console.error('❌ Failed to find manifest', { folderPath, error });
     return null;
   }
 };
 
 /**
- * Parse MANIFEST.md content for metadata.
- * Supports YAML front-matter or plain markdown.
+ * Parse MANIFEST content for metadata.
+ * Supports: YAML front-matter, plain text (first line = title, paragraph = description), key-value pairs.
  */
 export const parseManifestMarkdown = (md: string): { title?: string; description?: string; tags?: string[] } => {
   try {
+    if (!md || !md.trim()) return {};
+    
     // Check for YAML front-matter
     if (md.startsWith('---')) {
       const endIndex = md.indexOf('---', 3);
@@ -397,25 +514,74 @@ export const parseManifestMarkdown = (md: string): { title?: string; description
       }
     }
     
-    // Plain markdown fallback
+    // Plain text parsing
     const lines = md.split('\n').map(l => l.trim()).filter(l => l);
+    if (lines.length === 0) return {};
+    
     const result: { title?: string; description?: string; tags?: string[] } = {};
     
+    // Try key-value format first (Title:, Description:, Tags:)
+    let hasKeyValue = false;
+    for (const line of lines) {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0) {
+        const key = line.slice(0, colonIndex).trim().toLowerCase();
+        const value = line.slice(colonIndex + 1).trim();
+        
+        if (key === 'title' && value) {
+          result.title = value;
+          hasKeyValue = true;
+        } else if ((key === 'description' || key === 'subtitle') && value) {
+          result.description = value;
+          hasKeyValue = true;
+        } else if (key === 'tags' && value) {
+          // Try parsing as JSON array or comma-separated
+          try {
+            if (value.startsWith('[')) {
+              result.tags = JSON.parse(value);
+            } else {
+              result.tags = value.split(',').map(t => t.trim()).filter(t => t);
+            }
+          } catch {
+            result.tags = value.split(',').map(t => t.trim()).filter(t => t);
+          }
+          hasKeyValue = true;
+        }
+      }
+    }
+    
+    if (hasKeyValue) return result;
+    
+    // Markdown format fallback
     // Find first H1
     const h1Line = lines.find(line => line.startsWith('# '));
     if (h1Line) {
       result.title = h1Line.slice(2).trim();
+    } else {
+      // First non-empty line as title
+      if (lines[0]) {
+        result.title = lines[0];
+      }
     }
     
-    // Find first non-empty paragraph (not starting with #)
-    const paragraph = lines.find(line => line && !line.startsWith('#') && line.length > 10);
+    // Find first non-empty paragraph (not starting with #, at least 10 chars)
+    const paragraph = lines.find(line => 
+      line && 
+      !line.startsWith('#') && 
+      !line.includes(':') && 
+      line.length >= 10 &&
+      line !== result.title
+    );
     if (paragraph) {
       result.description = paragraph;
+    } else if (lines.length > 1 && lines[1] && lines[1] !== result.title) {
+      // Second line as description if exists
+      result.description = lines[1];
     }
     
     return result;
   } catch (error) {
-    console.error('❌ Failed to parse manifest markdown', error);
+    console.error('❌ Failed to parse manifest', error);
     return {};
   }
 };
@@ -484,15 +650,23 @@ export const getFolderMetadata = async (folderPath: string): Promise<{ title?: s
 export function persistFolderMetaToCache(folder: string, meta: any) {
   try {
     const OWNER = "juliecamus";
-    const KEY = (o: string) => `manifestMetaCache:v1:${o}`;
+    const KEY = (o: string) => `manifestMetaCache:v2:${o}`;
     const raw = localStorage.getItem(KEY(OWNER));
     const old = raw ? JSON.parse(raw) : { owner: OWNER, updatedAt: 0, metaByFolder: {} };
     old.owner = OWNER;
     old.metaByFolder = old.metaByFolder || {};
-    old.metaByFolder[folder] = { ...(old.metaByFolder[folder] ?? {}), ...(meta ?? {}), ts: Date.now() };
+    
+    // Support negative cache with __absent marker and provenance
+    if (meta && meta.__absent) {
+      old.metaByFolder[folder] = { __absent: true, source: 'absent', ts: Date.now() };
+      console.log("[HARD-DIAG:MANIFEST] manifest_absent_cached", { folder });
+    } else {
+      old.metaByFolder[folder] = { ...(old.metaByFolder[folder] ?? {}), ...(meta ?? {}), source: 'file', ts: Date.now() };
+      console.log("[HARD-DIAG:MANIFEST] manifest_meta_persisted", { folder, source: "file" });
+    }
+    
     old.updatedAt = Date.now();
     localStorage.setItem(KEY(OWNER), JSON.stringify(old));
-    console.log("[HARD-DIAG:MANIFEST] manifest_meta_persisted", { folder, source: "probe" });
   } catch (e) {
     console.log("[HARD-DIAG:MANIFEST] persist_failed", { folder, err: String(e) });
   }

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { MediaItem } from '../lib/mediaConfig';
+import type { MediaItem } from '../hooks/useMediaIndex';
 
 interface Project {
   slug: string;
@@ -31,8 +31,19 @@ const Lightbox: React.FC<LightboxProps> = ({
   onPrev
 }) => {
   // Handle media vs project content
-  const title = media ? media.title : project?.title || '';
-  const isVideo = media?.fullType === 'video';
+  const title = media 
+    ? ((media.meta?.source === 'file' && media.meta?.title) || media.title)
+    : project?.title || '';
+  const description = media
+    ? ((media.meta?.source === 'file' && media.meta?.description) || media.description)
+    : undefined;
+  const tags = media && media.meta?.source === 'file' ? (media.meta?.tags || media.tags) : media?.tags;
+  // Determine if this is a video
+  const isVideoUrl = (u?: string) => !!u && /\.(mp4|mov|webm|m4v)(\?|$)/i.test(u);
+  const isVideo = media?.fullType === 'video' || isVideoUrl(media?.fullUrl);
+  
+  // State for showing/hiding tags (default visible if tags exist)
+  const [showTags, setShowTags] = React.useState(true);
   
   // Get all images/content
   let allContent: string[] = [];
@@ -204,11 +215,43 @@ const Lightbox: React.FC<LightboxProps> = ({
             </div>
           )}
 
-          {/* Title */}
-          <div className="absolute top-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg px-4 py-2">
-            <h2 className="text-lg font-playfair font-semibold text-foreground">
-              {title}
-            </h2>
+          {/* Title, description, and tags overlay */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-background/95 via-background/80 to-transparent rounded-b-lg">
+            <div className="space-y-2">
+              <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+              
+              {/* Description */}
+              {description && (
+                <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+              )}
+              
+              {/* Tags as chips */}
+              {tags && tags.length > 0 && showTags && (
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag, idx) => (
+                    <span 
+                      key={idx}
+                      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-charcoal/90 text-off-white border border-off-white/20"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              
+              {/* Toggle tags button (only show if tags exist) */}
+              {tags && tags.length > 0 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTags(!showTags);
+                  }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
+                >
+                  {showTags ? 'Hide tags' : `Show tags (${tags.length})`}
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
       )}

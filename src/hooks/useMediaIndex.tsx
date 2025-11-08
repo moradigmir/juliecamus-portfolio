@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, SetStateAction, Dispatch } from 'react';
 import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
-import { findPreviewForFolder, probeStream, getFolderMetadata, toProxyStrict } from '@/lib/hidrive';
+import { findPreviewForFolder, findPosterForFolder, findFirstVideoForFolder, probeStream, getFolderMetadata, toProxyStrict, persistFolderMetaToCache } from '@/lib/hidrive';
 import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
 
 // HARD BOOT TRACER – proves this file is the one actually running
@@ -11,8 +11,16 @@ try {
   console.log("[HARD-DIAG:MANIFEST] BOOT_PROOF", { ts: Date.now() });
 
   const owner = "juliecamus";
-  const cacheKey = `manifestMetaCache:v1:${owner}`;
+  const cacheKey = `manifestMetaCache:v2:${owner}`;
   const raw = localStorage.getItem(cacheKey);
+
+  // Nuclear cache clear if ?clearcache=1 URL param is present
+  if (new URLSearchParams(window.location.search).get('clearcache') === '1') {
+    console.log("[HARD-DIAG:MANIFEST] NUCLEAR_CACHE_CLEAR", { reason: 'URL param' });
+    ['manifestMetaCache:v1:juliecamus', 'manifestMetaCache:v2:juliecamus', 'manifest:last_refresh_ts', 'manifest:last_result']
+      .forEach(k => localStorage.removeItem(k));
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 
   if (raw) {
     const parsed = JSON.parse(raw);
@@ -95,6 +103,7 @@ export interface MediaItem {
     title?: string;
     description?: string;
     tags?: string[];
+    source?: 'file' | 'absent';
   };
 }
 
@@ -104,12 +113,23 @@ export interface MediaManifest {
   source: 'hidrive';
 }
 
+export interface MetaStats {
+  processed: number;
+  total: number;
+  found: number;
+  missing: number;
+  errors: number;
+  lastRefreshTs: number;
+}
+
 interface UseMediaIndexReturn {
   mediaItems: MediaItem[];
   isLoading: boolean;
   error: string | null;
   isSupabasePaused: boolean;
   refetch: () => void;
+  metaStats: MetaStats;
+  forceRefreshManifests: () => void;
 }
 
 export const useMediaIndex = (): UseMediaIndexReturn => {
@@ -117,6 +137,14 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSupabasePaused, setIsSupabasePaused] = useState(false);
+  const [metaStats, setMetaStats] = useState<MetaStats>({
+    processed: 0,
+    total: 0,
+    found: 0,
+    missing: 0,
+    errors: 0,
+    lastRefreshTs: 0
+  });
 
   const fetchMediaManifest = async () => {
     try {
@@ -146,12 +174,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         firstMetaPresent: !!manifest?.items?.[0]?.meta
       });
       
-      // Build meta lookup from build-time file
-      const buildMeta: Record<string, {title?:string;description?:string;tags?:string[]}> = {};
-      (manifest?.items ?? []).forEach((it:any) => {
-        if (it?.folder && it?.meta) buildMeta[it.folder] = it.meta;
-      });
-      
+      // DO NOT use build-time meta for runtime UI/cache anymore
+      // We only use session cache that comes from real MANIFEST files
+
       // Validate manifest structure
       if (!manifest.items || !Array.isArray(manifest.items)) {
         throw new Error('Invalid manifest structure: missing items array');
@@ -164,7 +189,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
 
       // Restore session cache (localStorage)
       const owner = 'juliecamus';
-      const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
+      const KEY = (o:string) => `manifestMetaCache:v2:${o}`;
       let sessionMeta: Record<string, any> = {};
       try {
         const raw = localStorage.getItem(KEY(owner));
@@ -174,7 +199,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         }
       } catch {}
 
-      const mergedMeta: Record<string, any> = { ...buildMeta, ...sessionMeta };
+      const mergedMeta: Record<string, any> = Object.fromEntries(
+        Object.entries(sessionMeta).filter(([_, v]: any) => v && v.source === 'file')
+      );
       
       const mapHiDriveUrlToProxy = (url: string): string => {
         if (!url) return url;
@@ -200,30 +227,34 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return url;
       };
       
-      // Map to proxy URLs and immediately attach cached meta before setState
+      // Map to proxy URLs and immediately attach meta
       let applied = 0;
       const proxiedItems = sortedItems.map((entry) => {
         // Map URLs to proxy using toProxyStrict function for guaranteed /public/ prefix
-        const item = {
+        const item: any = {
           ...entry,
           previewUrl: toProxy(entry.previewUrl),
           fullUrl: toProxy(entry.fullUrl),
         };
         
-        // Attach cached meta immediately if it exists
+        // Keep build-time meta as an immediate fallback (title/description/tags)
+        // Then overlay any cached MANIFEST file meta on top when available
         const m = mergedMeta[entry.folder];
-        if (!m) return item;
+        if (m && m.source === 'file') {
+          item.meta = { ...(entry.meta ?? {}), ...m };
+          if (m.title) item.title = m.title;
+          if (m.description) item.description = m.description;
+          if (m.tags) item.tags = m.tags;
+          applied++;
+          emit('MANIFEST','CACHED_ATTACH_APPLIED', {
+            folder: entry.folder, title: item.title, descriptionLen: item.description?.length ?? 0
+          });
+        } else {
+          // Ensure meta object exists if manifest provided at build time
+          if (entry.meta) item.meta = { ...(entry.meta), source: (entry.meta.source as any) ?? 'build' };
+        }
         
-        item.meta = { ...(item.meta ?? {}), ...m };
-        item.title = item.title ?? m.title;
-        item.description = item.description ?? m.description;
-        item.tags = item.tags ?? m.tags;
-        applied++;
-        emit('MANIFEST','CACHED_ATTACH_APPLIED', {
-          folder: entry.folder, title: item.title, descriptionLen: item.description?.length ?? 0
-        });
-        
-        return item;
+        return item as typeof entry;
       });
       
       emit('MANIFEST','manifest_meta_cached_scan', { count: applied });
@@ -416,31 +447,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       };
 
       const manifestFolders = new Set(sortedItems.map((it) => it.folder));
-      const candidates = Array.from({ length: 99 }, (_, i) => (i + 1).toString().padStart(2, '0'));
-      const missing = candidates.filter((nn) => !manifestFolders.has(nn));
+      const discovered: MediaItem[] = []; // discovery moved to background for speed
 
-      const discoveredRaw = await Promise.all(
-        missing.map(async (nn) => {
-          const firstPath = await probePublicFirstMedia(nn);
-          if (!firstPath) return null;
-          const proxied = `${proxyBase}?path=${encodeURIComponent(firstPath)}`;
-          const isVideo = /\.(mp4|mov)$/i.test(firstPath);
-          
-          const extra: MediaItem = {
-            orderKey: nn,
-            folder: nn,
-            title: `Folder ${nn}`,
-            previewUrl: proxied,
-            previewType: isVideo ? 'video' : 'image',
-            fullUrl: proxied,
-            fullType: isVideo ? 'video' : 'image',
-            meta: {}, // Will be populated by background check
-          };
-          return extra;
-        })
-      );
 
-      const discovered = discoveredRaw.filter(Boolean) as MediaItem[];
 
         // Merge with discovery using merge-preserve approach
         const combined = mergeByFolder(enhancedItems, discovered);
@@ -463,15 +472,169 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         flushDiagToEdge(buildDiagSummary({ items_sorted: foldersList, placeholders_after_real: placeholderCount })); 
       } catch(_) {}
 
-      // Set the media items AFTER all diagnostics are emitted
+      // CRITICAL: Set items immediately so UI shows SOMETHING
+      console.log(`🎯 [CRITICAL] Setting ${combined.length} media items NOW`);
       setMediaItems(combined);
-      setIsSupabasePaused(false); // Reset on success
+      setIsSupabasePaused(false);
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
-      // Background task: Check for MANIFEST.md updates after grid loads
-      setTimeout(async () => {
-        await backgroundManifestCheck(combined, setMediaItems, owner);
-      }, 1000);
+      // Video pre-warmer: prime browser cache for faster playback
+      setTimeout(() => {
+        (async () => {
+          const videos = combined.filter(item => item.previewType === 'video');
+          console.log(`🔥 Pre-warming ${videos.length} videos...`);
+          
+          const PREFETCH_CONCURRENCY = 4;
+          const queue = [...videos];
+          
+          async function warmOne() {
+            while (queue.length) {
+              const item = queue.shift();
+              if (!item) break;
+              
+              try {
+                const url = toProxy(item.previewUrl || item.fullUrl);
+                await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-1' } });
+                console.log(`✓ Pre-warmed: ${item.folder}`);
+              } catch {
+                // Ignore errors
+              }
+            }
+          }
+          
+          await Promise.all(Array.from({ length: PREFETCH_CONCURRENCY }, () => warmOne()));
+          console.log(`✅ Pre-warming complete`);
+        })();
+      }, 500);
+
+      // FORCE MANIFEST CHECK on every load to prove it runs
+      console.log(`🚀 [CRITICAL] FORCING MANIFEST CHECK NOW`);
+      setTimeout(() => {
+        backgroundManifestCheck(combined, setMediaItems, owner, true, setMetaStats)
+          .then(() => console.log('✅ [MANIFEST] Background check COMPLETED'))
+          .catch(err => console.error('❌ [MANIFEST] Background check FAILED:', err));
+      }, 100);
+
+      // Background discovery (non-blocking, concurrency-limited, smart range)
+      // Keeps initial load fast; progressively adds missing folders
+      setTimeout(() => {
+        (async () => {
+          try {
+            const manifestFolders = new Set(combined.map((it) => it.folder));
+            
+            // Discovery: scan all folders 01-99, stop after consecutive 404s
+            const scanMax = 99; // always scan full range
+            
+            const candidates = Array.from({ length: scanMax }, (_, i) => (i + 1).toString().padStart(2, '0'));
+            const missing = candidates.filter((nn) => !manifestFolders.has(nn));
+            if (!missing.length) return;
+
+            console.log(`🔍 Discovery range: 01-99 (${missing.length} missing folders to check)`);
+
+            const CONCURRENCY = 6; // Leave headroom for video loads
+            const CONSECUTIVE_404_LIMIT = Number.POSITIVE_INFINITY; // do not early stop
+            const queue = [...missing]; // check all missing folders
+            let consecutive404s = 0;
+            let lastCheckedFolder = 0;
+
+            const discoveredFolders: string[] = [];
+
+            async function processOne(nn: string) {
+              try {
+                const folderNum = parseInt(nn, 10);
+                
+                // Find poster image and first playable video
+                const poster = await findPosterForFolder(`/public/${nn}/`);
+                const playable = await findFirstVideoForFolder(`/public/${nn}/`);
+                
+                let fullUrl: string;
+                let fullType: 'image' | 'video';
+                let previewUrl: string;
+                let previewType: 'image' | 'video';
+                
+                if (playable) {
+                  // Video folder: fullUrl points to playable video
+                  fullUrl = playable;
+                  fullType = 'video';
+                  // Preview prefers poster image for fast paint, else the playable
+                  previewUrl = poster || playable;
+                  previewType = poster ? 'image' : 'video';
+                  console.log('DISCOVERED', { folder: nn, previewType, fullType, previewUrl, fullUrl, poster: !!poster });
+                } else {
+                  // Image-only folder: fallback to findPreviewForFolder
+                  const fallbackImage = await findPreviewForFolder(`/public/${nn}/`);
+                  if (!fallbackImage) {
+                    // Track consecutive 404s (only if we're checking in order)
+                    if (folderNum > lastCheckedFolder) {
+                      consecutive404s++;
+                      lastCheckedFolder = folderNum;
+                      if (consecutive404s >= CONSECUTIVE_404_LIMIT) {
+                        console.log(`⚠️ Discovery stopped: ${consecutive404s} consecutive 404s at folder ${nn}`);
+                        queue.length = 0; // clear queue to stop workers
+                        return;
+                      }
+                    }
+                    return;
+                  }
+                  fullUrl = fallbackImage;
+                  fullType = 'image';
+                  previewUrl = fallbackImage;
+                  previewType = 'image';
+                  console.log('DISCOVERED', { folder: nn, previewType, fullType, previewUrl, fullUrl, poster: !!poster });
+                }
+                
+                // Reset consecutive 404 counter on success
+                consecutive404s = 0;
+                lastCheckedFolder = folderNum;
+                
+                const extra: MediaItem = {
+                  orderKey: nn,
+                  folder: nn,
+                  title: `Folder ${nn}`,
+                  previewUrl,
+                  previewType,
+                  fullUrl,
+                  fullType,
+                  thumbnailUrl: poster || undefined,
+                  meta: {},
+                };
+                setMediaItems((prev) => sortMedia(mergeByFolder(prev, [extra])));
+                discoveredFolders.push(nn);
+                console.log(`✅ Discovered folder ${nn}`);
+              } catch (e) {
+                // ignore individual errors
+              }
+            }
+
+            async function worker() {
+              while (queue.length && consecutive404s < CONSECUTIVE_404_LIMIT) {
+                const nn = queue.shift();
+                if (!nn) break;
+                await processOne(nn);
+              }
+            }
+
+            await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+            console.log(`✅ Discovery complete (${discoveredFolders.length} new folders)`);
+            
+            // Fetch metadata for newly discovered folders
+            if (discoveredFolders.length > 0) {
+              console.log(`🔍 Fetching metadata for ${discoveredFolders.length} discovered folders...`);
+              setTimeout(() => {
+                setMediaItems(currentItems => {
+                  backgroundManifestCheck(currentItems, setMediaItems, owner, false, setMetaStats)
+                    .then(() => console.log('✅ [MANIFEST] Post-discovery check COMPLETED'))
+                    .catch(err => console.error('❌ [MANIFEST] Post-discovery check FAILED:', err));
+                  return currentItems;
+                });
+              }, 100);
+            }
+          } catch (e) {
+            console.warn('Background discovery failed:', e);
+          }
+        })();
+      }, 0);
+
 
       
     } catch (err) {
@@ -488,102 +651,18 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
     fetchMediaManifest();
   };
 
+  const forceRefreshManifests = useCallback(() => {
+    console.log('⚡ Force refreshing MANIFEST.txt files...');
+    const owner = 'juliecamus';
+    backgroundManifestCheck(mediaItems, setMediaItems, owner, true, setMetaStats).catch(err =>
+      console.error('❌ Force refresh error:', err)
+    );
+  }, [mediaItems]);
+
   useEffect(() => {
-    const DIAG = (msg: string, data?: any) =>
-      console.log("[HARD-DIAG:MANIFEST]", msg, data ?? "");
-  
-    // ✅ Single source of truth for session cache
-    const OWNER = "juliecamus";
-    const KEY = (o: string) => `manifestMetaCache:v1:${o}`;
-  
-    // 0) Scan the cache and log what’s there (no mutation yet)
-    try {
-      const raw = localStorage.getItem(KEY(OWNER));
-      if (raw) {
-        const blob = JSON.parse(raw);
-        const map = blob?.metaByFolder || {};
-        const folders = Object.keys(map);
-        DIAG("manifest_meta_cached_scan", { count: folders.length });
-        folders.forEach((f) => {
-          const m = map[f] || {};
-          DIAG("manifest_meta_cached", {
-            folder: f,
-            title: m.title,
-            descriptionLen: m.description?.length ?? 0,
-          });
-        });
-      } else {
-        DIAG("manifest_meta_cached_scan", { count: 0 });
-      }
-    } catch (e) {
-      DIAG("cached_hydrate_failed", { err: String(e) });
-    }
-  
-    // 1) Fetch /media.manifest.json and attach build-time meta immediately
-    (async () => {
-      try {
-        const res = await fetch("/media.manifest.json", { cache: "no-store" });
-        if (!res.ok) {
-          DIAG("manifest_json_fetch_failed", { status: res.status });
-          return;
-        }
-        const json = await res.json();
-        const items: Array<{ folder?: string; meta?: any }> = Array.isArray(json?.items)
-          ? json.items
-          : [];
-        DIAG("manifest_json_sample", {
-          hasItems: items.length > 0,
-          count: items.length,
-          firstMetaPresent: !!items[0]?.meta,
-        });
-  
-        // Build {folder->meta} from build-time manifest
-        const fromBuild: Record<string, any> = {};
-        for (const it of items) {
-          const folder = it?.folder;
-          const meta = it?.meta;
-          if (folder && meta) fromBuild[folder] = meta;
-        }
-        const folders = Object.keys(fromBuild);
-  
-        if (folders.length) {
-          // Attach to UI *after* the list exists (fetchMediaManifest builds the list),
-          // but in case list already exists, enrich current items too.
-          setMediaItems((prev) =>
-            prev.map((it) =>
-              it.folder && fromBuild[it.folder]
-                ? { ...it, meta: { ...(it.meta ?? {}), ...fromBuild[it.folder] }, title: it.title ?? fromBuild[it.folder].title, description: it.description ?? fromBuild[it.folder].description, tags: it.tags ?? fromBuild[it.folder].tags }
-                : it
-            )
-          );
-          console.log("[HARD-DIAG:MANIFEST] CACHED_ATTACH_APPLIED", { folders });
-  
-          // Persist build-time meta into the SAME cache (so next reload shows instantly)
-          try {
-            const raw = localStorage.getItem(KEY(OWNER));
-            const old = raw ? JSON.parse(raw) : { owner: OWNER, updatedAt: 0, metaByFolder: {} };
-            const merged = { ...old, owner: OWNER, metaByFolder: { ...(old.metaByFolder || {}) } };
-            folders.forEach((f) => {
-              merged.metaByFolder[f] = {
-                ...(merged.metaByFolder[f] ?? {}),
-                ...fromBuild[f],
-                ts: Date.now(),
-              };
-            });
-            merged.updatedAt = Date.now();
-            localStorage.setItem(KEY(OWNER), JSON.stringify(merged));
-            DIAG("manifest_meta_persisted", { count: folders.length, source: "build" });
-          } catch (e) {
-            DIAG("persist_failed", { err: String(e) });
-          }
-        } else {
-          DIAG("manifest_json_no_meta_items", { count: items.length });
-        }
-      } catch (e) {
-        DIAG("manifest_json_exception", { err: String(e) });
-      }
-    })();
-  }, []); // IMPORTANT: run once on mount
+    console.log('[MANIFEST] build meta hydration disabled');
+  }, []);
+
 
   useEffect(() => {
     fetchMediaManifest();
@@ -605,7 +684,9 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
     isLoading,
     error,
     isSupabasePaused,
-    refetch
+    refetch,
+    metaStats,
+    forceRefreshManifests
   };
 };
 
@@ -618,12 +699,14 @@ function mergeByFolder<T extends { folder:string; title?:string; description?:st
   inc.forEach(n => {
     const prev = map.get(n.folder);
     if (!prev) { map.set(n.folder, n); return; }
+    // IMPORTANT: prefer incoming values (e.g., MANIFEST-derived title) over previous placeholder
     map.set(n.folder, {
+      ...prev,
       ...n,
-      meta: prev.meta ?? n.meta,
-      title: prev.title ?? n.title,
-      description: prev.description ?? n.description,
-      tags: prev.tags ?? n.tags,
+      meta: { ...(prev.meta ?? {}), ...(n.meta ?? {}) },
+      title: (n.title ?? prev.title),
+      description: (n.description ?? prev.description),
+      tags: (n.tags ?? prev.tags),
     });
   });
   const out = Array.from(map.values());
@@ -631,97 +714,196 @@ function mergeByFolder<T extends { folder:string; title?:string; description?:st
   return out;
 }
 
-// Background task to check for MANIFEST.md updates
+// Ensure consistent ordering by numeric folder/orderKey
+function sortMedia(items: MediaItem[]): MediaItem[] {
+  try {
+    return [...items].sort((a, b) => {
+      const aKey = parseInt((a.orderKey || a.folder || '0').toString(), 10);
+      const bKey = parseInt((b.orderKey || b.folder || '0').toString(), 10);
+      return aKey - bKey;
+    });
+  } catch {
+    return items;
+  }
+}
+
+// Background task to check for MANIFEST updates (prioritized, cached, concurrency-limited)
+// FORCE MODE: On first load, ignores all cache and fetches MANIFEST.txt for ALL folders
 const backgroundManifestCheck = async (
   items: MediaItem[], 
-  setMediaItems: (items: MediaItem[]) => void,
-  owner: string
+  setMediaItems: Dispatch<SetStateAction<MediaItem[]>>,
+  owner: string,
+  forceRefresh = false,
+  setMetaStats?: (stats: MetaStats) => void
 ) => {
   try {
-    let hasUpdates = false;
-    const updatedItems = [...items];
+    console.log(`🔍 [MANIFEST CHECK START] ${items.length} folders, forceRefresh=${forceRefresh}`);
+    
+    const CONCURRENCY = 2; // Reduced to avoid starving video loads
+    const NEGATIVE_CACHE_TTL = 30 * 1000; // 30 seconds
+    const POSITIVE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+    const KEY = (o:string) => `manifestMetaCache:v2:${o}`;
+    const MANIFEST_REFRESH_KEY = 'manifest:last_refresh_ts';
+    const MANIFEST_RESULT_KEY = 'manifest:last_result';
+    
+    // Load existing cache
+    let cachedData: any = {};
+    try {
+      const raw = localStorage.getItem(KEY(owner));
+      if (raw) {
+        const blob = JSON.parse(raw);
+        cachedData = blob?.metaByFolder || {};
+      }
+    } catch {}
+    
+    // Stats tracking
+    let statsProcessed = 0;
+    let statsFound = 0;
+    let statsMissing = 0;
+    let statsErrors = 0;
+    
+    // Sort indices to prioritize lower folder numbers
+    const indices = items
+      .map((item, i) => ({ i, folder: parseInt(item.folder, 10) || 999 }))
+      .sort((a, b) => a.folder - b.folder)
+      .map(x => x.i);
+    
+    console.log(`📋 [MANIFEST QUEUE] ${indices.length} folders prioritized by number`);
 
-    for (let i = 0; i < updatedItems.length; i++) {
-      const item = updatedItems[i];
+    async function processIndex(i: number) {
+      const item = items[i];
       const folderPath = `/public/${item.folder}/`;
+      const cachedMeta = cachedData[item.folder];
+      
+      console.log(`🔎 [MANIFEST ${item.folder}] Processing...`);
+      statsProcessed++;
+      
+      // Update stats
+      if (setMetaStats) {
+        setMetaStats({
+          processed: statsProcessed,
+          total: indices.length,
+          found: statsFound,
+          missing: statsMissing,
+          errors: statsErrors,
+          lastRefreshTs: Date.now()
+        });
+      }
+      
+      // Check if needs refresh (missing metadata)
+      const needsRefresh = !item.title || item.title === item.folder || !item.meta?.title;
+      
+      // FORCE MODE: Skip cache completely on first load
+      if (forceRefresh) {
+        console.log(`⚡ [MANIFEST ${item.folder}] FORCE FETCH (initial load)`);
+      } else if (cachedMeta?.ts && !needsRefresh) {
+        const age = Date.now() - cachedMeta.ts;
+        
+        // Skip if negative cache is still valid
+        if (cachedMeta.__absent && age < NEGATIVE_CACHE_TTL) {
+          console.log(`⏭️ [MANIFEST ${item.folder}] Skip: absent cached (${Math.round(age/1000)}s ago)`);
+          statsMissing++;
+          return;
+        }
+        
+        // Skip if positive cache is fresh AND came from a real MANIFEST file
+        if (cachedMeta.source === 'file' && cachedMeta.title && age < POSITIVE_CACHE_TTL) {
+          console.log(`⏭️ [MANIFEST ${item.folder}] Skip: cached (${Math.round(age/1000)}s ago)`);
+          statsFound++;
+          return;
+        }
+      }
+      
+      if (needsRefresh) {
+        console.log(`🔄 [MANIFEST ${item.folder}] Needs refresh: missing metadata`);
+      }
       
       try {
-        // Always fetch current MANIFEST.md metadata for all folders (including cached ones)
+        console.log(`📡 [MANIFEST ${item.folder}] Fetching MANIFEST.txt...`);
         const currentMeta = await getFolderMetadata(folderPath);
         
-        // Compare with cached metadata
-        const cachedMeta = item.meta || {};
-        
-        // Check if we have current metadata (either from MANIFEST.md or cache)
-        if (currentMeta.title || currentMeta.description) {
-          // Check for differences
-          const hasChanges = (
-            currentMeta.title !== cachedMeta.title ||
-            currentMeta.description !== cachedMeta.description ||
-            JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])
-          );
-          
-          if (hasChanges) {
-            // Update item with new metadata
-            const changedKeys = [];
-            if (currentMeta.title !== cachedMeta.title) changedKeys.push('title');
-            if (currentMeta.description !== cachedMeta.description) changedKeys.push('description');
-            if (JSON.stringify(currentMeta.tags || []) !== JSON.stringify(cachedMeta.tags || [])) changedKeys.push('tags');
-            
-            updatedItems[i] = {
-              ...item,
-              title: currentMeta.title || item.title,
-              meta: currentMeta
-            };
-            
-            hasUpdates = true;
-            
-            // Persist probe results to cache
-            const { title, description, tags } = currentMeta;
-            try {
-              const KEY = (o:string) => `manifestMetaCache:v1:${o}`;
-              const raw = localStorage.getItem(KEY(owner));
-              const before = raw ? JSON.parse(raw) : { owner, updatedAt: 0, metaByFolder: {} };
-              before.metaByFolder = before.metaByFolder || {};
-              before.metaByFolder[item.folder] = { title, description, tags };
-              before.updatedAt = Date.now();
-              before.owner = owner;
-              localStorage.setItem(KEY(owner), JSON.stringify(before));
-              emit('MANIFEST','manifest_meta_persisted', { folder: item.folder, source: 'probe' });
-            } catch (e) {
-              emit('MANIFEST','manifest_meta_persist_fail', { folder: item.folder });
-            }
-            
-            diag('MANIFEST', 'manifest_md_updated', {
-              folder: item.folder,
-              changedKeys
-            });
-            
-            // Flush individual update to edge
-            if (currentMeta.title) {
-              flushDiagToEdge(buildDiagSummary({
-                manifest_example_0: { folder: item.folder, title: currentMeta.title }
-              }));
-            }
-          }
+        // No manifest found
+        if (!currentMeta.title && !currentMeta.description && !currentMeta.tags) {
+          console.log(`📭 [MANIFEST ${item.folder}] NOT FOUND - no MANIFEST.txt file`);
+          persistFolderMetaToCache(item.folder, { __absent: true });
+          cachedData[item.folder] = { __absent: true, source: 'absent', ts: Date.now() };
+          statsMissing++;
+          return;
         }
-        // Note: getFolderMetadata already emits manifest_md_missing/manifest_md_ok internally
         
+        console.log(`✅ [MANIFEST ${item.folder}] FOUND!`, { 
+          title: currentMeta.title, 
+          descLen: currentMeta.description?.length || 0,
+          tags: currentMeta.tags?.length || 0
+        });
+        statsFound++;
+        
+        // Check for changes
+        const itemMeta = item.meta || {};
+        const hasChanges = (
+          !itemMeta.title ||
+          currentMeta.title !== itemMeta.title ||
+          currentMeta.description !== itemMeta.description ||
+          JSON.stringify(currentMeta.tags || []) !== JSON.stringify(itemMeta.tags || [])
+        );
+        
+        if (hasChanges || forceRefresh) {
+          console.log(`📝 [MANIFEST ${item.folder}] UPDATING UI`, { title: currentMeta.title });
+          
+          const updatedItem = {
+            ...item,
+            title: currentMeta.title || item.title,
+            description: currentMeta.description || item.description,
+            tags: currentMeta.tags || item.tags,
+            meta: { ...(item.meta ?? {}), ...currentMeta, source: 'file' as const },
+          };
+          
+          // Persist to cache with source marker
+          persistFolderMetaToCache(item.folder, { ...currentMeta, source: 'file' });
+          cachedData[item.folder] = { ...currentMeta, source: 'file', ts: Date.now() };
+          
+          // Incremental UI update - use functional setState to preserve discovered items
+          setMediaItems(prev => sortMedia(mergeByFolder(prev, [updatedItem])));
+        } else {
+          console.log(`✓ [MANIFEST ${item.folder}] No changes`);
+        }
       } catch (error) {
-        // Background check failed, don't break the UI but log it
-        console.warn(`Background manifest check failed for folder ${item.folder}:`, error);
-        
-        // Still emit missing diagnostic if we couldn't check the folder
-        diag('MANIFEST', 'manifest_md_missing', { folder: item.folder });
+        console.error(`❌ [MANIFEST ${item.folder}] Error:`, error);
+        statsErrors++;
       }
     }
-    
-    // Update state if there were changes
-    if (hasUpdates) {
-      setMediaItems(updatedItems);
-      console.log('📝 Updated metadata from background MANIFEST.md check');
+
+    async function worker() {
+      while (indices.length) {
+        const i = indices.shift();
+        if (typeof i !== 'number') break;
+        await processIndex(i);
+      }
     }
+
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+    console.log(`✅ [MANIFEST CHECK COMPLETE] Processed all folders`);
+    
+    // Save final stats
+    const finalStats = {
+      processed: statsProcessed,
+      total: indices.length,
+      found: statsFound,
+      missing: statsMissing,
+      errors: statsErrors,
+      lastRefreshTs: Date.now()
+    };
+    
+    if (setMetaStats) {
+      setMetaStats(finalStats);
+    }
+    
+    // Persist last refresh timestamp and result
+    try {
+      localStorage.setItem(MANIFEST_REFRESH_KEY, Date.now().toString());
+      localStorage.setItem(MANIFEST_RESULT_KEY, JSON.stringify(finalStats));
+    } catch {}
   } catch (error) {
-    console.warn('Background manifest check failed:', error);
+    console.error('❌ [MANIFEST CHECK FAILED]', error);
   }
 };
