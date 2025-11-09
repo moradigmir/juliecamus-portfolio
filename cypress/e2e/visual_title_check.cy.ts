@@ -2,7 +2,7 @@
 
 describe('Visual Title Display Check', () => {
   it('Should display actual titles on hover, not "---"', () => {
-    cy.visit('http://localhost:8083/');
+    cy.visit('http://localhost:8080/');
     
     // Wait for tiles to load
     cy.get('.gallery-tile', { timeout: 15000 }).should('have.length.greaterThan', 60);
@@ -33,7 +33,7 @@ describe('Visual Title Display Check', () => {
   });
   
   it('Should show specific expected titles for known folders', () => {
-    cy.visit('http://localhost:8083/');
+    cy.visit('http://localhost:8080/');
     cy.get('.gallery-tile', { timeout: 15000 }).should('exist');
     
     // Expected titles for first few folders

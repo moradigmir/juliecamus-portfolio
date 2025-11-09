@@ -2,7 +2,7 @@
 
 describe('REAL BROWSER TESTS - ACTUAL CONTENT VALIDATION', () => {
   beforeEach(() => {
-    cy.visit('http://localhost:8083/');
+    cy.visit('http://localhost:8080/');
   });
 
   it('Should have MORE THAN 60 tiles with ACTUAL LOADING MEDIA', () => {

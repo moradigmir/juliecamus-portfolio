@@ -2,7 +2,7 @@
 
 describe('Preview File Selection Validation', () => {
   beforeEach(() => {
-    cy.visit('http://localhost:8083/');
+    cy.visit('http://localhost:8080/');
   });
 
   it('Should display correct preview files based on directory contents', () => {
@@ -47,8 +47,8 @@ describe('Preview File Selection Validation', () => {
   });
 
   it('Should prioritize preview.* files over other files', () => {
-    // Folders that have preview.* files should use them
-    const foldersWithPreview = ['04', '06', '07', '13', '16', '21', '22', '27', '28', '29', '31', '33', '34', '35', '36', '37', '38'];
+    // Folders that have preview.* files should use them (excluding video folders which use video previews)
+    const foldersWithPreview = ['04', '06', '07', '13', '16', '21', '22', '28', '29', '31', '33', '34', '35', '36', '37', '38'];
     
     foldersWithPreview.forEach((folder) => {
       cy.get('.gallery-tile').each(($tile) => {
