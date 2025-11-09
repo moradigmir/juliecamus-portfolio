@@ -10,6 +10,7 @@ interface MediaItem {
   fullUrl: string;
   fullType: 'image' | 'video';
   thumbnailUrl?: string;
+  allImages?: string[]; // All images in the folder for gallery navigation
 }
 
 interface MediaManifest {
@@ -171,7 +172,13 @@ async function generateManifest(): Promise<MediaManifest> {
     const manifestTitle = readManifestTitle(folderPath);
     const title = manifestTitle || `Portfolio ${folder.name}`;
     
-    console.log(`  ✅ ${folder.name}: ${previewFile} -> ${previewUrl} (${title})`);
+    // Get all images in folder for gallery (excluding preview files)
+    const allImages = files
+      .filter(f => getMediaType(f) === 'image')
+      .filter(f => !f.toLowerCase().startsWith('preview.') && !f.toLowerCase().startsWith('_preview.'))
+      .map(f => `/media/hidrive/${folder.name}/${f}`);
+    
+    console.log(`  ✅ ${folder.name}: ${previewFile} -> ${previewUrl} (${title}) [${allImages.length} images]`);
     
     items.push({
       orderKey: folder.name,
@@ -180,7 +187,8 @@ async function generateManifest(): Promise<MediaManifest> {
       previewUrl,
       previewType: getMediaType(previewFile),
       fullUrl,
-      fullType: getMediaType(fullFile || previewFile)
+      fullType: getMediaType(fullFile || previewFile),
+      allImages: allImages.length > 1 ? allImages : undefined
     });
   }
   

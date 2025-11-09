@@ -134,68 +134,25 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
   const openMediaLightbox = useCallback(async (media: MediaItem) => {
     // Check if this is an image directory that should have multiple images
-    if (media.fullType === 'image' && media.previewType === 'image') {
-      try {
-        // Extract the directory path from the media URL
-        const url = new URL(media.previewUrl);
-        const path = url.searchParams.get('path') || '';
-        const directory = path.substring(0, path.lastIndexOf('/') + 1);
+    if (media.fullType === 'image' && media.previewType === 'image' && (media as any).allImages) {
+      // Use pre-generated allImages list from manifest
+      const allImages = (media as any).allImages as string[];
+      
+      if (allImages && allImages.length > 1) {
+        console.log('[GALLERY] Opening gallery with', allImages.length, 'images for folder', media.folder);
         
-        // Only attempt directory listing if we have a valid directory path
-        if (directory && directory !== '/') {
-          // Use proper HiDrive directory listing instead of naive text parsing
-          const hidriveItems = await listDir(directory);
-          
-          // Filter to image files only and EXCLUDE preview.* files from gallery
-          const imageFiles = hidriveItems
-            .filter(item => item.type === 'file' && (
-              isMediaContentType(item.contentType || '') ||
-              /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif)$/i.test(item.name)
-            ))
-            .filter(item => {
-              const ct = item.contentType || '';
-              return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif)$/i.test(item.name);
-            })
-            .filter(item => !/^preview(\.|$)/i.test(item.name)) // Skip preview.* files and 'preview' file in gallery
-            .map(item => item.name)
-            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-          
-          // Diagnostic: Log preview filter
-          const totalFiles = hidriveItems.filter(item => item.type === 'file').length;
-          console.log('[MANIFEST] preview_filter_applied', {
-            folder: media.folder,
-            total: totalFiles,
-            shownInGallery: imageFiles.length,
-            skippedPreviewCount: totalFiles - imageFiles.length
-          });
-          
-          if (imageFiles.length > 1) {
-            // Create a project-like structure with all images
-            const owner = url.searchParams.get('owner') || 'juliecamus';
-            const images = imageFiles.map(filename => {
-              const imageUrl = new URL(media.previewUrl);
-              imageUrl.searchParams.set('path', directory + filename);
-              if (owner) imageUrl.searchParams.set('owner', owner);
-              return imageUrl.toString();
-            });
-            
-            // Find the index of the current image
-            const currentFilename = path.substring(path.lastIndexOf('/') + 1);
-            const currentImageIndex = imageFiles.findIndex(filename => filename === currentFilename);
-            
-            const project: Project = {
-              slug: media.folder,
-              title: media.title,
-              coverImage: images[0],
-              images: images.slice(1) // Lightbox expects coverImage + additional images
-            };
-            
-            openLightbox(project, Math.max(0, currentImageIndex));
-            return;
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to fetch directory listing for image navigation:', error);
+        // Find the index of the current image
+        const currentImageIndex = allImages.findIndex(url => url === media.previewUrl || url === media.fullUrl);
+        
+        const project: Project = {
+          slug: media.folder,
+          title: media.title,
+          coverImage: allImages[0],
+          images: allImages.slice(1) // Lightbox expects coverImage + additional images
+        };
+        
+        openLightbox(project, Math.max(0, currentImageIndex));
+        return;
       }
     }
     
