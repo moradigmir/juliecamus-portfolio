@@ -507,13 +507,14 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         })();
       }, 500);
 
-      // FORCE MANIFEST CHECK on every load to prove it runs
-      console.log(`🚀 [CRITICAL] FORCING MANIFEST CHECK NOW`);
-      setTimeout(() => {
-        backgroundManifestCheck(combined, setMediaItems, owner, true, setMetaStats)
-          .then(() => console.log('✅ [MANIFEST] Background check COMPLETED'))
-          .catch(err => console.error('❌ [MANIFEST] Background check FAILED:', err));
-      }, 100);
+      // DISABLED: Background manifest check causes infinite loading on Cloudflare Pages
+      // because it tries to probe media files that don't have CORS/range support
+      console.log(`📦 Background manifest check DISABLED for production`);
+      // setTimeout(() => {
+      //   backgroundManifestCheck(combined, setMediaItems, owner, true, setMetaStats)
+      //     .then(() => console.log('✅ [MANIFEST] Background check COMPLETED'))
+      //     .catch(err => console.error('❌ [MANIFEST] Background check FAILED:', err));
+      // }, 100);
 
       // Background discovery DISABLED - we have a complete manifest
       console.log('📦 Discovery disabled - using manifest only');
