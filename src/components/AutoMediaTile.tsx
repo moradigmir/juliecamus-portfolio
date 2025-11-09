@@ -18,7 +18,7 @@ interface AutoMediaTileProps {
 const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTileProps) => {
   const isDebugMode = new URLSearchParams(window.location.search).get('diagnostics') === '1';
   const [isLoaded, setIsLoaded] = useState(false);
-  const [resolvedSrc, setResolvedSrc] = useState<string>('');
+  const [resolvedSrc, setResolvedSrc] = useState<string>(media.previewUrl || media.fullUrl || '');
   const [posterSrc, setPosterSrc] = useState<string>(media.thumbnailUrl || '/placeholder.svg');
   const [validated, setValidated] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -215,13 +215,15 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
 
   // Run validation and poster discovery on mount/media change
   useEffect(() => {
-    setValidated(false);
+    // SKIP validation - just use the URLs from manifest directly
+    setValidated(true);
     setVideoReady(false);
     setIsLoaded(false);
     
-    validateAndResolve();
-    discoverPoster();
-  }, [media.folder, media.fullUrl, media.previewUrl, validateAndResolve, discoverPoster]);
+    // Don't run validateAndResolve() - it breaks working URLs
+    // validateAndResolve();
+    // discoverPoster();
+  }, [media.folder, media.fullUrl, media.previewUrl]);
 
   // Reload video when src changes
   useEffect(() => {

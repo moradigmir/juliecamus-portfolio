@@ -4,8 +4,8 @@
       "orderKey": "01",
       "folder": "01",
       "title": "Dior Holiday by Elena Kechicheva",
-      "previewUrl": "/media/hidrive/01/preview.jpg",
-      "previewType": "image",
+      "previewUrl": "/media/hidrive/01/01_short.mp4",
+      "previewType": "video",
       "fullUrl": "/media/hidrive/01/01_long.mp4",
       "fullType": "video"
     },
@@ -238,8 +238,8 @@
       "orderKey": "27",
       "folder": "27",
       "title": "Portfolio 27",
-      "previewUrl": "/media/hidrive/27/preview.jpg",
-      "previewType": "image",
+      "previewUrl": "/media/hidrive/27/video-1749482497-1.mp4",
+      "previewType": "video",
       "fullUrl": "/media/hidrive/27/video-1749482497-1.mp4",
       "fullType": "video"
     },
@@ -568,6 +568,6 @@
       "fullType": "image"
     }
   ],
-  "generatedAt": "2025-11-09T18:02:29.667Z",
+  "generatedAt": "2025-11-09T19:39:51.752Z",
   "source": "local"
 }

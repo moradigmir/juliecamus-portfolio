@@ -24,28 +24,49 @@ function getMediaType(filename: string): 'image' | 'video' {
   return videoExtensions.includes(ext) ? 'video' : 'image';
 }
 
-function selectPreviewFile(files: string[]): string | null {
-  // Priority 1: preview.* (without underscore)
-  let candidate = files.find(f => f.match(/^preview\./i));
-  if (candidate) return candidate;
+function selectPreviewFile(files: string[], folderPath: string): string | null {
+  // Check if folder has videos - if yes, prefer video previews
+  const hasVideo = files.some(f => getMediaType(f) === 'video');
   
-  // Priority 2: _preview.* (with underscore)
+  if (hasVideo) {
+    // For video folders, prioritize video previews
+    // Priority 1: contains _short
+    let candidate = files.find(f => f.toLowerCase().includes('_short'));
+    if (candidate) return candidate;
+    
+    // Priority 2: first video
+    candidate = files.find(f => getMediaType(f) === 'video');
+    if (candidate) return candidate;
+  }
+  
+  // For image folders or fallback
+  // Priority 3: preview.* (without underscore) - but check if it's not corrupted
+  let candidate = files.find(f => /^preview\./i.test(f));
+  if (candidate) {
+    const fullPath = path.join(folderPath, candidate);
+    const stats = fs.statSync(fullPath);
+    // Skip if file is suspiciously small (< 1KB = likely corrupted)
+    if (stats.size < 1024) {
+      console.log(`  ⚠️  Skipping corrupted preview file: ${candidate} (${stats.size} bytes)`);
+      candidate = null;
+    } else {
+      return candidate;
+    }
+  }
+  
+  // Priority 4: _preview.* (with underscore)
   let candidate2 = files.find(f => f.match(/^_preview\./i));
   if (candidate2) return candidate2;
   
-  // Priority 3: contains _short
-  candidate = files.find(f => f.toLowerCase().includes('_short'));
-  if (candidate) return candidate;
-  
-  // Priority 4: contains _preview
+  // Priority 5: contains _preview
   candidate = files.find(f => f.toLowerCase().includes('_preview'));
   if (candidate) return candidate;
   
-  // Priority 5: first image
+  // Priority 6: first image
   candidate = files.find(f => getMediaType(f) === 'image');
   if (candidate) return candidate;
   
-  // Priority 6: first video
+  // Priority 7: first video (fallback)
   candidate = files.find(f => getMediaType(f) === 'video');
   if (candidate) return candidate;
   
@@ -135,7 +156,7 @@ async function generateManifest(): Promise<MediaManifest> {
       continue;
     }
     
-    const previewFile = selectPreviewFile(files);
+    const previewFile = selectPreviewFile(files, folderPath);
     const fullFile = selectFullFile(files, folder.name);
     
     if (!previewFile) {

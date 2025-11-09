@@ -1021,7 +1021,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               <ProjectTile
                 key={`project-${item.project.slug}-${item.index}`}
                 project={item.project}
-                index={item.index}
+                index={idx}
                 onHover={handleTileHover}
                 onClick={() => openLightbox(item.project, 0)}
               />
@@ -1031,7 +1031,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               <div key={`media-${item.media.folder}`} className="relative">
                 <AutoMediaTile
                   media={item.media}
-                  index={item.index}
+                  index={idx}
                   onHover={() => {}}
                   onLeave={() => {}}
                   onClick={openMediaLightbox}

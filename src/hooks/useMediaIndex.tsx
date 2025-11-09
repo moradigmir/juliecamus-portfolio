@@ -515,12 +515,17 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           .catch(err => console.error('❌ [MANIFEST] Background check FAILED:', err));
       }, 100);
 
-      // Background discovery (non-blocking, concurrency-limited, smart range)
-      // Keeps initial load fast; progressively adds missing folders
+      // Background discovery DISABLED - we have a complete manifest
+      console.log('📦 Discovery disabled - using manifest only');
+      
+      /* DISABLED DISCOVERY CODE
       setTimeout(() => {
         (async () => {
           try {
             const manifestFolders = new Set(combined.map((it) => it.folder));
+            
+            // Discovery: scan all folders 01-99, stop after consecutive 404s
+            const scanMax = 99; // always scan full range
             
             // Discovery: scan all folders 01-99, stop after consecutive 404s
             const scanMax = 99; // always scan full range
@@ -634,8 +639,8 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
           }
         })();
       }, 0);
-
-
+      */
+      // END DISABLED DISCOVERY CODE
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error loading media manifest';
