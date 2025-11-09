@@ -478,34 +478,35 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       setIsSupabasePaused(false);
       console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
-      // Video pre-warmer: prime browser cache for faster playback
-      setTimeout(() => {
-        (async () => {
-          const videos = combined.filter(item => item.previewType === 'video');
-          console.log(`🔥 Pre-warming ${videos.length} videos...`);
-          
-          const PREFETCH_CONCURRENCY = 4;
-          const queue = [...videos];
-          
-          async function warmOne() {
-            while (queue.length) {
-              const item = queue.shift();
-              if (!item) break;
-              
-              try {
-                const url = toProxy(item.previewUrl || item.fullUrl);
-                await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-1' } });
-                console.log(`✓ Pre-warmed: ${item.folder}`);
-              } catch {
-                // Ignore errors
-              }
-            }
-          }
-          
-          await Promise.all(Array.from({ length: PREFETCH_CONCURRENCY }, () => warmOne()));
-          console.log(`✅ Pre-warming complete`);
-        })();
-      }, 500);
+      // DISABLED: Video pre-warming causes issues on Cloudflare Pages
+      console.log(`📦 Video pre-warming DISABLED for production`);
+      // setTimeout(() => {
+      //   (async () => {
+      //     const videos = combined.filter(item => item.previewType === 'video');
+      //     console.log(`🔥 Pre-warming ${videos.length} videos...`);
+      //     
+      //     const PREFETCH_CONCURRENCY = 4;
+      //     const queue = [...videos];
+      //     
+      //     async function warmOne() {
+      //       while (queue.length) {
+      //         const item = queue.shift();
+      //         if (!item) break;
+      //         
+      //         try {
+      //           const url = toProxy(item.previewUrl || item.fullUrl);
+      //           await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-1' } });
+      //           console.log(`✓ Pre-warmed: ${item.folder}`);
+      //         } catch {
+      //           // Ignore errors
+      //         }
+      //       }
+      //     }
+      //     
+      //     await Promise.all(Array.from({ length: PREFETCH_CONCURRENCY }, () => warmOne()));
+      //     console.log(`✅ Pre-warming complete`);
+      //   })();
+      // }, 500);
 
       // DISABLED: Background manifest check causes infinite loading on Cloudflare Pages
       // because it tries to probe media files that don't have CORS/range support
