@@ -5,6 +5,14 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/media.manifest.json",
+      "destination": "/media.manifest.json"
+    },
+    {
+      "source": "/media/(.*)",
+      "destination": "/media/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

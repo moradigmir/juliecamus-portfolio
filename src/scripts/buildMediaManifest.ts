@@ -134,10 +134,13 @@ class HiDriveClient {
   }
 
   getPublicUrl(filePath: string): string {
-    // For files in the public folder, we can create direct access URLs
-    // HiDrive allows direct access to files in public shares
-    const cleanPath = filePath.replace('/public/', '');
-    return `https://my.hidrive.com/share/juliecamus${cleanPath}`;
+    // Convert /public/XX/file to /media/hidrive/XX/file for local serving
+    const match = filePath.match(/\/public\/(\d+)\/(.*)/);
+    if (match) {
+      return `/media/hidrive/${match[1]}/${match[2]}`;
+    }
+    // Fallback for other paths
+    return filePath.replace('/public/', '/media/hidrive/');
   }
 }
 
@@ -152,8 +155,8 @@ class MediaManifestBuilder {
     console.log('🚀 Starting HiDrive media manifest generation...');
     
     try {
-      // List the /public/media directory
-      const mediaDir = '/public/media';
+      // List the /public/media/hidrive directory  
+      const mediaDir = '/public/media/hidrive';
       console.log(`📂 Scanning ${mediaDir}`);
       
       const entries = await this.client.listDirectory(mediaDir);

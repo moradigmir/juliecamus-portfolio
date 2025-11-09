@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import React from 'react';
 import { Edit3 } from 'lucide-react';
 import Navigation from '../components/Navigation';
 import HeroSplashMatch from '../components/HeroSplashMatch';
@@ -16,6 +17,18 @@ const Index = () => {
   const { mediaItems, refetch } = useMediaIndex();
   const showEditButton = typeof window !== 'undefined' && 
     new URLSearchParams(window.location.search).get('diagnostics') === '1';
+  
+  // DEBUG: Force reload manifest to bypass cache
+  React.useEffect(() => {
+    const forceReload = () => {
+      fetch('/media.manifest.json?t=' + Date.now())
+        .then(r => r.json())
+        .then(manifest => {
+          console.log('DEBUG: Manifest loaded with', manifest.items.length, 'items');
+        });
+    };
+    forceReload();
+  }, []);
   
   const handleEditorSave = () => {
     // Trigger refetch of media items to reflect updated metadata
@@ -49,7 +62,7 @@ const Index = () => {
       
       {/* Projects Gallery - starts immediately after hero */}
       <section id="gallery" style={{ paddingTop: "clamp(120px, 15vh, 180px)", marginTop: "0px", paddingBottom: "96px" }}>
-        <MasonryGrid projects={projects} />
+        <MasonryGrid />
       </section>
       
       <ScrollToTop />

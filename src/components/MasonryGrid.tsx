@@ -30,7 +30,7 @@ interface Project {
 }
 
 interface MasonryGridProps {
-  projects: Project[];
+  projects?: Project[];
 }
 
 type GridItem = 
@@ -269,13 +269,11 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           const folderPath = `/public/${folder}/`;
           const result = await validateFolder(folderPath);
           
-          if (result.ok && result.preview) {
+          if (result.ok) {
             // Diagnostics: Log successful validation
             diag('VALIDATE', 'folder_ok', { 
               folder, 
-              file: result.preview, 
-              status: 200, // validateFolder doesn't return status, assume 200 if ok
-              ct: result.preview.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg'
+              status: 200 // validateFolder doesn't return status, assume 200 if ok
             });
           } else {
             // Diagnostics: Log failed validation
@@ -285,7 +283,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             });
           }
           
-          return { folder, ok: result.ok, preview: result.preview };
+          return { folder, ok: result.ok };
         })
       );
 
@@ -308,9 +306,9 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       // Flush VALIDATE summary to edge logs
       const validateOk = results.filter(r => r.ok).map(r => ({
         folder: r.folder,
-        file: r.preview || 'unknown',
+        file: 'unknown',
         status: 200, // validateFolder doesn't return status, assume 200 if ok
-        ct: (r.preview && r.preview.endsWith('.mp4')) ? 'video/mp4' : 'image/jpeg'
+        ct: 'unknown'
       }));
       
       const validateFail = results.filter(r => !r.ok).map(r => ({
@@ -471,13 +469,13 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     
     // Flush to edge with current state
     const currentFolders = autoMediaItems.map(item => item.folder);
-    const placeholdersCount = checked ? 0 : projects.length;
+    const placeholdersCount = checked ? 0 : (projects?.length || 0);
     
     flushDiagToEdge(buildDiagSummary({
       items_sorted: currentFolders,
       placeholders_after_real: placeholdersCount
     }));
-  }, [autoMediaItems, projects.length]);
+  }, [autoMediaItems, projects?.length || 0]);
 
   const handleFullRescan = useCallback(async () => {
     setIsScanning(true);
@@ -641,7 +639,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     
     // SECOND: Add projects with accordion expansion (these act as placeholders)
     // Only add if clearPlaceholders is false
-    if (!clearPlaceholders) {
+    if (!clearPlaceholders && projects) {
       projects.forEach((project, projectIndex) => {
         const itemIndex = items.length;
         
@@ -668,7 +666,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
 
     // Diagnostics: Log current state after item creation
     const currentFolders = autoMediaItems.map(item => item.folder);
-    const placeholdersCount = clearPlaceholders ? 0 : projects.length;
+    const placeholdersCount = clearPlaceholders ? 0 : (projects?.length || 0);
     
     diag('ORDER', 'items_sorted', { folders: currentFolders });
     diag('ORDER', 'placeholders_after_real', { count: placeholdersCount });

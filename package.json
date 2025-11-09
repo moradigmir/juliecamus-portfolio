@@ -15,11 +15,13 @@
     "report:large-media": "tsx scripts/reportLargeMedia.ts",
     "build:manifest": "tsx scripts/buildMediaManifest.ts",
     "compress:images": "tsx scripts/compressImages.ts",
+    "compress": "node compress-for-deploy.cjs",
     "deploy": "node deploy.cjs",
     "deploy:vercel": "vercel --prod",
     "deploy:netlify": "netlify deploy --prod --dir=dist",
     "deploy:github-pages": "npm run build && npm run deploy:github-pages-script",
-    "deploy:github-pages-script": "gh-pages -d dist --dotfiles"
+    "deploy:github-pages-script": "gh-pages -d dist --dotfiles",
+    "test:comprehensive": "node tests/run-tests.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

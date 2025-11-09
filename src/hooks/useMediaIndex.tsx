@@ -227,14 +227,14 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         return url;
       };
       
-      // Map to proxy URLs and immediately attach meta
+      // Map to direct URLs and immediately attach meta
       let applied = 0;
       const proxiedItems = sortedItems.map((entry) => {
-        // Map URLs to proxy using toProxyStrict function for guaranteed /public/ prefix
+        // Use direct URLs from manifest (no conversion needed)
         const item: any = {
           ...entry,
-          previewUrl: toProxy(entry.previewUrl),
-          fullUrl: toProxy(entry.fullUrl),
+          previewUrl: entry.previewUrl,
+          fullUrl: entry.fullUrl,
         };
         
         // Keep build-time meta as an immediate fallback (title/description/tags)
