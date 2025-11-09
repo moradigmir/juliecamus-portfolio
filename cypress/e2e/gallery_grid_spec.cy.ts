@@ -16,7 +16,7 @@ describe('Gallery Grid - 3 Column Enforcement', () => {
     viewports.forEach(({ width, height }) => {
       cy.viewport(width, height);
       
-      cy.get('.strict-three-column-grid').should('exist').then($grid => {
+      cy.get('.flowing-grid').should('exist').then($grid => {
         const gridStyles = getComputedStyle($grid[0]);
         const columns = gridStyles.gridTemplateColumns.split(' ').length;
         
