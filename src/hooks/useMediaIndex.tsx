@@ -147,10 +147,12 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
   });
 
   const fetchMediaManifest = async () => {
+    console.log('🚀🚀🚀 fetchMediaManifest STARTED');
     try {
       setIsLoading(true);
       setError(null);
       
+      console.log('🚀🚀🚀 About to fetch manifest');
       emit('MANIFEST','manifest_fetch_begin', { url: '/media.manifest.json' });
       const response = await fetch('/media.manifest.json');
       emit('MANIFEST','manifest_fetch_status', { ok: response.ok, status: response.status });
@@ -283,132 +285,11 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         }
       }
 
-      // Try to heal obvious 404s: case-sensitive extension, uppercase basename, or use fullUrl
-      const healedItems = await Promise.all(
-        proxiedItems.map(async (it) => {
-          const tryHead = async (url: string) => {
-            try {
-              const res = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' } });
-              const ct = res.headers.get('content-type') || '';
-              const isMedia = ct.startsWith('video/') || ct.startsWith('image/');
-              return { ok: (res.ok || res.status === 206) && isMedia, status: res.status, ct };
-            } catch (e) {
-              return { ok: false, status: 0, ct: '' };
-            }
-          };
+      // HEALING DISABLED - files are served directly, no need to probe/heal
+      const healedItems = proxiedItems;
 
-          // Only attempt healing for preview
-          const previewCheck = await tryHead(it.previewUrl);
-          if (previewCheck.ok) return it;
-
-          // Try uppercasing the extension for common cases
-          try {
-            const u = new URL(it.previewUrl);
-            const path = u.searchParams.get('path') || '';
-            const dot = path.lastIndexOf('.');
-            if (dot > -1) {
-              const ext = path.slice(dot);
-              const upperExt = ext.toUpperCase();
-              if (ext !== upperExt) {
-                const altPath = path.slice(0, dot) + upperExt;
-                u.searchParams.set('path', altPath);
-                const altUrl = u.toString();
-                const altCheck = await tryHead(altUrl);
-                if (altCheck.ok) {
-                  console.log('Healed preview by uppercasing extension', { altPath });
-                  return { ...it, previewUrl: altUrl };
-                }
-              }
-
-              // Try uppercasing the basename as well
-              const slash = path.lastIndexOf('/');
-              if (slash > -1) {
-                const base = path.slice(slash + 1, dot);
-                const upperBase = base.toUpperCase();
-                if (base !== upperBase) {
-                  const altPath2 = path.slice(0, slash + 1) + upperBase + path.slice(dot).toUpperCase();
-                  u.searchParams.set('path', altPath2);
-                  const altUrl2 = u.toString();
-                  const altCheck2 = await tryHead(altUrl2);
-                  if (altCheck2.ok) {
-                    console.log('Healed preview by uppercasing basename+ext', { altPath: altPath2 });
-                    return { ...it, previewUrl: altUrl2 };
-                  }
-                }
-              }
-            }
-          } catch {}
-
-          // Fall back to fullUrl for preview if available and valid
-          const fullCheck = await tryHead(it.fullUrl);
-          if (fullCheck.ok) {
-            console.log('Healed preview by using fullUrl');
-            return { ...it, previewUrl: it.fullUrl, previewType: it.fullType };
-          }
-
-          return it; // Keep as-is; tile will show clear error
-        })
-      );
-
-      // Step 2.5: Enhance items with long video detection
-      const enhancedItems = await Promise.all(
-        healedItems.map(async (item) => {
-          // Skip if not a video or if fullUrl is already different from previewUrl
-          if (item.fullType !== 'video' || item.fullUrl !== item.previewUrl) {
-            return item;
-          }
-
-          try {
-            // Extract path and folder from preview URL to look for long version
-            const match = item.previewUrl.match(/path=([^&]+)/);
-            if (!match) return item;
-
-            const decodedPath = decodeURIComponent(match[1]);
-            const pathParts = decodedPath.split('/');
-            const fileName = pathParts[pathParts.length - 1];
-            const folderPath = pathParts.slice(0, -1).join('/') + '/';
-
-            // Derive base name and try to find long version
-            let baseName = fileName.replace(/\.[^.]+$/, ''); // remove extension
-            const extension = fileName.match(/\.[^.]+$/)?.[0] || '.mp4';
-
-            // Remove _short suffix if present to get base name
-            baseName = baseName.replace(/_short$/i, '');
-
-            // Try different long version patterns
-            const longCandidates = [
-              `${baseName}_long${extension}`,
-              `${baseName}_long.mp4`,
-              `${baseName}_long.mov`,
-              `${baseName}_long.MP4`,
-              `${baseName}_long.MOV`
-            ];
-
-            // Test each candidate by trying to fetch it
-            for (const candidate of longCandidates) {
-              const longPath = folderPath + candidate;
-              const longUrl = `${proxyBase}?path=${encodeURIComponent(longPath)}&owner=juliecamus`;
-
-              try {
-                const res = await fetch(longUrl, { method: 'GET', headers: { Range: 'bytes=0-0' } });
-                const ct = res.headers.get('content-type') || '';
-                if ((res.ok || res.status === 206) && ct.startsWith('video/')) {
-                  console.log(`✅ Found long version for ${item.folder}: ${candidate}`);
-                  return { ...item, fullUrl: longUrl };
-                }
-              } catch {
-                // Continue to next candidate
-              }
-            }
-
-            console.log(`ℹ️ No long version found for ${item.folder}, using preview as full`);
-            return item;
-          } catch (error) {
-            console.warn(`⚠️ Error checking for long version in ${item.folder}:`, error);
-            return item;
-          }
-        })
-      );
+      // LONG VIDEO DETECTION DISABLED - manifest already has correct full URLs
+      const enhancedItems = healedItems;
 
       // Auto-discover additional numbered folders (01-50) not present in the manifest
       const proxyBase = 'https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy';
@@ -473,10 +354,10 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
       } catch(_) {}
 
       // CRITICAL: Set items immediately so UI shows SOMETHING
-      console.log(`🎯 [CRITICAL] Setting ${combined.length} media items NOW`);
+      console.log(`🎯🎯🎯 [CRITICAL] Setting ${combined.length} media items NOW`);
       setMediaItems(combined);
       setIsSupabasePaused(false);
-      console.log(`✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
+      console.log(`✅✅✅ Loaded ${combined.length} media items from manifest (HiDrive proxied where applicable)`);
 
       // Video pre-warming REMOVED - files are served directly, browser handles caching
       console.log(`📦 Video pre-warming not needed (direct file serving)`);
