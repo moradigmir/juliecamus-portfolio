@@ -382,7 +382,21 @@ export const fetchText = async (path: string, noStore = true): Promise<string | 
       return null;
     }
     
+    // Check if response is HTML (error page) instead of text/plain
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) {
+      console.warn('⚠️ Received HTML response instead of text (likely 404 error page)', { path, contentType });
+      return null;
+    }
+    
     const text = await res.text();
+    
+    // Additional check: reject if content starts with HTML
+    if (text.trim().startsWith('<html') || text.trim().startsWith('<!DOCTYPE')) {
+      console.warn('⚠️ Content appears to be HTML, rejecting', { path });
+      return null;
+    }
+    
     return text;
   } catch (error) {
     console.error('❌ Failed to fetch text', { path, error });
@@ -430,7 +444,20 @@ export const findManifestMarkdown = async (folderPath: string): Promise<{ conten
         clearTimeout(timeoutId);
         
         if (res.ok) {
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('text/html')) {
+            console.warn('⚠️ Manifest request returned HTML (error page)', { folder: normalizedPath, file: variant });
+            continue; // Try next variant
+          }
+          
           const content = await res.text();
+          
+          // Reject HTML content
+          if (content.trim().startsWith('<html') || content.trim().startsWith('<!DOCTYPE')) {
+            console.warn('⚠️ Manifest content appears to be HTML, rejecting', { folder: normalizedPath, file: variant });
+            continue; // Try next variant
+          }
+          
           if (content && content.trim()) {
             console.log('✅ Found manifest via direct GET', { folder: normalizedPath, file: variant });
             return { content, matchedFilename: variant };
