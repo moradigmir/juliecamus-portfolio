@@ -156,7 +156,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               const ct = item.contentType || '';
               return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif)$/i.test(item.name);
             })
-            .filter(item => !/^preview\./i.test(item.name)) // Skip preview.* files in gallery
+            .filter(item => !/^preview(\.|$)/i.test(item.name)) // Skip preview.* files and 'preview' file in gallery
             .map(item => item.name)
             .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
           
