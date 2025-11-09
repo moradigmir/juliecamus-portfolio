@@ -57,13 +57,12 @@ export const diag = (tag: string, msg: string, data?: any): void => {
 };
 
 export async function flushDiagToEdge(summary: any) {
+  // Edge logging via Supabase proxy is retired; keep summaries in console for debugging.
   try {
-    const payload = btoa(unescape(encodeURIComponent(JSON.stringify(summary).slice(0, 8000))));
-    // Send a NOOP request to the proxy that the edge function will log and 204
-    const u = `https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy?diag=1&payload=${encodeURIComponent(payload)}`;
-    await fetch(u, { method: "GET", mode: "cors" });
-  } catch (e) {
-    console.warn("diag flush failed", e);
+    const payload = JSON.stringify(summary);
+    console.info('[DIAG:FLUSH]', payload);
+  } catch (error) {
+    console.warn('diag flush failed', error);
   }
 }
 

@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+package-lock.json
+
+# Local debugging utilities
+public/simple-test.html
+public/load-test.html
+public/clear-cache.html
+decode-filenames.ps1
+test-manifest-path.js

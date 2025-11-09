@@ -3,6 +3,10 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Types for the manifest
 export type MediaType = 'image' | 'video';
@@ -21,12 +25,13 @@ export interface MediaItem {
     description?: string;
     tags?: string[];
   };
+  files?: ManifestFile[];
 }
 
 export interface MediaManifest {
   items: MediaItem[];
   generatedAt: string;
-  source: 'hidrive';
+  source: 'hidrive' | 'local';
 }
 
 interface HiDriveFile {
@@ -35,222 +40,209 @@ interface HiDriveFile {
   path: string;
   size?: number;
   href?: string;
+  modified?: string;
 }
 
-class HiDriveClient {
-  private username: string;
-  private password: string;
-  private baseUrl: string;
+interface ManifestFile {
+  name: string;
+  type: 'file' | 'directory';
+  size?: number;
+  modified?: string;
+  contentType?: string;
+}
 
-  constructor(username: string, password: string) {
-    this.username = username;
-    this.password = password;
-    this.baseUrl = 'https://webdav.hidrive.strato.com';
+class LocalMediaSource {
+  private mediaRoot: string;
+
+  constructor(mediaRoot: string) {
+    this.mediaRoot = path.resolve(mediaRoot);
   }
 
-  private getAuthHeader(): string {
-    return `Basic ${Buffer.from(`${this.username}:${this.password}`).toString('base64')}`;
+  private normaliseRemotePath(p: string): string {
+    if (!p) return '/';
+    let out = p.replace(/\\/g, '/');
+    if (!out.startsWith('/')) {
+      out = '/' + out;
+    }
+    return out;
+  }
+
+  private relativeFromRemote(p: string): string {
+    const normalised = this.normaliseRemotePath(p);
+    const withoutLeading = normalised.replace(/^\/+/, '');
+    return withoutLeading;
+  }
+
+  private toLocalPath(p: string): string {
+    const relative = this.relativeFromRemote(p);
+    return path.join(this.mediaRoot, relative);
   }
 
   async listDirectory(dirPath: string): Promise<HiDriveFile[]> {
-    const url = `${this.baseUrl}${dirPath}`;
-    console.log(`📂 Listing directory: ${url}`);
+    const normalised = this.normaliseRemotePath(dirPath);
+    const localDir = this.toLocalPath(normalised);
 
-    try {
-      const response = await fetch(url, {
-        method: 'PROPFIND',
-        headers: {
-          'Authorization': this.getAuthHeader(),
-          'Depth': '1',
-          'Content-Type': 'application/xml',
-          'User-Agent': 'Mozilla/5.0 (compatible; MediaManifestBuilder/1.0)'
-        },
-        body: `<?xml version="1.0" encoding="utf-8"?>
-<D:propfind xmlns:D="DAV:">
-  <D:prop>
-    <D:displayname/>
-    <D:getcontentlength/>
-    <D:resourcetype/>
-    <D:href/>
-  </D:prop>
-</D:propfind>`
-      });
-
-      if (!response.ok) {
-        console.error(`❌ HTTP ${response.status}: ${response.statusText}`);
-        throw new Error(`HiDrive request failed: ${response.status} ${response.statusText}`);
-      }
-
-      const xmlText = await response.text();
-      console.log(`📄 Response received (${xmlText.length} chars)`);
-      
-      return this.parseWebDAVResponse(xmlText, dirPath);
-    } catch (error) {
-      console.error(`❌ Error listing directory ${dirPath}:`, error);
-      throw error;
+    if (!fs.existsSync(localDir)) {
+      console.warn(`⚠️  Local directory does not exist: ${localDir}`);
+      return [];
     }
-  }
 
-  private parseWebDAVResponse(xml: string, basePath: string): HiDriveFile[] {
-    console.log(`🔍 Parsing WebDAV response for ${basePath}`);
+    const dirEntries = await fs.promises.readdir(localDir, { withFileTypes: true });
     const files: HiDriveFile[] = [];
-    
-    // Simple regex-based parsing for WebDAV multistatus response
-    const responsePattern = /<d:response[^>]*>(.*?)<\/d:response>/gis;
-    let match;
-    
-    while ((match = responsePattern.exec(xml)) !== null) {
-      const responseContent = match[1];
-      
-      // Extract href
-      const hrefMatch = responseContent.match(/<d:href[^>]*>(.*?)<\/d:href>/i);
-      if (!hrefMatch) continue;
-      
-      const href = decodeURIComponent(hrefMatch[1]);
-      
-      // Skip the current directory itself
-      if (href === basePath || href === basePath + '/') {
-        continue;
+
+    for (const entry of dirEntries) {
+      const remotePath = `${normalised.replace(/\/$/, '')}/${entry.name}`;
+      const base: HiDriveFile = {
+        name: entry.name,
+        type: entry.isDirectory() ? 'dir' : 'file',
+        path: remotePath,
+      };
+
+      if (!entry.isDirectory()) {
+        try {
+          const stats = await fs.promises.stat(path.join(localDir, entry.name));
+          base.size = stats.size;
+          base.modified = stats.mtime.toISOString();
+        } catch (err) {
+          console.warn(`⚠️  Could not read size for ${remotePath}`, err);
+        }
+      } else {
+        try {
+          const stats = await fs.promises.stat(path.join(localDir, entry.name));
+          base.modified = stats.mtime.toISOString();
+        } catch {}
       }
-      
-      // Extract display name
-      const nameMatch = responseContent.match(/<d:displayname[^>]*>(.*?)<\/d:displayname>/i);
-      const name = nameMatch ? nameMatch[1].trim() : path.basename(href);
-      
-      if (!name) continue;
-      
-      // Check if it's a directory
-      const isCollection = responseContent.includes('<d:collection') || responseContent.includes('<d:collection/>');
-      
-      // Extract size
-      const sizeMatch = responseContent.match(/<d:getcontentlength[^>]*>(\d+)<\/d:getcontentlength>/i);
-      const size = sizeMatch ? parseInt(sizeMatch[1]) : undefined;
-      
-      files.push({
-        name,
-        type: isCollection ? 'dir' : 'file',
-        path: href,
-        size,
-        href
-      });
-      
-      console.log(`  📄 Found: ${name} (${isCollection ? 'dir' : 'file'})`);
+
+      files.push(base);
     }
-    
-    return files;
+
+    return files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   }
 
   getPublicUrl(filePath: string): string {
-    // For files in the public folder, we can create direct access URLs
-    // HiDrive allows direct access to files in public shares
-    const cleanPath = filePath.replace('/public/', '');
-    return `https://my.hidrive.com/share/juliecamus${cleanPath}`;
+    const relative = this.relativeFromRemote(filePath).split(path.sep).join('/');
+    return `/media/hidrive/${relative}`;
   }
 
   async fetchManifestMarkdown(folderPath: string): Promise<{ content: string; matchedFilename: string } | null> {
-    const manifestVariants = ['MANIFEST.md', 'Manifest.md', 'manifest.md'];
-    
+    const manifestVariants = ['MANIFEST.md', 'Manifest.md', 'manifest.md', 'MANIFEST.txt', 'Manifest.txt', 'manifest.txt'];
+    const localDir = this.toLocalPath(folderPath);
+
     for (const variant of manifestVariants) {
-      try {
-        const manifestPath = `${folderPath}/${variant}`;
-        const url = `${this.baseUrl}${manifestPath}`;
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': this.getAuthHeader(),
-            'User-Agent': 'Mozilla/5.0 (compatible; MediaManifestBuilder/1.0)'
+      const candidatePath = path.join(localDir, variant);
+      if (fs.existsSync(candidatePath)) {
+        try {
+          const content = await fs.promises.readFile(candidatePath, 'utf-8');
+          if (content.trim().length > 0) {
+            console.log(`  📄 Found manifest: ${variant}`);
+            return { content, matchedFilename: variant };
           }
-        });
-        
-        if (response.ok) {
-          const content = await response.text();
-          console.log(`  📄 Found manifest: ${variant}`);
-          return { content, matchedFilename: variant };
+        } catch (error) {
+          console.warn(`  ⚠️  Failed to read manifest ${variant}:`, error);
         }
-      } catch (error) {
-        // Try next variant
-        continue;
       }
     }
-    
+
     return null;
   }
 
   parseManifestMarkdown(md: string): { title?: string; description?: string; tags?: string[] } {
     try {
-      // Check for YAML front-matter
       if (md.startsWith('---')) {
         const endIndex = md.indexOf('---', 3);
         if (endIndex > 3) {
           const yamlContent = md.slice(3, endIndex).trim();
-          
-          // Simple YAML parsing for our supported fields
           const result: { title?: string; description?: string; tags?: string[] } = {};
-          
+
           const lines = yamlContent.split('\n');
           for (const line of lines) {
             const trimmed = line.trim();
             if (trimmed.startsWith('title:')) {
-              result.title = trimmed.slice(6).trim().replace(/^["']|["']$/g, '');
+              result.title = trimmed.slice(6).trim().replace(/^['"]|['"]$/g, '');
             } else if (trimmed.startsWith('description:') || trimmed.startsWith('subtitle:')) {
               const key = trimmed.startsWith('description:') ? 'description:' : 'subtitle:';
-              result.description = trimmed.slice(key.length).trim().replace(/^["']|["']$/g, '');
+              result.description = trimmed.slice(key.length).trim().replace(/^['"]|['"]$/g, '');
             } else if (trimmed.startsWith('tags:')) {
               const tagsStr = trimmed.slice(5).trim();
               if (tagsStr.startsWith('[') && tagsStr.endsWith(']')) {
                 try {
                   result.tags = JSON.parse(tagsStr);
                 } catch {
-                  // Fallback: split by comma
-                  result.tags = tagsStr.slice(1, -1).split(',').map(t => t.trim().replace(/^["']|["']$/g, ''));
+                  result.tags = tagsStr.slice(1, -1).split(',').map(t => t.trim().replace(/^['"]|['"]$/g, ''));
                 }
               }
             }
           }
-          
+
           return result;
         }
       }
-      
-      // Plain markdown fallback
+
       const lines = md.split('\n').map(l => l.trim()).filter(l => l);
       const result: { title?: string; description?: string; tags?: string[] } = {};
-      
-      // Find first H1
+
       const h1Line = lines.find(line => line.startsWith('# '));
       if (h1Line) {
         result.title = h1Line.slice(2).trim();
       }
-      
-      // Find first non-empty paragraph (not starting with #)
+
       const paragraph = lines.find(line => line && !line.startsWith('#') && line.length > 10);
       if (paragraph) {
         result.description = paragraph;
       }
-      
+
       return result;
     } catch (error) {
       console.error('❌ Failed to parse manifest markdown', error);
       return {};
     }
   }
+
+  getAbsolutePath(filePath: string): string {
+    return this.toLocalPath(filePath);
+  }
 }
 
 class MediaManifestBuilder {
-  private client: HiDriveClient;
-  
-  constructor(username: string, password: string) {
-    this.client = new HiDriveClient(username, password);
+  private client: LocalMediaSource;
+  private thumbnailsRoot: string;
+  private publicDir: string;
+
+  constructor(mediaRoot: string, publicDir: string, thumbnailsRoot: string) {
+    this.client = new LocalMediaSource(mediaRoot);
+    this.publicDir = path.resolve(publicDir);
+    this.thumbnailsRoot = path.resolve(thumbnailsRoot);
+  }
+
+  private inferContentType(filename: string): string | undefined {
+    const lower = filename.toLowerCase();
+    const map: Record<string, string> = {
+      '.mp4': 'video/mp4',
+      '.mov': 'video/quicktime',
+      '.m4v': 'video/x-m4v',
+      '.webm': 'video/webm',
+      '.mp3': 'audio/mpeg',
+      '.m4a': 'audio/mp4',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.avif': 'image/avif',
+      '.svg': 'image/svg+xml',
+    };
+
+    const ext = Object.keys(map).find((extension) => lower.endsWith(extension));
+    return ext ? map[ext] : undefined;
   }
 
   async buildManifest(): Promise<MediaManifest> {
-    console.log('🚀 Starting HiDrive media manifest generation...');
+    console.log('🚀 Starting local media manifest generation...');
     
     try {
-      // Scan /public/ directory to find ALL numbered folders (01-50)
-      const publicDir = '/public';
-      console.log(`📂 Scanning ${publicDir} for numbered folders`);
+      // Scan root directory to find ALL numbered folders (01-50)
+      const publicDir = '/';
+      console.log(`📂 Scanning root for numbered folders`);
       
       const entries = await this.client.listDirectory(publicDir);
       
@@ -294,13 +286,14 @@ class MediaManifestBuilder {
           
           const previewUrl = this.client.getPublicUrl(preview.path);
           const fullUrl = this.client.getPublicUrl((full || preview).path);
-          
+          const previewAbsolutePath = this.client.getAbsolutePath(preview.path);
+
           // Generate thumbnail for videos
           let thumbnailUrl: string | undefined;
           if (this.getMediaType(preview.name) === 'video') {
-            thumbnailUrl = await this.generateVideoThumbnail(previewUrl, dir.name);
+            thumbnailUrl = await this.generateVideoThumbnail(previewAbsolutePath, dir.name);
           }
-          
+
           // Fetch and parse MANIFEST.md for metadata
           const manifestResult = await this.client.fetchManifestMarkdown(folderPath);
           let meta: { title?: string; description?: string; tags?: string[] } | undefined;
@@ -314,25 +307,30 @@ class MediaManifestBuilder {
             withoutMeta++;
           }
           
-          // Use hidrive:// scheme for consistent URL format
-          const hidePreviewUrl = `hidrive://public/${dir.name}/${preview.name}`;
-          const hideFullUrl = `hidrive://public/${dir.name}/${(full || preview).name}`;
-          
-          console.log(`  ✅ Preview: ${preview.name} -> ${hidePreviewUrl}`);
-          console.log(`  ✅ Full: ${(full || preview).name} -> ${hideFullUrl}`);
+          console.log(`  ✅ Preview: ${preview.name} -> ${previewUrl}`);
+          console.log(`  ✅ Full: ${(full || preview).name} -> ${fullUrl}`);
           if (thumbnailUrl) {
             console.log(`  🖼️  Thumbnail: ${thumbnailUrl}`);
           }
-          
+
+          const manifestFiles: ManifestFile[] = files.map((entry): ManifestFile => ({
+            name: entry.name,
+            type: entry.type === 'dir' ? 'directory' : 'file',
+            size: entry.size,
+            modified: entry.modified,
+            contentType: entry.type === 'file' ? this.inferContentType(entry.name) : undefined,
+          }));
+
           const item: MediaItem = {
             orderKey: dir.name,
             folder: dir.name,
             title: meta?.title || `Portfolio ${dir.name}`,
-            previewUrl: hidePreviewUrl,
+            previewUrl,
             previewType: this.getMediaType(preview.name),
-            fullUrl: hideFullUrl,
+            fullUrl,
             fullType: this.getMediaType((full || preview).name),
-            thumbnailUrl
+            thumbnailUrl,
+            files: manifestFiles
           };
           
           // Only attach meta if it has content
@@ -354,7 +352,7 @@ class MediaManifestBuilder {
       return {
         items,
         generatedAt: new Date().toISOString(),
-        source: 'hidrive'
+        source: 'local'
       };
       
     } catch (error) {
@@ -463,19 +461,16 @@ class MediaManifestBuilder {
     return videoExtensions.includes(ext) ? 'video' : 'image';
   }
 
-  private async generateVideoThumbnail(videoUrl: string, folderName: string): Promise<string | undefined> {
+  private async generateVideoThumbnail(sourcePath: string, folderName: string): Promise<string | undefined> {
     try {
-      // Create thumbnails directory if it doesn't exist
-      const publicDir = path.join(process.cwd(), '..', 'public');
-      const thumbnailsDir = path.join(publicDir, 'thumbnails');
-      const folderThumbnailsDir = path.join(thumbnailsDir, folderName);
-      
+      const folderThumbnailsDir = path.join(this.thumbnailsRoot, folderName);
+
       if (!fs.existsSync(folderThumbnailsDir)) {
         fs.mkdirSync(folderThumbnailsDir, { recursive: true });
       }
       
       const thumbnailPath = path.join(folderThumbnailsDir, `${folderName}_thumb.webp`);
-      const relativeThumbnailPath = `/thumbnails/${folderName}/${folderName}_thumb.webp`;
+      const relativeThumbnailPath = '/' + path.relative(this.publicDir, thumbnailPath).split(path.sep).join('/');
       
       // Check if thumbnail already exists
       if (fs.existsSync(thumbnailPath)) {
@@ -483,11 +478,11 @@ class MediaManifestBuilder {
         return relativeThumbnailPath;
       }
       
-      console.log(`    🎬 Generating thumbnail for video: ${videoUrl}`);
+      console.log(`    🎬 Generating thumbnail for video: ${sourcePath}`);
       
       // Use ffmpeg to extract first frame as WebP thumbnail (requires ffmpeg to be installed)
       try {
-        execSync(`ffmpeg -i "${videoUrl}" -vf "scale=320:240:force_original_aspect_ratio=increase,crop=320:240" -frames:v 1 -f webp "${thumbnailPath}" -y`, {
+        execSync(`ffmpeg -i "${sourcePath}" -vf "scale=320:240:force_original_aspect_ratio=increase,crop=320:240" -frames:v 1 -f webp "${thumbnailPath}" -y`, {
           stdio: 'pipe',
           timeout: 30000 // 30 second timeout
         });
@@ -509,68 +504,66 @@ class MediaManifestBuilder {
 }
 
 async function main() {
-  console.log('🎬 HiDrive Media Manifest Builder\n');
-  
-  const username = 'juliecamus';
-  const password = process.env.HIDRIVE_PASSWORD;
-  
-  if (!password) {
-    console.error('❌ HIDRIVE_PASSWORD environment variable is required');
-    console.error('   Set it with: export HIDRIVE_PASSWORD="your-password"');
+  console.log('🎬 Local Media Manifest Builder\n');
+
+  const projectRoot = path.resolve(__dirname, '..');
+  const publicDir = path.join(projectRoot, 'public');
+  const defaultMediaRoot = path.join(publicDir, 'media', 'hidrive');
+  const mediaRoot = process.env.LOCAL_MEDIA_ROOT ? path.resolve(process.env.LOCAL_MEDIA_ROOT) : defaultMediaRoot;
+  const thumbnailsRoot = path.join(publicDir, 'thumbnails');
+
+  console.log(`📂 Media root : ${mediaRoot}`);
+  console.log(`🖼️  Thumbnails: ${thumbnailsRoot}`);
+
+  if (!fs.existsSync(mediaRoot)) {
+    console.error('❌ Local media root not found. Run the HiDrive sync script first.');
     process.exit(1);
   }
-  
-  console.log(`🔐 Connecting to HiDrive as: ${username}`);
-  
+
   try {
-    const builder = new MediaManifestBuilder(username, password);
+    const builder = new MediaManifestBuilder(mediaRoot, publicDir, thumbnailsRoot);
     const manifest = await builder.buildManifest();
-    
-    // Write to public directory
-    const publicDir = path.join(process.cwd(), '..', 'public');
-    const manifestPath = path.join(publicDir, 'media.manifest.json');
-    
-    // Ensure directory exists
+
+    // Ensure public directory exists
     if (!fs.existsSync(publicDir)) {
       fs.mkdirSync(publicDir, { recursive: true });
     }
-    
-    // Write manifest
+
+    const manifestPath = path.join(publicDir, 'media.manifest.json');
     fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-    
+
     console.log(`\n🎉 Success!`);
     console.log(`📄 Manifest written to: ${manifestPath}`);
     console.log(`📊 Found ${manifest.items.length} media items:`);
-    
+
     manifest.items.forEach((item, index) => {
       console.log(`   ${index + 1}. Folder ${item.folder}: ${item.title}`);
       console.log(`      Preview: ${item.previewType} (${item.previewUrl})`);
       console.log(`      Full: ${item.fullType} (${item.fullUrl})`);
     });
-    
+
     if (manifest.items.length === 0) {
-      console.log('\n⚠️  No media items found. Make sure you have:');
-      console.log('   - Folders named with numbers (01, 02, etc.) in /public/media/');
-      console.log('   - Media files (.jpg, .mp4, etc.) inside those folders');
+      console.log('\n⚠️  No media items found. Ensure the local mirror contains numbered folders with media.');
     }
-    
   } catch (error) {
     console.error('\n❌ Failed to generate manifest:', error);
-    
-    if (error instanceof Error) {
-      if (error.message.includes('401')) {
-        console.error('🔑 Authentication failed. Check your HIDRIVE_PASSWORD.');
-      } else if (error.message.includes('404')) {
-        console.error('📁 Directory not found. Make sure /public/media/ exists in your HiDrive.');
-      } else if (error.message.includes('ENOTFOUND') || error.message.includes('network')) {
-        console.error('🌐 Network error. Check your internet connection.');
-      }
-    }
-    
     process.exit(1);
   }
 }
 
-if (require.main === module) {
-  main();
+const isDirectExecution = (() => {
+  if (typeof process === 'undefined' || !process.argv?.length) return true;
+  const scriptPath = process.argv[1];
+  if (!scriptPath) return true;
+  try {
+    const resolvedArg = path.resolve(scriptPath);
+    const modulePath = path.resolve(__filename);
+    return resolvedArg === modulePath;
+  } catch {
+    return true;
+  }
+})();
+
+if (isDirectExecution) {
+  void main();
 }

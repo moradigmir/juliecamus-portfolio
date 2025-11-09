@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Media Test</title>
+</head>
+<body>
+    <h1>Media Loading Test</h1>
+    
+    <h2>Video Test</h2>
+    <video controls width="400" src="/media/hidrive/01/01_short.mp4">
+        Video not supported
+    </video>
+    
+    <h2>Image Test</h2>
+    <img src="/media/hidrive/02/02_preview.jpg" width="400" alt="Test image" onerror="this.style.border='3px solid red';">
+    
+    <h2>Direct Link Tests</h2>
+    <ul>
+        <li><a href="/media/hidrive/01/01_short.mp4" target="_blank">Video 01 (direct link)</a></li>
+        <li><a href="/media/hidrive/02/02_preview.jpg" target="_blank">Image 02 (direct link)</a></li>
+        <li><a href="/media/hidrive/03/03_short.mp4" target="_blank">Video 03 (direct link)</a></li>
+    </ul>
+    
+    <script>
+        // Test fetch
+        fetch('/media/hidrive/01/01_short.mp4', { method: 'HEAD' })
+            .then(r => console.log('Video HEAD:', r.status, r.headers.get('content-type')))
+            .catch(e => console.error('Video HEAD error:', e));
+            
+        fetch('/media/hidrive/02/02_preview.jpg', { method: 'HEAD' })
+            .then(r => console.log('Image HEAD:', r.status, r.headers.get('content-type')))
+            .catch(e => console.error('Image HEAD error:', e));
+    </script>
+</body>
+</html>

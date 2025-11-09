@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Media Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        pre { background: #f5f5f5; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Media Loading Debug</h1>
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        async function testPath(path) {
+            const div = document.createElement('div');
+            div.innerHTML = `<strong>Testing:</strong> ${path}<br>`;
+            results.appendChild(div);
+            
+            try {
+                const response = await fetch(path, { method: 'HEAD' });
+                const className = response.ok ? 'success' : 'error';
+                div.innerHTML += `<span class="${className}">Status: ${response.status} ${response.statusText}</span><br>`;
+                div.innerHTML += `Content-Type: ${response.headers.get('content-type')}<br>`;
+                div.innerHTML += `Content-Length: ${response.headers.get('content-length')}<br><br>`;
+            } catch (error) {
+                div.innerHTML += `<span class="error">Error: ${error.message}</span><br><br>`;
+            }
+        }
+        
+        // Test a few paths
+        const paths = [
+            '/media/hidrive/01/01_short.mp4',
+            '/media/hidrive/02/02_preview.jpg',
+            '/media/hidrive/03/03_short.mp4',
+            '/media.manifest.json',
+            '/placeholder.svg'
+        ];
+        
+        (async () => {
+            for (const path of paths) {
+                await testPath(path);
+            }
+        })();
+    </script>
+</body>
+</html>

@@ -2,24 +2,19 @@ import { motion } from 'framer-motion';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import ProjectTile from './ProjectTile';
 import AutoMediaTile from './AutoMediaTile';
-import { useMediaIndex, type MediaItem, type MediaManifest } from '../hooks/useMediaIndex';
+import { useMediaIndex, type MediaItem, type MediaManifest, type ManifestFileMeta } from '../hooks/useMediaIndex';
 import Lightbox from './Lightbox';
-import HiDriveBrowser from './HiDriveBrowser';
-import ProjectStatusIndicator from './ProjectStatusIndicator';
 import { DiagnosticsModal } from '../debug/DiagnosticsModal';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Save, Copy, Bug, ToggleLeft, Download, ArrowUp, RefreshCw, Clock, Tag, X } from 'lucide-react';
-import { MediaManifestGenerator } from '../utils/mediaManifestGenerator';
+import { Save, Copy, Bug, Download, ArrowUp, Tag, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { listDir, probeStream, findPreviewForFolder, isMediaContentType, validateFolder } from '@/lib/hidrive';
 import { diag, flushDiagToEdge, buildDiagSummary } from '../debug/diag';
-import { loadMetaCache, getMetaCacheStats } from '@/lib/metaCache';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { normalizeMediaPath } from '@/lib/hidrive';
 
 interface Project {
   slug: string;
@@ -44,7 +39,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [lightboxProject, setLightboxProject] = useState<Project | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<MediaItem | null>(null);
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
-  const [showHiDriveBrowser, setShowHiDriveBrowser] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showManifestDialog, setShowManifestDialog] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -53,8 +47,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [manifestDiff, setManifestDiff] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState('');
   const { toast } = useToast();
 
   // Show dev controls only on /?diagnostics=1 route
@@ -93,15 +85,30 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   }, []);
   
   // Load auto-discovered media from HiDrive
-  const { 
-    mediaItems: autoMediaItems, 
-    isLoading: mediaLoading, 
-    error: mediaError, 
-    isSupabasePaused, 
+  const {
+    mediaItems: autoMediaItems,
+    isLoading: mediaLoading,
+    error: mediaError,
     refetch,
     metaStats,
     forceRefreshManifests
   } = useMediaIndex();
+
+  const toMediaUrl = useCallback((folder: string, file: ManifestFileMeta) => {
+    return normalizeMediaPath(`/public/${folder}/${file.name}`);
+  }, []);
+
+  const isImageFile = useCallback((file: ManifestFileMeta) => {
+    if (file.type !== 'file') return false;
+    if (file.contentType?.startsWith('image/')) return true;
+    return /\.(jpe?g|png|gif|webp|bmp|tiff?)$/i.test(file.name);
+  }, []);
+
+  const isVideoFile = useCallback((file: ManifestFileMeta) => {
+    if (file.type !== 'file') return false;
+    if (file.contentType?.startsWith('video/')) return true;
+    return /\.(mp4|mov|m4v|webm)$/i.test(file.name);
+  }, []);
 
   // Keep lightbox media in sync with latest metadata (e.g., MANIFEST updates)
   useEffect(() => {
@@ -132,80 +139,36 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setLightboxOpen(true);
   }, []);
 
-  const openMediaLightbox = useCallback(async (media: MediaItem) => {
-    // Check if this is an image directory that should have multiple images
-    if (media.fullType === 'image' && media.previewType === 'image') {
-      try {
-        // Extract the directory path from the media URL
-        const url = new URL(media.previewUrl);
-        const path = url.searchParams.get('path') || '';
-        const directory = path.substring(0, path.lastIndexOf('/') + 1);
-        
-        // Only attempt directory listing if we have a valid directory path
-        if (directory && directory !== '/') {
-          // Use proper HiDrive directory listing instead of naive text parsing
-          const hidriveItems = await listDir(directory);
-          
-          // Filter to image files only and EXCLUDE preview.* files from gallery
-          const imageFiles = hidriveItems
-            .filter(item => item.type === 'file' && (
-              isMediaContentType(item.contentType || '') ||
-              /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif)$/i.test(item.name)
-            ))
-            .filter(item => {
-              const ct = item.contentType || '';
-              return ct.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|bmp|tiff|tif)$/i.test(item.name);
-            })
-            .filter(item => !/^preview\./i.test(item.name)) // Skip preview.* files in gallery
-            .map(item => item.name)
-            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-          
-          // Diagnostic: Log preview filter
-          const totalFiles = hidriveItems.filter(item => item.type === 'file').length;
-          console.log('[MANIFEST] preview_filter_applied', {
-            folder: media.folder,
-            total: totalFiles,
-            shownInGallery: imageFiles.length,
-            skippedPreviewCount: totalFiles - imageFiles.length
-          });
-          
-          if (imageFiles.length > 1) {
-            // Create a project-like structure with all images
-            const owner = url.searchParams.get('owner') || 'juliecamus';
-            const images = imageFiles.map(filename => {
-              const imageUrl = new URL(media.previewUrl);
-              imageUrl.searchParams.set('path', directory + filename);
-              if (owner) imageUrl.searchParams.set('owner', owner);
-              return imageUrl.toString();
-            });
-            
-            // Find the index of the current image
-            const currentFilename = path.substring(path.lastIndexOf('/') + 1);
-            const currentImageIndex = imageFiles.findIndex(filename => filename === currentFilename);
-            
-            const project: Project = {
-              slug: media.folder,
-              title: media.title,
-              coverImage: images[0],
-              images: images.slice(1) // Lightbox expects coverImage + additional images
-            };
-            
-            openLightbox(project, Math.max(0, currentImageIndex));
-            return;
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to fetch directory listing for image navigation:', error);
-      }
+  const openMediaLightbox = useCallback((media: MediaItem) => {
+    const files = media.files ?? [];
+    const imageFiles = files.filter(isImageFile).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+    if (media.fullType === 'image' && media.previewType === 'image' && imageFiles.length > 1) {
+      const imageUrls = imageFiles.map((file) => toMediaUrl(media.folder, file));
+      const currentUrl = normalizeMediaPath(media.previewUrl || media.fullUrl || imageUrls[0]);
+      const currentIndex = Math.max(0, imageUrls.findIndex((url) => url === currentUrl));
+
+      const project: Project = {
+        slug: media.folder,
+        title: media.title,
+        coverImage: imageUrls[0],
+        images: imageUrls.slice(1),
+      };
+
+      openLightbox(project, currentIndex);
+      return;
     }
-    
-    // Fallback: treat as single media item (for videos or single images)
+
     const latest = autoMediaItems.find((m) => m.folder === media.folder) || media;
-    setLightboxMedia(latest);
+    setLightboxMedia({
+      ...latest,
+      previewUrl: normalizeMediaPath(latest.previewUrl),
+      fullUrl: normalizeMediaPath(latest.fullUrl),
+    });
     setLightboxProject(null);
     setLightboxImageIndex(0);
     setLightboxOpen(true);
-  }, [openLightbox]);
+  }, [autoMediaItems, isImageFile, openLightbox, toMediaUrl]);
 
 
   const closeLightbox = useCallback(() => {
@@ -227,206 +190,120 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     setLightboxImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
   }, [lightboxProject]);
 
-  const handlePathFound = useCallback((correctPath: string) => {
-    console.log('📍 Found correct path:', correctPath);
-    // Here you could implement auto-rewriting of manifest paths
-    // For now, just notify and suggest manual update
-    alert(`Found correct path: ${correctPath}\n\nUpdate your media.manifest.json to use this path prefix.`);
-  }, []);
-
   const handleRefreshManifest = useCallback(async () => {
     setIsRefreshing(true);
 
     try {
-      toast({ title: 'Checking folders...', description: 'Validating all folders in the grid' });
+      toast({ title: 'Checking folders...', description: 'Validating local media files' });
 
-      // Build validation list = manifest items + discovered items already in state
-      const res = await fetch('/media.manifest.json');
-      if (!res.ok) throw new Error(`Failed to load manifest: ${res.status}`);
-      const manifest = await res.json();
-      const manifestItems: Array<{ folder?: string; previewUrl?: string; fullUrl?: string }> = Array.isArray(manifest?.items) ? manifest.items : [];
-      const manifestFolders = Array.from(new Set(manifestItems.map((it) => it.folder).filter(Boolean))) as string[];
-      
-      // Get discovered folders from auto-discovered media items
-      const discoveredFolders = Array.from(new Set(autoMediaItems.map(item => item.folder)));
-      
-      // Combine all folders (manifest + discovered)
-      const allFolders = Array.from(new Set([...manifestFolders, ...discoveredFolders]));
-      
-      if (allFolders.length === 0) {
-        toast({ title: 'No folders found', description: 'Nothing to check', variant: 'destructive' });
+      if (autoMediaItems.length === 0) {
+        toast({ title: 'No media items', description: 'Nothing to validate yet', variant: 'destructive' });
         return;
       }
 
-      console.log(`🔍 Validating ${allFolders.length} folders: ${allFolders.join(', ')}`);
-      
-      // Diagnostics: Log validation start
-      diag('VALIDATE', 'start', { folders: allFolders });
+      const validationTargets = autoMediaItems.map((item) => item.folder);
+      diag('VALIDATE', 'start', { folders: validationTargets });
 
-      // Validate each folder using shared validateFolder helper
       const results = await Promise.all(
-        allFolders.map(async (folder) => {
-          const folderPath = `/public/${folder}/`;
-          const result = await validateFolder(folderPath);
-          
-          if (result.ok && result.preview) {
-            // Diagnostics: Log successful validation
-            diag('VALIDATE', 'folder_ok', { 
-              folder, 
-              file: result.preview, 
-              status: 200, // validateFolder doesn't return status, assume 200 if ok
-              ct: result.preview.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg'
+        autoMediaItems.map(async (item) => {
+          const mediaFiles = (item.files ?? []).filter((file) => file.type === 'file');
+          const previewCandidate = mediaFiles.find((file) => /^preview\./i.test(file.name))
+            ?? mediaFiles.find(isVideoFile)
+            ?? mediaFiles.find(isImageFile);
+
+          if (!previewCandidate) {
+            diag('VALIDATE', 'folder_fail', {
+              folder: item.folder,
+              reason: 'No media files listed in manifest',
             });
-          } else {
-            // Diagnostics: Log failed validation
-            diag('VALIDATE', 'folder_fail', { 
-              folder, 
-              reason: `No valid preview found in ${folderPath}` 
-            });
+            return { folder: item.folder, ok: false, reason: 'No media files listed in manifest' };
           }
-          
-          return { folder, ok: result.ok, preview: result.preview };
+
+          const previewUrl = toMediaUrl(item.folder, previewCandidate);
+          try {
+            const res = await fetch(previewUrl, { method: 'HEAD' });
+            const ok = res.ok;
+            const ct = res.headers.get('Content-Type') ?? undefined;
+
+            diag('VALIDATE', ok ? 'folder_ok' : 'folder_fail', {
+              folder: item.folder,
+              file: previewCandidate.name,
+              status: res.status,
+            });
+
+            if (ok) {
+              return { folder: item.folder, ok, status: res.status, file: previewCandidate.name, ct };
+            }
+
+            return {
+              folder: item.folder,
+              ok: false,
+              status: res.status,
+              file: previewCandidate.name,
+              ct,
+              reason: `HTTP ${res.status}`,
+            };
+          } catch (error) {
+            diag('VALIDATE', 'folder_fail', {
+              folder: item.folder,
+              reason: 'HEAD request failed',
+            });
+            return {
+              folder: item.folder,
+              ok: false,
+              file: previewCandidate.name,
+              reason: 'HEAD request failed',
+            };
+          }
         })
       );
 
       const okCount = results.filter((r) => r.ok).length;
-      const failedCount = results.filter((r) => !r.ok).length;
-      
-      console.log(`📊 Validation summary:`, { 
-        folders_ok: okCount, 
-        folders_failed: failedCount, 
-        total: allFolders.length 
-      });
+      const failedCount = results.length - okCount;
 
-      // Diagnostics: Log validation summary
-      diag('VALIDATE', 'summary', { 
-        folders_ok: okCount, 
-        folders_failed: failedCount, 
-        total: allFolders.length 
+      diag('VALIDATE', 'summary', {
+        folders_ok: okCount,
+        folders_failed: failedCount,
+        total: results.length,
       });
-
-      // Flush VALIDATE summary to edge logs
-      const validateOk = results.filter(r => r.ok).map(r => ({
-        folder: r.folder,
-        file: r.preview || 'unknown',
-        status: 200, // validateFolder doesn't return status, assume 200 if ok
-        ct: (r.preview && r.preview.endsWith('.mp4')) ? 'video/mp4' : 'image/jpeg'
-      }));
-      
-      const validateFail = results.filter(r => !r.ok).map(r => ({
-        folder: r.folder,
-        reason: `No valid preview found in /public/${r.folder}/`
-      }));
 
       flushDiagToEdge(buildDiagSummary({
-        validate_start: allFolders,
-        validate_ok: validateOk,
-        validate_fail: validateFail,
-        validate_summary: { folders_ok: okCount, folders_failed: failedCount, total: allFolders.length },
-        net_examples: [
-          { type: "propfind_ok", path: "/public/02/", status: 207 },
-          { type: "range_ok", path: "/public/01/01_short.MP4", status: 206, ct: "video/mp4" }
-        ]
+        validate_start: validationTargets,
+        validate_ok: results
+          .filter((r) => r.ok)
+          .map((r) => ({
+            folder: r.folder,
+            file: r.file ?? '',
+            status: r.status ?? 0,
+            ct: r.ct ?? '',
+          })),
+        validate_fail: results
+          .filter((r) => !r.ok)
+          .map((r) => ({
+            folder: r.folder,
+            reason: r.reason ?? 'Unknown failure',
+          })),
+        validate_summary: { folders_ok: okCount, folders_failed: failedCount, total: results.length },
       }));
 
-      if (okCount === allFolders.length) {
-        toast({ 
-          title: 'All folders OK', 
-          description: `Verified ${okCount}/${allFolders.length}: ${allFolders.join(', ')}` 
+      if (failedCount === 0) {
+        toast({
+          title: 'All folders OK',
+          description: `Verified ${okCount}/${results.length}: ${validationTargets.join(', ')}`,
         });
       } else {
         const failed = results.filter((r) => !r.ok).map((r) => r.folder);
-        toast({ 
-          title: `Verified ${okCount}/${allFolders.length}`, 
-          description: `Failed: ${failed.join(', ')}`, 
-          variant: 'destructive' 
+        toast({
+          title: `Verified ${okCount}/${results.length}`,
+          description: `Failed: ${failed.join(', ')}`,
+          variant: 'destructive',
         });
       }
-
-      refetch();
     } catch (error) {
       console.error('Folder check failed:', error);
       toast({ title: 'Check failed', description: 'Unexpected error while checking folders', variant: 'destructive' });
     } finally {
       setIsRefreshing(false);
-    }
-  }, [autoMediaItems, refetch, toast]);
-
-  const handleWriteToManifest = useCallback(async () => {
-    try {
-      // Build a new manifest object from all real items in sorted order
-      const newManifest: MediaManifest = {
-        items: autoMediaItems.map(item => ({
-          orderKey: item.folder,
-          folder: item.folder,
-          title: item.title,
-          previewUrl: item.previewUrl,
-          previewType: item.previewType,
-          fullUrl: item.fullUrl,
-          fullType: item.fullType
-        })),
-        generatedAt: new Date().toISOString(),
-        source: 'hidrive' as const
-      };
-
-      const proposedJson = JSON.stringify(newManifest, null, 2);
-      
-      // Get current manifest for diff
-      let currentJson = '{}';
-      try {
-        const response = await fetch('/media.manifest.json');
-        if (response.ok) {
-          const current = await response.json();
-          currentJson = JSON.stringify(current, null, 2);
-        }
-      } catch (e) {
-        console.warn('Could not load current manifest for diff');
-      }
-
-      // Create simple diff (just show both for now)
-      const diff = `--- Current manifest\n+++ Proposed manifest\n\n${currentJson}\n\n--- BECOMES ---\n\n${proposedJson}`;
-      
-      console.log(`📝 manifest.proposed_count=${newManifest.items.length}`);
-      console.log(`📝 manifest.example[0]=${JSON.stringify(newManifest.items[0] || {})}`);
-      console.log(`📝 manifest.diff_ready=true lines=${diff.split('\n').length}`);
-
-      // Diagnostics: Log persist operations
-      diag('PERSIST', 'manifest_proposed_count', { count: newManifest.items.length });
-      if (newManifest.items[0]) {
-        diag('PERSIST', 'manifest_example_0', { 
-          item: { 
-            folder: newManifest.items[0].folder, 
-            previewUrl: newManifest.items[0].previewUrl 
-          } 
-        });
-      }
-      diag('PERSIST', 'diff_ready', { lines: diff.split('\n').length });
-
-      // Flush PERSIST summary to edge logs  
-      flushDiagToEdge(buildDiagSummary({
-        manifest_proposed_count: newManifest.items.length,
-        manifest_example_0: newManifest.items[0] ? {
-          folder: newManifest.items[0].folder,
-          previewUrl: newManifest.items[0].previewUrl
-        } : null,
-        diff_lines: diff.split('\n').length
-      }));
-
-      setProposedManifest(proposedJson);
-      setManifestDiff(diff);
-      setShowManifestDialog(true);
-      
-      toast({ 
-        title: 'Manifest ready', 
-        description: `Generated manifest with ${newManifest.items.length} items` 
-      });
-    } catch (error) {
-      console.error('Failed to generate manifest:', error);
-      toast({ 
-        title: 'Error', 
-        description: 'Failed to generate manifest', 
-        variant: 'destructive' 
-      });
     }
   }, [autoMediaItems, toast]);
 
@@ -479,121 +356,10 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     }));
   }, [autoMediaItems, projects.length]);
 
-  const handleFullRescan = useCallback(async () => {
-    setIsScanning(true);
-    setScanProgress('Starting full rescan...');
-    
-    try {
-      const discovered: MediaItem[] = [];
-      const SCAN_MAX = 99;
-      const CONCURRENCY = 12;
-      
-      console.log('🚀 FULL RESCAN: Scanning folders 01-99...');
-      toast({ title: 'Full Rescan Started', description: 'Discovering all folders...' });
-      
-      const queue = Array.from({ length: SCAN_MAX }, (_, i) => 
-        (i + 1).toString().padStart(2, '0')
-      );
-      
-      let processed = 0;
-      
-      async function processFolder(folderNum: string) {
-        try {
-          const folderPath = `/public/${folderNum}/`;
-          const previewUrl = await findPreviewForFolder(folderPath);
-          
-          if (previewUrl) {
-            const isVideo = /\.(mp4|mov)$/i.test(previewUrl);
-            discovered.push({
-              orderKey: folderNum,
-              folder: folderNum,
-              title: `Folder ${folderNum}`,
-              previewUrl,
-              previewType: isVideo ? 'video' : 'image',
-              fullUrl: previewUrl,
-              fullType: isVideo ? 'video' : 'image',
-              meta: {},
-            });
-            console.log(`✅ Discovered folder ${folderNum}`);
-          }
-        } catch (error) {
-          // Silently skip folders that don't exist
-        }
-        
-        processed++;
-        setScanProgress(`Scanned ${processed}/${SCAN_MAX} folders...`);
-      }
-      
-      async function worker() {
-        while (queue.length) {
-          const folder = queue.shift();
-          if (!folder) break;
-          await processFolder(folder);
-        }
-      }
-      
-      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
-      
-      console.log(`✅ Full rescan complete: Found ${discovered.length} folders`);
-      setScanProgress('Generating manifest...');
-      
-      if (discovered.length === 0) {
-        toast({ 
-          title: 'No Folders Found', 
-          description: 'Could not find any valid media folders in /public/', 
-          variant: 'destructive' 
-        });
-        setIsScanning(false);
-        setScanProgress('');
-        return;
-      }
-      
-      // Sort by folder number
-      discovered.sort((a, b) => parseInt(a.folder, 10) - parseInt(b.folder, 10));
-      
-      // Generate new manifest
-      const newManifest = {
-        items: discovered,
-        generatedAt: new Date().toISOString(),
-        source: 'hidrive'
-      };
-      
-      const manifestJson = JSON.stringify(newManifest, null, 2);
-      console.log(`📄 Generated manifest with ${discovered.length} items`);
-      
-      // Download manifest file
-      const blob = new Blob([manifestJson], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'media.manifest.json';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      toast({ 
-        title: 'Rescan Complete!', 
-        description: `Found ${discovered.length} folders. Manifest downloaded - replace public/media.manifest.json and refresh.`,
-        duration: 10000
-      });
-      
-    } catch (error) {
-      console.error('❌ Full rescan failed:', error);
-      toast({ 
-        title: 'Rescan Failed', 
-        description: error instanceof Error ? error.message : 'Unknown error', 
-        variant: 'destructive' 
-      });
-    } finally {
-      setIsScanning(false);
-      setScanProgress('');
-    }
-  }, [toast]);
-
   // Compute all unique tags from media items
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
+
     autoMediaItems.forEach(item => {
       const tags = (item.meta?.source === 'file' ? item.meta?.tags : undefined) || [];
       tags.forEach(tag => tagSet.add(tag));
@@ -692,83 +458,9 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{ minHeight: '100vh' }}
     >
-      {/* Project Status Indicator for Supabase Issues */}
-      {isSupabasePaused && (
-        <div className="mb-8">
-          <ProjectStatusIndicator onRetry={refetch} />
-        </div>
-      )}
-
       {/* Diagnostic Panel - Only show when debug=1 */}
       {showDevControls && (
-        <div data-dev-toolbar className="mb-6 space-y-3">
-          {/* Cache Status & Controls Row */}
-          <div className="flex items-center justify-between gap-4 p-3 border rounded-lg bg-muted/20">
-            <div className="flex items-center gap-3">
-              {/* Cache Status */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2 px-3 py-1.5 border rounded bg-background">
-                      <Clock className="w-3 h-3 text-muted-foreground" />
-                      <div className="text-xs space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Meta: {metaStats.found}/{autoMediaItems.length}</span>
-                          {metaStats.processed > 0 && metaStats.processed < metaStats.total && (
-                            <span className="text-muted-foreground">
-                              ({Math.round((metaStats.processed / metaStats.total) * 100)}%)
-                            </span>
-                          )}
-                        </div>
-                        {metaStats.lastRefreshTs > 0 && (
-                          <div className="text-muted-foreground">
-                            {(() => {
-                              const ago = Date.now() - metaStats.lastRefreshTs;
-                              if (ago < 60000) return `${Math.round(ago / 1000)}s ago`;
-                              if (ago < 3600000) return `${Math.round(ago / 60000)}m ago`;
-                              return `${Math.round(ago / 3600000)}h ago`;
-                            })()}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="space-y-1 text-xs">
-                      <p>MANIFEST.txt metadata cache</p>
-                      <p>Found: {metaStats.found} folders</p>
-                      <p>Missing: {metaStats.missing} folders</p>
-                      {metaStats.errors > 0 && <p className="text-destructive">Errors: {metaStats.errors}</p>}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              {/* Progress bar while refreshing */}
-              {metaStats.processed > 0 && metaStats.processed < metaStats.total && (
-                <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-charcoal transition-all duration-300"
-                    style={{ width: `${(metaStats.processed / metaStats.total) * 100}%` }}
-                  />
-                </div>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={forceRefreshManifests}
-                variant="outline"
-                size="sm"
-                className="text-xs"
-                disabled={metaStats.processed > 0 && metaStats.processed < metaStats.total}
-              >
-                <RefreshCw className={`w-3 h-3 mr-1 ${metaStats.processed > 0 && metaStats.processed < metaStats.total ? 'animate-spin' : ''}`} />
-                Force Refresh
-              </Button>
-            </div>
-          </div>
-          
+        <motion.div data-dev-toolbar className="mb-6 space-y-3">
           {/* Tag Filter Row */}
           {allTags.length > 0 && (
             <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/20">
@@ -825,196 +517,62 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
           {/* Controls Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center gap-2 px-3 py-1 border rounded">
-                    <Switch
-                      id="clear-placeholders"
-                      checked={clearPlaceholders}
-                      onCheckedChange={handleClearPlaceholdersToggle}
-                      className="scale-75"
-                    />
-                    <label htmlFor="clear-placeholders" className="text-xs cursor-pointer">
-                      Clear placeholders
-                    </label>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Hide placeholder projects so only real HiDrive folders are shown</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <Button
-              onClick={() => setShowHiDriveBrowser(!showHiDriveBrowser)}
-              variant="outline"
-              size="sm"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              {showHiDriveBrowser ? 'Hide' : 'Show'} HiDrive Browser
-            </Button>
-            {(mediaError || autoMediaItems.length === 0) && !isSupabasePaused && (
-              <Button onClick={refetch} variant="outline" size="sm" disabled={mediaLoading}>
-                {mediaLoading ? 'Retrying…' : 'Retry Loading'}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 px-3 py-1 border rounded">
+                      <Switch
+                        id="clear-placeholders"
+                        checked={clearPlaceholders}
+                        onCheckedChange={handleClearPlaceholdersToggle}
+                        className="scale-75"
+                      />
+                      <label htmlFor="clear-placeholders" className="text-xs cursor-pointer">
+                        Clear placeholders
+                      </label>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Hide placeholder projects so only real HiDrive folders are shown</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Button 
+                onClick={handleRefreshManifest} 
+                variant="outline" 
+                size="sm" 
+                disabled={isRefreshing}
+                className="text-xs"
+              >
+                {isRefreshing ? 'Checking...' : 'Check Folders'}
               </Button>
-            )}
-            <Button 
-              onClick={handleRefreshManifest} 
-              variant="outline" 
-              size="sm" 
-              disabled={isRefreshing}
-              className="text-xs"
-            >
-              {isRefreshing ? 'Checking...' : 'Check Folders'}
-            </Button>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    onClick={handleFullRescan} 
-                    variant="default" 
-                    size="sm" 
-                    disabled={isScanning}
-                    className="text-xs bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    <RefreshCw className={`w-3 h-3 mr-1 ${isScanning ? 'animate-spin' : ''}`} />
-                    {isScanning ? scanProgress : 'Full Rescan (01-99)'}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Scan ALL folders 01-99 and generate new manifest file</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <Button 
-              onClick={() => {
-                const owner = 'juliecamus';
-                const keyV1 = `manifestMetaCache:v1:${owner}`;
-                const keyV2 = `manifestMetaCache:v2:${owner}`;
-                localStorage.removeItem(keyV1);
-                localStorage.removeItem(keyV2);
-                localStorage.removeItem('manifest:last_refresh_ts');
-                localStorage.removeItem('manifest:last_result');
-                console.log('🗑️ Nuked metadata cache (v1+v2)');
-                toast({ 
-                  title: 'Meta cache nuked', 
-                  description: 'Cleared v1+v2. Force refreshing...' 
-                });
-                // Force refresh after clearing
-                setTimeout(() => {
-                  forceRefreshManifests();
-                }, 300);
-              }} 
-              variant="outline" 
-              size="sm"
-              className="text-xs"
-            >
-              <Download className="w-3 h-3 mr-1" />
-              Nuke Meta Cache
-            </Button>
-            {autoMediaItems.length > 0 && (
-              <Dialog open={showManifestDialog} onOpenChange={setShowManifestDialog}>
-                <DialogTrigger asChild>
-                  <Button 
-                    onClick={handleWriteToManifest}
-                    variant="outline" 
-                    size="sm"
-                    className="text-xs"
-                  >
-                    <Save className="w-3 h-3 mr-1" />
-                    Write to manifest
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-                  <DialogHeader>
-                    <DialogTitle>Proposed Manifest Update</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={() => copyToClipboard(proposedManifest, 'JSON')}
-                        variant="outline" 
-                        size="sm"
-                      >
-                        <Copy className="w-3 h-3 mr-1" />
-                        Copy JSON
-                      </Button>
-                      <Button 
-                        onClick={() => copyToClipboard(manifestDiff, 'Diff')}
-                        variant="outline" 
-                        size="sm"
-                      >
-                        <Copy className="w-3 h-3 mr-1" />
-                        Copy Diff
-                      </Button>
-                      <Button 
-                        onClick={() => downloadManifest(proposedManifest)}
-                        variant="outline" 
-                        size="sm"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Download JSON
-                      </Button>
-                    </div>
-                    <div className="overflow-auto max-h-[60vh]">
-                      <pre className="text-xs bg-muted p-4 rounded whitespace-pre-wrap">
-                        {manifestDiff}
-                      </pre>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-            <Button 
-              onClick={() => setShowDiagnostics(!showDiagnostics)}
-              variant="outline" 
-              size="sm"
-              className="text-xs"
-            >
-              <Bug className="w-3 h-3 mr-1" />
-              Diagnostics
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              Placeholders: {clearPlaceholders ? 'OFF' : 'ON'}
-            </Badge>
-            <div className="text-sm text-muted-foreground">
-              {isSupabasePaused ? (
-                'Backend services unavailable'
-              ) : autoMediaItems.length > 0 ? (
-                `${autoMediaItems.length} auto-discovered media items`
-              ) : (
-                'No media loaded'
-              )}
+              <Button 
+                onClick={() => setShowDiagnostics(!showDiagnostics)}
+                variant="outline" 
+                size="sm"
+                className="text-xs"
+              >
+                <Bug className="w-3 h-3 mr-1" />
+                Diagnostics
+              </Button>
             </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                Placeholders: {clearPlaceholders ? 'OFF' : 'ON'}
+              </Badge>
+              <div className="text-sm text-muted-foreground">
+                {autoMediaItems.length > 0 ? (
+                  `${autoMediaItems.length} auto-discovered media items`
+                ) : (
+                  'No media loaded'
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* HiDrive Browser Panel */}
-      {showHiDriveBrowser && (
-        <div className="mb-8">
-          <HiDriveBrowser onPathFound={handlePathFound} />
-        </div>
+        </motion.div>
       )}
 
       {/* Show loading or error states */}
-      {mediaLoading && !isSupabasePaused && (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-charcoal mx-auto mb-2"></div>
-          <p className="text-muted-foreground">Loading media...</p>
-        </div>
-      )}
-      
-      {mediaError && !isSupabasePaused && (
-        <div className="text-center py-8">
-          <p className="text-destructive">Error loading media: {mediaError}</p>
-          <p className="text-muted-foreground text-sm">Falling back to demo content...</p>
-        </div>
-      )}
-
       {/* Flowing grid */}
       <div className="flowing-grid">
         {gridItems.map((item, idx) => {
@@ -1074,6 +632,7 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
               </motion.div>
             );
           }
+          return null;
         })}
       </div>
 

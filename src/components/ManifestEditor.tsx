@@ -14,7 +14,7 @@ import {
   type ManifestMetadata 
 } from '@/lib/manifestEditor';
 import { clearMetaCache } from '@/lib/metaCache';
-import { toProxy } from '@/lib/hidrive';
+import { normalizeMediaPath } from '@/lib/hidrive';
 import type { MediaItem } from '@/hooks/useMediaIndex';
 
 interface ManifestEditorProps {
@@ -177,14 +177,14 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
     }
   };
 
-  const refreshFromHiDrive = async () => {
+  const refreshFromFiles = async () => {
     setIsLoadingAll(true);
     
     for (let i = 0; i < folders.length; i++) {
       const folder = folders[i];
       updateFolder(i, { status: 'loading' });
       
-      const folderPath = `/public/${folder.folder}`;
+      const folderPath = normalizeMediaPath(`/public/${folder.folder}`);
       const result = await fetchManifestFile(folderPath);
       
       if (result.success && result.content) {
@@ -205,7 +205,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
     setIsLoadingAll(false);
     toast({
       title: 'Refreshed',
-      description: 'Loaded latest metadata from HiDrive.',
+      description: 'Loaded latest MANIFEST metadata from local media files.',
     });
   };
 
@@ -241,11 +241,11 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={refreshFromHiDrive}
+                    onClick={refreshFromFiles}
                     disabled={isLoadingAll}
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Refresh
+                    Refresh from files
                   </Button>
                   <Button
                     size="sm"
@@ -393,17 +393,17 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
                     {/* Media Content */}
                     {previewMediaItem.previewType === 'video' ? (
                       <video
-                        src={toProxy(previewMediaItem.previewUrl)}
+                        src={normalizeMediaPath(previewMediaItem.previewUrl)}
                         className="w-full h-full object-cover"
                         autoPlay
                         muted
                         loop
                         playsInline
-                        poster={previewMediaItem.thumbnailUrl ? toProxy(previewMediaItem.thumbnailUrl) : '/placeholder.svg'}
+                        poster={previewMediaItem.thumbnailUrl ? normalizeMediaPath(previewMediaItem.thumbnailUrl) : '/placeholder.svg'}
                       />
                     ) : (
                       <img
-                        src={toProxy(previewMediaItem.previewUrl)}
+                        src={normalizeMediaPath(previewMediaItem.previewUrl)}
                         alt={previewFolder.title}
                         className="w-full h-full object-cover"
                       />
@@ -493,18 +493,18 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
               <div className="w-full h-full flex items-center justify-center">
                 {previewMediaItem.previewType === 'video' ? (
                   <video
-                    src={toProxy(previewMediaItem.fullUrl || previewMediaItem.previewUrl)}
+                    src={normalizeMediaPath(previewMediaItem.fullUrl || previewMediaItem.previewUrl)}
                     className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                     autoPlay
                     muted
                     loop
                     playsInline
                     controls
-                    poster={previewMediaItem.thumbnailUrl ? toProxy(previewMediaItem.thumbnailUrl) : '/placeholder.svg'}
+                    poster={previewMediaItem.thumbnailUrl ? normalizeMediaPath(previewMediaItem.thumbnailUrl) : '/placeholder.svg'}
                   />
                 ) : (
                   <img
-                    src={toProxy(previewMediaItem.fullUrl || previewMediaItem.previewUrl)}
+                    src={normalizeMediaPath(previewMediaItem.fullUrl || previewMediaItem.previewUrl)}
                     alt={previewFolder.title}
                     className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                   />

@@ -2,44 +2,2252 @@
   "items": [
     {
       "orderKey": "01",
-      "folder": "01", 
-      "title": "Dior Holiday Campaign",
-      "previewUrl": "hidrive://public/01/01_short.mp4",
+      "folder": "01",
+      "title": "Dior Holiday by Elena Kechicheva",
+      "previewUrl": "/media/hidrive/01/01_short.mp4",
       "previewType": "video",
-      "fullUrl": "hidrive://public/01/01_DIOR_HOLIDAY_BY_ELINA_KECHICHEVA.MP4",
+      "fullUrl": "/media/hidrive/01/01_long.mp4",
       "fullType": "video",
+      "files": [
+        {
+          "name": "01_long.mp4",
+          "type": "file",
+          "size": 928797,
+          "modified": "2025-11-08T21:00:57.682Z",
+          "contentType": "video/mp4"
+        },
+        {
+          "name": "01_short.mp4",
+          "type": "file",
+          "size": 6682266,
+          "modified": "2025-11-08T21:00:59.230Z",
+          "contentType": "video/mp4"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 65,
+          "modified": "2025-11-08T21:00:59.263Z"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 12,
+          "modified": "2025-11-09T01:43:31.648Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.svg",
+          "type": "file",
+          "size": 549,
+          "modified": "2025-11-09T01:39:56.486Z",
+          "contentType": "image/svg+xml"
+        }
+      ],
       "meta": {
-        "title": "Dior Holiday Campaign",
-        "description": "A luxurious holiday campaign for Dior featuring elegant cinematography and stunning visuals."
+        "title": "Dior Holiday by Elena Kechicheva",
+        "tags": [
+          "Dior"
+        ]
       }
     },
     {
       "orderKey": "02",
       "folder": "02",
-      "title": "Fashion Week Collection",
-      "previewUrl": "hidrive://public/02/02_preview.jpg",
+      "title": "Givenchy Beauty by Pascal Ming Hao Lou",
+      "previewUrl": "/media/hidrive/02/02_preview.jpg",
       "previewType": "image",
-      "fullUrl": "hidrive://public/02/02_FASHION_WEEK_FULL.mp4",
-      "fullType": "video",
+      "fullUrl": "/media/hidrive/02/GIV_SC22_DEEPVELVET_BS_DUO_1849_16x9.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "02_preview.jpg",
+          "type": "file",
+          "size": 13086784,
+          "modified": "2025-11-08T21:01:03.617Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "GIV_SC22_DEEPVELVET_BS_DUO_1849_16x9.jpg",
+          "type": "file",
+          "size": 1245426,
+          "modified": "2025-11-08T21:01:03.770Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "GIV_SC22_DISTURBIA_BS_1001_1x1.jpg",
+          "type": "file",
+          "size": 3070910,
+          "modified": "2025-11-08T21:01:04.042Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749479668-1.jpg",
+          "type": "file",
+          "size": 60434,
+          "modified": "2025-11-08T21:01:04.087Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 75,
+          "modified": "2025-11-08T21:01:04.123Z"
+        },
+        {
+          "name": "preview.svg",
+          "type": "file",
+          "size": 555,
+          "modified": "2025-11-09T01:40:07.803Z",
+          "contentType": "image/svg+xml"
+        }
+      ],
       "meta": {
-        "title": "Fashion Week Collection",
-        "description": "Behind the scenes of the latest fashion week collection showcasing innovative designs."
+        "title": "Givenchy Beauty by Pascal Ming Hao Lou",
+        "tags": [
+          "Givenchy"
+        ]
       }
     },
     {
       "orderKey": "03",
       "folder": "03",
-      "title": "Givenchy Le Rouge",
-      "previewUrl": "hidrive://public/03/03_short.mp4",
+      "title": "Givenchy Beauty Le Rouge by Jonathan Elhaik",
+      "previewUrl": "/media/hidrive/03/03_short.mp4",
       "previewType": "video",
-      "fullUrl": "hidrive://public/03/GIVENCHY LE ROUGE.mp4",
+      "fullUrl": "/media/hidrive/03/03_short.mp4",
       "fullType": "video",
+      "files": [
+        {
+          "name": "03_short.mp4",
+          "type": "file",
+          "size": 13141938,
+          "modified": "2025-11-08T21:01:08.768Z",
+          "contentType": "video/mp4"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 61,
+          "modified": "2025-11-08T21:01:08.805Z"
+        },
+        {
+          "name": "preview.svg",
+          "type": "file",
+          "size": 549,
+          "modified": "2025-11-09T01:40:19.142Z",
+          "contentType": "image/svg+xml"
+        }
+      ],
       "meta": {
-        "title": "Givenchy Le Rouge",
-        "description": "Elegant lipstick campaign showcasing the rich textures and bold colors of Givenchy Le Rouge."
+        "title": "Givenchy Beauty Le Rouge by Jonathan Elhaik"
       }
+    },
+    {
+      "orderKey": "04",
+      "folder": "04",
+      "title": "Schön Magazine",
+      "previewUrl": "/media/hidrive/04/01.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/04/01.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "01.png",
+          "type": "file",
+          "size": 1672408,
+          "modified": "2025-11-08T21:01:09.327Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.18.39.png",
+          "type": "file",
+          "size": 1680999,
+          "modified": "2025-11-08T21:01:09.749Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.19.38.png",
+          "type": "file",
+          "size": 1203361,
+          "modified": "2025-11-08T21:01:09.942Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.20.03.png",
+          "type": "file",
+          "size": 788665,
+          "modified": "2025-11-08T21:01:10.011Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 70,
+          "modified": "2025-11-08T21:01:10.037Z"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 195837,
+          "modified": "2025-11-08T21:01:10.083Z",
+          "contentType": "image/png"
+        }
+      ],
+      "meta": {
+        "title": "Schön Magazine",
+        "tags": [
+          "fashion",
+          "magazine",
+          "b&w"
+        ]
+      }
+    },
+    {
+      "orderKey": "05",
+      "folder": "05",
+      "title": "Factice Magazine by Anton Zemlyanov",
+      "previewUrl": "/media/hidrive/05/Factice by Anton Zemlyanoy 01 copie.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/05/Factice by Anton Zemlyanoy 01 copie.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Factice by Anton Zemlyanoy 01 copie.jpg",
+          "type": "file",
+          "size": 395123,
+          "modified": "2025-11-08T21:01:10.237Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Factice by Anton Zemlyanoy 02 copie.jpg",
+          "type": "file",
+          "size": 429691,
+          "modified": "2025-11-08T21:01:10.382Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Factice by Anton Zemlyanoy 05 copie.jpg",
+          "type": "file",
+          "size": 469566,
+          "modified": "2025-11-08T21:01:10.420Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 79,
+          "modified": "2025-11-08T21:01:10.455Z"
+        }
+      ],
+      "meta": {
+        "title": "Factice Magazine by Anton Zemlyanov",
+        "tags": [
+          "b&w",
+          "magazine"
+        ]
+      }
+    },
+    {
+      "orderKey": "06",
+      "folder": "06",
+      "title": "Dior Magazine by Aishwarya Aruum Bekha",
+      "previewUrl": "/media/hidrive/06/Capture d’écran 2025-06-07 à 18.42.29.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/06/Capture d’écran 2025-06-07 à 18.42.29.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Capture d’écran 2025-06-07 à 18.42.29.png",
+          "type": "file",
+          "size": 3940488,
+          "modified": "2025-11-08T21:01:11.558Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 18.42.43.png",
+          "type": "file",
+          "size": 4364595,
+          "modified": "2025-11-08T21:01:11.777Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 18.43.17.png",
+          "type": "file",
+          "size": 3414912,
+          "modified": "2025-11-08T21:01:11.914Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-13 à 11.00.52.png",
+          "type": "file",
+          "size": 1529554,
+          "modified": "2025-11-08T21:01:12.003Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 83,
+          "modified": "2025-11-08T21:01:12.036Z"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 1463832,
+          "modified": "2025-11-08T21:01:12.115Z",
+          "contentType": "image/png"
+        }
+      ],
+      "meta": {
+        "title": "Dior Magazine by Aishwarya Aruum Bekha",
+        "tags": [
+          "Dior",
+          "Magazine"
+        ]
+      }
+    },
+    {
+      "orderKey": "07",
+      "folder": "07",
+      "title": "Dior Jewelry by Melanie + Ramon",
+      "previewUrl": "/media/hidrive/07/image-1749460307-3.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/07/image-1749460307-3.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "image-1749460307-3.jpg",
+          "type": "file",
+          "size": 121231,
+          "modified": "2025-11-08T21:01:12.286Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749460376-2.jpg",
+          "type": "file",
+          "size": 63986,
+          "modified": "2025-11-08T21:01:12.359Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749460467-1.jpg",
+          "type": "file",
+          "size": 191001,
+          "modified": "2025-11-08T21:01:12.455Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 64,
+          "modified": "2025-11-08T21:01:12.494Z"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 82768,
+          "modified": "2025-11-08T21:01:12.523Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "SET-2_MY_DIOR_0123.jpg",
+          "type": "file",
+          "size": 1870588,
+          "modified": "2025-11-08T21:01:12.653Z",
+          "contentType": "image/jpeg"
+        }
+      ],
+      "meta": {
+        "title": "Dior Jewelry by Melanie + Ramon",
+        "tags": [
+          "Dior"
+        ]
+      }
+    },
+    {
+      "orderKey": "08",
+      "folder": "08",
+      "title": "Chanel Beauty by Anairam",
+      "previewUrl": "/media/hidrive/08/Chanel Beauty by Anairam 13 copie.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/08/Chanel Beauty by Anairam 13 copie.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Chanel Beauty by Anairam 13 copie.jpg",
+          "type": "file",
+          "size": 2058108,
+          "modified": "2025-11-08T21:01:13.374Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 59,
+          "modified": "2025-11-08T21:01:13.405Z"
+        }
+      ],
+      "meta": {
+        "title": "Chanel Beauty by Anairam",
+        "tags": [
+          "Chanel"
+        ]
+      }
+    },
+    {
+      "orderKey": "09",
+      "folder": "09",
+      "title": "Dior Jewelry by Melanie + Ramon",
+      "previewUrl": "/media/hidrive/09/PARURE_03_EDIT_CARRE_v4 ETALO.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/09/PARURE_03_EDIT_CARRE_v4 ETALO.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 75,
+          "modified": "2025-11-08T21:01:13.564Z"
+        },
+        {
+          "name": "PARURE_03_EDIT_CARRE_v4 ETALO.mp4",
+          "type": "file",
+          "size": 31431023,
+          "modified": "2025-11-08T21:01:14.500Z",
+          "contentType": "video/mp4"
+        },
+        {
+          "name": "PARURE_05_EDIT_CARRE_v4 ETALO.mp4",
+          "type": "file",
+          "size": 36428585,
+          "modified": "2025-11-08T21:01:15.913Z",
+          "contentType": "video/mp4"
+        }
+      ],
+      "meta": {
+        "title": "Dior Jewelry by Melanie + Ramon",
+        "tags": [
+          "Dior",
+          "Jewelry"
+        ]
+      }
+    },
+    {
+      "orderKey": "10",
+      "folder": "10",
+      "title": "Dior Le baume by Axel Morin",
+      "previewUrl": "/media/hidrive/10/DIOR LE BAUME by axel morin.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/10/DIOR LE BAUME by axel morin.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "DIOR LE BAUME by axel morin.mp4",
+          "type": "file",
+          "size": 1750150,
+          "modified": "2025-11-08T21:01:18.825Z",
+          "contentType": "video/mp4"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 73,
+          "modified": "2025-11-08T21:01:18.861Z"
+        }
+      ],
+      "meta": {
+        "title": "Dior Le baume by Axel Morin",
+        "tags": [
+          "Dior",
+          "Cosmetics"
+        ]
+      }
+    },
+    {
+      "orderKey": "11",
+      "folder": "11",
+      "title": "Givenchy Beauty by Pascal Ming Hao Lou",
+      "previewUrl": "/media/hidrive/11/11.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/11/11.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "11.jpg",
+          "type": "file",
+          "size": 2073997,
+          "modified": "2025-11-08T21:01:20.260Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "GIV_MAKEUP_LE9_N5_BS_4448-V7_1X1.jpg",
+          "type": "file",
+          "size": 4615341,
+          "modified": "2025-11-08T21:01:20.793Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 75,
+          "modified": "2025-11-08T21:01:20.828Z"
+        }
+      ],
+      "meta": {
+        "title": "Givenchy Beauty by Pascal Ming Hao Lou",
+        "tags": [
+          "Givenchy"
+        ]
+      }
+    },
+    {
+      "orderKey": "12",
+      "folder": "12",
+      "title": "Givenchy Beauty by Pascal Ming Hao Lou",
+      "previewUrl": "/media/hidrive/12/12.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/12/12.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "12.jpg",
+          "type": "file",
+          "size": 1780241,
+          "modified": "2025-11-08T21:01:21.496Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "GIV_SC22_ROSEPERFECTO_BS_1555_4x5.jpg",
+          "type": "file",
+          "size": 1724109,
+          "modified": "2025-11-08T21:01:21.650Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "GIV_SC22_ROSEPERFECTO_BS_DUO_1693_4x5.jpg",
+          "type": "file",
+          "size": 1816790,
+          "modified": "2025-11-08T21:01:22.087Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "GIV_SC22_SHEERVELVET_BS_1914_1x1.jpg",
+          "type": "file",
+          "size": 1891635,
+          "modified": "2025-11-08T21:01:22.255Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 75,
+          "modified": "2025-11-08T21:01:22.291Z"
+        }
+      ],
+      "meta": {
+        "title": "Givenchy Beauty by Pascal Ming Hao Lou",
+        "tags": [
+          "Givenchy"
+        ]
+      }
+    },
+    {
+      "orderKey": "13",
+      "folder": "13",
+      "title": "Zadig & Voltaire by Melissa de Araujo",
+      "previewUrl": "/media/hidrive/13/13.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/13/13.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "13.jpg",
+          "type": "file",
+          "size": 105778,
+          "modified": "2025-11-08T21:01:22.486Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Capture d'écran 2025-10-03 171007.png",
+          "type": "file",
+          "size": 137458,
+          "modified": "2025-11-08T21:01:22.566Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d'écran 2025-10-03 171017.png",
+          "type": "file",
+          "size": 226132,
+          "modified": "2025-11-08T21:01:22.615Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 71,
+          "modified": "2025-11-08T21:01:22.643Z"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 107389,
+          "modified": "2025-11-08T21:01:22.677Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "zv_push_noel_sac-4-2000x1335-q80.jpg",
+          "type": "file",
+          "size": 241717,
+          "modified": "2025-11-08T21:01:22.756Z",
+          "contentType": "image/jpeg"
+        }
+      ],
+      "meta": {
+        "title": "Zadig & Voltaire by Melissa de Araujo",
+        "tags": [
+          "Zadig"
+        ]
+      }
+    },
+    {
+      "orderKey": "14",
+      "folder": "14",
+      "title": "Vogue Hong Kong by Alan Gelati",
+      "previewUrl": "/media/hidrive/14/14.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/14/14.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "14.png",
+          "type": "file",
+          "size": 195667,
+          "modified": "2025-11-08T21:01:22.926Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "IMG_6288.JPG",
+          "type": "file",
+          "size": 76212,
+          "modified": "2025-11-08T21:01:22.991Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6289.JPG",
+          "type": "file",
+          "size": 60638,
+          "modified": "2025-11-08T21:01:23.037Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6290.JPG",
+          "type": "file",
+          "size": 62879,
+          "modified": "2025-11-08T21:01:23.076Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6291.JPG",
+          "type": "file",
+          "size": 64712,
+          "modified": "2025-11-08T21:01:23.134Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 76,
+          "modified": "2025-11-08T21:01:23.168Z"
+        }
+      ],
+      "meta": {
+        "title": "Vogue Hong Kong by Alan Gelati",
+        "tags": [
+          "Vogue",
+          "Magazine"
+        ]
+      }
+    },
+    {
+      "orderKey": "15",
+      "folder": "15",
+      "title": "1stant Magazine by Thierry Lebraly",
+      "previewUrl": "/media/hidrive/15/15_preview.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/15/Capture d’écran 2025-06-07 à 17.04.15.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "15_preview.png",
+          "type": "file",
+          "size": 487167,
+          "modified": "2025-11-08T21:01:23.513Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.04.15.png",
+          "type": "file",
+          "size": 2121034,
+          "modified": "2025-11-08T21:01:23.668Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.05.06.png",
+          "type": "file",
+          "size": 2124741,
+          "modified": "2025-11-08T21:01:23.775Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.05.46.png",
+          "type": "file",
+          "size": 1400061,
+          "modified": "2025-11-08T21:01:24.149Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.06.25.png",
+          "type": "file",
+          "size": 1635976,
+          "modified": "2025-11-08T21:01:24.518Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 52,
+          "modified": "2025-11-08T21:01:24.548Z"
+        }
+      ],
+      "meta": {
+        "title": "1stant Magazine by Thierry Lebraly"
+      }
+    },
+    {
+      "orderKey": "16",
+      "folder": "16",
+      "title": "Dior Fall by Tess Ayano",
+      "previewUrl": "/media/hidrive/16/00_a_afficher.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/16/00_a_afficher.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "00_a_afficher.jpg",
+          "type": "file",
+          "size": 135161,
+          "modified": "2025-11-08T21:01:24.986Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "dior fall 2 copie.jpeg",
+          "type": "file",
+          "size": 176390,
+          "modified": "2025-11-08T21:01:25.129Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "dior fall 4 copie.jpeg",
+          "type": "file",
+          "size": 199012,
+          "modified": "2025-11-08T21:01:25.170Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "dior fall 5 copie.jpeg",
+          "type": "file",
+          "size": 147515,
+          "modified": "2025-11-08T21:01:25.238Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "dior fall copie.jpeg",
+          "type": "file",
+          "size": 248433,
+          "modified": "2025-11-08T21:01:25.070Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 56,
+          "modified": "2025-11-08T21:01:25.270Z"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 607636,
+          "modified": "2025-11-08T21:01:25.309Z",
+          "contentType": "image/png"
+        }
+      ],
+      "meta": {
+        "title": "Dior Fall by Tess Ayano",
+        "tags": [
+          "Dior"
+        ]
+      }
+    },
+    {
+      "orderKey": "17",
+      "folder": "17",
+      "title": "Dior Holiday by Agnès Lloyd Platt",
+      "previewUrl": "/media/hidrive/17/17_short.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/17/17_short.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "17_short.mp4",
+          "type": "file",
+          "size": 2488797,
+          "modified": "2025-11-08T21:01:36.770Z",
+          "contentType": "video/mp4"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 67,
+          "modified": "2025-11-08T21:01:36.805Z"
+        }
+      ],
+      "meta": {
+        "title": "Dior Holiday by Agnès Lloyd Platt",
+        "tags": [
+          "Dior"
+        ]
+      }
+    },
+    {
+      "orderKey": "18",
+      "folder": "18",
+      "title": "Dior Holiday by Elina Kechicheva",
+      "previewUrl": "/media/hidrive/18/IMG_6267.JPG",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/18/IMG_6267.JPG",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "IMG_6267.JPG",
+          "type": "file",
+          "size": 300417,
+          "modified": "2025-11-08T21:01:37.286Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6269.JPG",
+          "type": "file",
+          "size": 372310,
+          "modified": "2025-11-08T21:01:37.370Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6271.JPG",
+          "type": "file",
+          "size": 460477,
+          "modified": "2025-11-08T21:01:37.456Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6273.JPG",
+          "type": "file",
+          "size": 292356,
+          "modified": "2025-11-08T21:01:37.527Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.txt",
+          "type": "file",
+          "size": 65,
+          "modified": "2025-11-08T21:01:37.556Z"
+        }
+      ],
+      "meta": {
+        "title": "Dior Holiday by Elina Kechicheva",
+        "tags": [
+          "Dior"
+        ]
+      }
+    },
+    {
+      "orderKey": "19",
+      "folder": "19",
+      "title": "Portfolio 19",
+      "previewUrl": "/media/hidrive/19/231011_Dior_Christmas_11_007_CMYK_FULL FRAME.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/19/231011_Dior_Christmas_11_007_CMYK_FULL FRAME.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "231011_Dior_Christmas_11_007_CMYK_FULL FRAME.jpg",
+          "type": "file",
+          "size": 12276702,
+          "modified": "2025-11-08T21:01:47.205Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749481898-3.jpg",
+          "type": "file",
+          "size": 181323,
+          "modified": "2025-11-08T21:01:47.321Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749481956-1.jpg",
+          "type": "file",
+          "size": 121454,
+          "modified": "2025-11-08T21:01:47.360Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6245.JPG",
+          "type": "file",
+          "size": 303455,
+          "modified": "2025-11-08T21:01:47.461Z",
+          "contentType": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "orderKey": "20",
+      "folder": "20",
+      "title": "Portfolio 20",
+      "previewUrl": "/media/hidrive/20/Chanel  beauty by Barnaby Roper.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/20/Chanel  beauty by Barnaby Roper.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "Chanel  beauty by Barnaby Roper.mp4",
+          "type": "file",
+          "size": 1476233,
+          "modified": "2025-11-08T21:01:48.179Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "21",
+      "folder": "21",
+      "title": "Runway Red — Julie Camus",
+      "previewUrl": "/media/hidrive/21/0_a_afficher_en_premier.JPG",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/21/0_a_afficher_en_premier.JPG",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "0_a_afficher_en_premier.JPG",
+          "type": "file",
+          "size": 192673,
+          "modified": "2025-11-08T21:01:48.333Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "231221_DIOR_OR_WOMEN_A_ZAHER_05_052.jpg",
+          "type": "file",
+          "size": 12363002,
+          "modified": "2025-11-08T21:01:49.043Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "231221_DIOR_OR_WOMEN_A_ZAHER_08_016.jpg",
+          "type": "file",
+          "size": 8864839,
+          "modified": "2025-11-08T21:01:49.468Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6225.JPG",
+          "type": "file",
+          "size": 109369,
+          "modified": "2025-11-08T21:01:49.520Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "MANIFEST.md",
+          "type": "file",
+          "size": 179,
+          "modified": "2025-11-08T21:01:49.553Z"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 670548,
+          "modified": "2025-11-08T21:01:49.613Z",
+          "contentType": "image/png"
+        }
+      ],
+      "meta": {
+        "title": "Runway Red — Julie Camus",
+        "description": "Satin skin, precise liner, and a bold lacquered lip created for the Paris runway.",
+        "tags": [
+          "fashion",
+          "runway",
+          "red-lip"
+        ]
+      }
+    },
+    {
+      "orderKey": "22",
+      "folder": "22",
+      "title": "Portfolio 22",
+      "previewUrl": "/media/hidrive/22/Capture d’écran 2025-06-07 à 16.50.51.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/22/Capture d’écran 2025-06-07 à 16.50.51.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Capture d’écran 2025-06-07 à 16.50.51.png",
+          "type": "file",
+          "size": 957446,
+          "modified": "2025-11-08T21:01:49.877Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 16.51.28.png",
+          "type": "file",
+          "size": 940309,
+          "modified": "2025-11-08T21:01:50.323Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d'écran 2025-10-03 173225.png",
+          "type": "file",
+          "size": 222919,
+          "modified": "2025-11-08T21:01:49.777Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 171183,
+          "modified": "2025-11-08T21:01:50.363Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "23",
+      "folder": "23",
+      "title": "Portfolio 23",
+      "previewUrl": "/media/hidrive/23/23.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/23/23.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "23.png",
+          "type": "file",
+          "size": 308896,
+          "modified": "2025-11-08T21:01:50.621Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d'écran 2025-10-03 173436.png",
+          "type": "file",
+          "size": 598085,
+          "modified": "2025-11-08T21:01:50.710Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Crush by Nicolas Wagner 03 copie.jpg",
+          "type": "file",
+          "size": 1086283,
+          "modified": "2025-11-08T21:01:50.808Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Crush by Nicolas Wagner 05 copie.jpg",
+          "type": "file",
+          "size": 1528133,
+          "modified": "2025-11-08T21:01:50.931Z",
+          "contentType": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "orderKey": "24",
+      "folder": "24",
+      "title": "Portfolio 24",
+      "previewUrl": "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.00.03.png",
+          "type": "file",
+          "size": 915536,
+          "modified": "2025-11-08T21:01:51.290Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.00.46.png",
+          "type": "file",
+          "size": 1730310,
+          "modified": "2025-11-08T21:01:51.417Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.01.20.png",
+          "type": "file",
+          "size": 1450507,
+          "modified": "2025-11-08T21:01:52.363Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "25",
+      "folder": "25",
+      "title": "Portfolio 25",
+      "previewUrl": "/media/hidrive/25/dior joaillere 7 copie.avif",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/25/dior joaillere 7 copie.avif",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "dior joaillere 7 copie.avif",
+          "type": "file",
+          "size": 386443,
+          "modified": "2025-11-08T21:01:52.670Z",
+          "contentType": "image/avif"
+        },
+        {
+          "name": "JGEM95031_1243 copie.jpg",
+          "type": "file",
+          "size": 813119,
+          "modified": "2025-11-08T21:01:52.925Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "JGEM95036_0539 copie.jpg",
+          "type": "file",
+          "size": 2933900,
+          "modified": "2025-11-08T21:01:53.405Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "SET_04_0426 copie.jpg",
+          "type": "file",
+          "size": 3493650,
+          "modified": "2025-11-08T21:01:53.770Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "SET-1_DIOARAMA_JDIO94025_0102.jpg",
+          "type": "file",
+          "size": 190459,
+          "modified": "2025-11-08T21:01:53.875Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "SET-3_0196 copie.jpg",
+          "type": "file",
+          "size": 185460,
+          "modified": "2025-11-08T21:01:53.935Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "SET-12_0079 copie.jpg",
+          "type": "file",
+          "size": 128502,
+          "modified": "2025-11-08T21:01:53.970Z",
+          "contentType": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "orderKey": "26",
+      "folder": "26",
+      "title": "Portfolio 26",
+      "previewUrl": "/media/hidrive/26/eyes_adjusted.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/26/eyes_adjusted.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "eyes_adjusted.mp4",
+          "type": "file",
+          "size": 2164795,
+          "modified": "2025-11-08T21:02:00.465Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "27",
+      "folder": "27",
+      "title": "Portfolio 27",
+      "previewUrl": "/media/hidrive/27/image-1749482339-2.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/27/video-1749482497-1.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "image-1749482339-2.jpg",
+          "type": "file",
+          "size": 117143,
+          "modified": "2025-11-08T21:02:00.813Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749482387-1.jpg",
+          "type": "file",
+          "size": 124167,
+          "modified": "2025-11-08T21:02:00.860Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749482423-1.jpg",
+          "type": "file",
+          "size": 117723,
+          "modified": "2025-11-08T21:02:00.916Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 988434,
+          "modified": "2025-11-08T21:02:01.013Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "video-1749482497-1.mp4",
+          "type": "file",
+          "size": 10908909,
+          "modified": "2025-11-08T21:02:01.553Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "28",
+      "folder": "28",
+      "title": "Portfolio 28",
+      "previewUrl": "/media/hidrive/28/Capture d’écran 2025-06-07 à 17.16.56.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/28/Capture d’écran 2025-06-07 à 17.16.56.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.16.56.png",
+          "type": "file",
+          "size": 2144861,
+          "modified": "2025-11-08T21:02:02.550Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 18.31.29.png",
+          "type": "file",
+          "size": 2240379,
+          "modified": "2025-11-08T21:02:02.739Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 1555254,
+          "modified": "2025-11-08T21:02:02.805Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "29",
+      "folder": "29",
+      "title": "Portfolio 29",
+      "previewUrl": "/media/hidrive/29/Capture d’écran 2025-06-07 à 18.38.13.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/29/Capture d’écran 2025-06-07 à 18.38.13.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Capture d’écran 2025-06-07 à 18.38.13.png",
+          "type": "file",
+          "size": 6545182,
+          "modified": "2025-11-08T21:02:04.387Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "full.png",
+          "type": "file",
+          "size": 745228,
+          "modified": "2025-11-08T21:02:04.536Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 3367292,
+          "modified": "2025-11-08T21:02:04.680Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "30",
+      "folder": "30",
+      "title": "Portfolio 30",
+      "previewUrl": "/media/hidrive/30/Capture d’écran 2025-06-13 à 10.46.48.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/30/Capture d’écran 2025-06-13 à 10.46.48.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Capture d’écran 2025-06-13 à 10.46.48.png",
+          "type": "file",
+          "size": 5458615,
+          "modified": "2025-11-08T21:02:05.389Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d'écran 2025-10-16 185737.png",
+          "type": "file",
+          "size": 736025,
+          "modified": "2025-11-08T21:02:05.071Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d'écran 2025-10-16 185813.png",
+          "type": "file",
+          "size": 247561,
+          "modified": "2025-11-08T21:02:05.145Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "31",
+      "folder": "31",
+      "title": "Portfolio 31",
+      "previewUrl": "/media/hidrive/31/afterclicik.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/31/afterclicik.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "afterclicik.jpg",
+          "type": "file",
+          "size": 6399946,
+          "modified": "2025-11-08T21:02:07.440Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Harper_s Bazaar Poland by Michal Radwanski 01.jpg",
+          "type": "file",
+          "size": 6129823,
+          "modified": "2025-11-08T21:02:07.925Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Harper_s Bazaar Poland by Michal Radwanski 03.jpg",
+          "type": "file",
+          "size": 5233175,
+          "modified": "2025-11-08T21:02:08.129Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Harper_s Bazaar Poland by Michal Radwanski 04.jpg",
+          "type": "file",
+          "size": 5044967,
+          "modified": "2025-11-08T21:02:08.336Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 1249441,
+          "modified": "2025-11-08T21:02:08.416Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "32",
+      "folder": "32",
+      "title": "Portfolio 32",
+      "previewUrl": "/media/hidrive/32/32_short.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/32/32_short.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "32_short.mp4",
+          "type": "file",
+          "size": 8692594,
+          "modified": "2025-11-08T21:02:10.010Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "33",
+      "folder": "33",
+      "title": "Portfolio 33",
+      "previewUrl": "/media/hidrive/33/DELVAUX_SHOT_08_115_RVB.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/33/DELVAUX_SHOT_08_115_RVB.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "DELVAUX_SHOT_08_115_RVB.jpg",
+          "type": "file",
+          "size": 4559044,
+          "modified": "2025-11-08T21:02:11.237Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "DELVAUX_SHOT_10_150.jpg",
+          "type": "file",
+          "size": 1930523,
+          "modified": "2025-11-08T21:02:11.429Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749477790-1.jpg",
+          "type": "file",
+          "size": 96739,
+          "modified": "2025-11-08T21:02:11.501Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 432327,
+          "modified": "2025-11-08T21:02:11.537Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "34",
+      "folder": "34",
+      "title": "Portfolio 34",
+      "previewUrl": "/media/hidrive/34/IMG_2480.JPG",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/34/IMG_2480.JPG",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "IMG_2480.JPG",
+          "type": "file",
+          "size": 94381,
+          "modified": "2025-11-08T21:02:11.761Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 502318,
+          "modified": "2025-11-08T21:02:11.800Z",
+          "contentType": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "orderKey": "35",
+      "folder": "35",
+      "title": "Portfolio 35",
+      "previewUrl": "/media/hidrive/35/35.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/35/35.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "35.jpg",
+          "type": "file",
+          "size": 636463,
+          "modified": "2025-11-08T21:02:12.167Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749478221-1.jpg",
+          "type": "file",
+          "size": 136461,
+          "modified": "2025-11-08T21:02:12.254Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749478283-1.jpg",
+          "type": "file",
+          "size": 134989,
+          "modified": "2025-11-08T21:02:12.315Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749478283-2.jpg",
+          "type": "file",
+          "size": 100626,
+          "modified": "2025-11-08T21:02:12.366Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749478320-1.jpg",
+          "type": "file",
+          "size": 77202,
+          "modified": "2025-11-08T21:02:12.405Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749478320-2.jpg",
+          "type": "file",
+          "size": 75957,
+          "modified": "2025-11-08T21:02:12.455Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 368159,
+          "modified": "2025-11-08T21:02:12.498Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "36",
+      "folder": "36",
+      "title": "Portfolio 36",
+      "previewUrl": "/media/hidrive/36/first.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/36/first.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "first.jpg",
+          "type": "file",
+          "size": 62307,
+          "modified": "2025-11-08T21:02:12.695Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749489616-1.jpg",
+          "type": "file",
+          "size": 98359,
+          "modified": "2025-11-08T21:02:12.750Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749489616-2.jpg",
+          "type": "file",
+          "size": 54284,
+          "modified": "2025-11-08T21:02:12.786Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 62307,
+          "modified": "2025-11-08T21:02:12.830Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "second.png",
+          "type": "file",
+          "size": 235333,
+          "modified": "2025-11-08T21:02:12.905Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "37",
+      "folder": "37",
+      "title": "Portfolio 37",
+      "previewUrl": "/media/hidrive/37/afer_click.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/37/afer_click.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "afer_click.jpg",
+          "type": "file",
+          "size": 929322,
+          "modified": "2025-11-08T21:02:13.256Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749460204-1.jpg",
+          "type": "file",
+          "size": 81403,
+          "modified": "2025-11-08T21:02:13.330Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_5790.jpg",
+          "type": "file",
+          "size": 703136,
+          "modified": "2025-11-08T21:02:13.406Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 929322,
+          "modified": "2025-11-08T21:02:13.448Z",
+          "contentType": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "orderKey": "38",
+      "folder": "38",
+      "title": "Portfolio 38",
+      "previewUrl": "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.12.13.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.12.13.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.12.13.png",
+          "type": "file",
+          "size": 1176290,
+          "modified": "2025-11-08T21:02:13.801Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.13.23.png",
+          "type": "file",
+          "size": 1349887,
+          "modified": "2025-11-08T21:02:13.918Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.13.51.png",
+          "type": "file",
+          "size": 2267386,
+          "modified": "2025-11-08T21:02:14.056Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.14.19.png",
+          "type": "file",
+          "size": 1377473,
+          "modified": "2025-11-08T21:02:14.148Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 226723,
+          "modified": "2025-11-08T21:02:14.205Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "39",
+      "folder": "39",
+      "title": "Portfolio 39",
+      "previewUrl": "/media/hidrive/39/video-1749460781-1.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/39/video-1749460781-1.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "video-1749460781-1.mp4",
+          "type": "file",
+          "size": 1822580,
+          "modified": "2025-11-08T21:02:14.713Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "40",
+      "folder": "40",
+      "title": "Portfolio 40",
+      "previewUrl": "/media/hidrive/40/DIOR HOLIDY NEIGE BY ELINA KECHICHEVA.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/40/DIOR HOLIDY NEIGE BY ELINA KECHICHEVA.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "DIOR HOLIDY NEIGE BY ELINA KECHICHEVA.mp4",
+          "type": "file",
+          "size": 77747282,
+          "modified": "2025-11-08T21:03:44.936Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "41",
+      "folder": "41",
+      "title": "Portfolio 41",
+      "previewUrl": "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.09.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.09.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.09.09.png",
+          "type": "file",
+          "size": 1301235,
+          "modified": "2025-11-08T21:03:45.192Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.09.25.png",
+          "type": "file",
+          "size": 1763168,
+          "modified": "2025-11-08T21:03:45.373Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.10.04.png",
+          "type": "file",
+          "size": 2422210,
+          "modified": "2025-11-08T21:03:45.620Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "42",
+      "folder": "42",
+      "title": "Portfolio 42",
+      "previewUrl": "/media/hidrive/42/DIOR HOLIDAY BY ELINA KECHICHEVA.MP4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/42/DIOR HOLIDAY BY ELINA KECHICHEVA.MP4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "DIOR HOLIDAY BY ELINA KECHICHEVA.MP4",
+          "type": "file",
+          "size": 6682266,
+          "modified": "2025-11-08T21:03:46.358Z",
+          "contentType": "video/mp4"
+        },
+        {
+          "name": "DIOR HOLIDY NEIGE BY ELINA KECHICHEVA.mp4",
+          "type": "file",
+          "size": 77747282,
+          "modified": "2025-11-08T21:03:49.003Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "43",
+      "folder": "43",
+      "title": "Portfolio 43",
+      "previewUrl": "/media/hidrive/43/GIVENCHY LE ROUGE INTERDIT.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/43/GIVENCHY LE ROUGE INTERDIT.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "GIVENCHY LE ROUGE INTERDIT.mp4",
+          "type": "file",
+          "size": 24439527,
+          "modified": "2025-11-08T21:03:50.957Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "44",
+      "folder": "44",
+      "title": "Portfolio 44",
+      "previewUrl": "/media/hidrive/44/chanel beauty by anairam lips x.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/44/chanel beauty by anairam lips x.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "chanel beauty by anairam lips x.mp4",
+          "type": "file",
+          "size": 3841203,
+          "modified": "2025-11-08T21:03:51.397Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "45",
+      "folder": "45",
+      "title": "Portfolio 45",
+      "previewUrl": "/media/hidrive/45/IMG_6280.JPG",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/45/IMG_6280.JPG",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "IMG_6280.JPG",
+          "type": "file",
+          "size": 159603,
+          "modified": "2025-11-08T21:03:51.523Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6282.JPG",
+          "type": "file",
+          "size": 103080,
+          "modified": "2025-11-08T21:03:51.805Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6283.JPG",
+          "type": "file",
+          "size": 119670,
+          "modified": "2025-11-08T21:03:51.874Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6285.JPG",
+          "type": "file",
+          "size": 110487,
+          "modified": "2025-11-08T21:03:51.920Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6286.JPG",
+          "type": "file",
+          "size": 122176,
+          "modified": "2025-11-08T21:03:51.956Z",
+          "contentType": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "orderKey": "46",
+      "folder": "46",
+      "title": "Portfolio 46",
+      "previewUrl": "/media/hidrive/46/160g by Benjamin Armand.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/46/160g by Benjamin Armand.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "160g by Benjamin Armand.mp4",
+          "type": "file",
+          "size": 1515001,
+          "modified": "2025-11-08T21:03:52.074Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "47",
+      "folder": "47",
+      "title": "Portfolio 47",
+      "previewUrl": "/media/hidrive/47/domperignonby woodkid.MP4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/47/domperignonby woodkid.MP4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "domperignonby woodkid.MP4",
+          "type": "file",
+          "size": 8794757,
+          "modified": "2025-11-08T21:03:52.763Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "48",
+      "folder": "48",
+      "title": "Portfolio 48",
+      "previewUrl": "/media/hidrive/48/Scala Regia by Dorothée Murail.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/48/Scala Regia by Dorothée Murail.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "Scala Regia by Dorothée Murail.mp4",
+          "type": "file",
+          "size": 10252288,
+          "modified": "2025-11-08T21:03:53.429Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "49",
+      "folder": "49",
+      "title": "Portfolio 49",
+      "previewUrl": "/media/hidrive/49/GIVENCHY BEAUTY PRISME LIBRE.MP4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/49/GIVENCHY BEAUTY PRISME LIBRE.MP4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "GIVENCHY BEAUTY PRISME LIBRE.MP4",
+          "type": "file",
+          "size": 2252701,
+          "modified": "2025-11-08T21:03:53.584Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "50",
+      "folder": "50",
+      "title": "Portfolio 50",
+      "previewUrl": "/media/hidrive/50/50.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/50/50.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "50.mp4",
+          "type": "file",
+          "size": 59045683,
+          "modified": "2025-11-08T21:03:55.923Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "51",
+      "folder": "51",
+      "title": "Portfolio 51",
+      "previewUrl": "/media/hidrive/51/video-1749482497-1.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/51/video-1749482497-1.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "video-1749482497-1.mp4",
+          "type": "file",
+          "size": 10908909,
+          "modified": "2025-11-08T21:03:56.637Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "52",
+      "folder": "52",
+      "title": "Portfolio 52",
+      "previewUrl": "/media/hidrive/52/image-1749652884-1.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/52/image-1749652884-1.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "image-1749652884-1.jpg",
+          "type": "file",
+          "size": 144692,
+          "modified": "2025-11-08T21:03:56.773Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1749652884-3.jpg",
+          "type": "file",
+          "size": 91165,
+          "modified": "2025-11-08T21:03:56.830Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 72527,
+          "modified": "2025-11-08T21:03:56.871Z",
+          "contentType": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "orderKey": "53",
+      "folder": "53",
+      "title": "Portfolio 53",
+      "previewUrl": "/media/hidrive/53/53.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/53/53.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "53.mp4",
+          "type": "file",
+          "size": 8692594,
+          "modified": "2025-11-08T21:03:57.236Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "54",
+      "folder": "54",
+      "title": "Portfolio 54",
+      "previewUrl": "/media/hidrive/54/54.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/54/54.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "54.mp4",
+          "type": "file",
+          "size": 1277959,
+          "modified": "2025-11-08T21:03:57.355Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "55",
+      "folder": "55",
+      "title": "Portfolio 55",
+      "previewUrl": "/media/hidrive/55/video-1760636399-1.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/55/video-1760636399-1.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "video-1760636399-1.mp4",
+          "type": "file",
+          "size": 2213397,
+          "modified": "2025-11-08T21:03:57.520Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "56",
+      "folder": "56",
+      "title": "Portfolio 56",
+      "previewUrl": "/media/hidrive/56/56.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/56/56.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "56.mp4",
+          "type": "file",
+          "size": 2422188,
+          "modified": "2025-11-08T21:03:57.670Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "57",
+      "folder": "57",
+      "title": "Portfolio 57",
+      "previewUrl": "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 01.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 01.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Marie-Claire South Africa by Daniella Midenge 01.jpg",
+          "type": "file",
+          "size": 4451325,
+          "modified": "2025-11-08T21:03:57.970Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Marie-Claire South Africa by Daniella Midenge 04.jpg",
+          "type": "file",
+          "size": 3163135,
+          "modified": "2025-11-08T21:03:58.170Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Marie-Claire South Africa by Daniella Midenge 08.jpg",
+          "type": "file",
+          "size": 4847647,
+          "modified": "2025-11-08T21:03:58.355Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "Marie-Claire South Africa by Daniella Midenge 09.jpg",
+          "type": "file",
+          "size": 6437637,
+          "modified": "2025-11-08T21:03:58.636Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 779391,
+          "modified": "2025-11-08T21:03:58.703Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "58",
+      "folder": "58",
+      "title": "Portfolio 58",
+      "previewUrl": "/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
+          "type": "file",
+          "size": 59455071,
+          "modified": "2025-11-08T21:04:01.179Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6238.JPG",
+          "type": "file",
+          "size": 113106,
+          "modified": "2025-11-08T21:04:01.231Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "IMG_6240.JPG",
+          "type": "file",
+          "size": 194890,
+          "modified": "2025-11-08T21:04:01.402Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview",
+          "type": "file",
+          "size": 55429244,
+          "modified": "2025-11-08T21:04:03.299Z"
+        }
+      ]
+    },
+    {
+      "orderKey": "59",
+      "folder": "59",
+      "title": "Portfolio 59",
+      "previewUrl": "/media/hidrive/59/Capture d’écran 2025-06-07 à 17.20.58.png",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/59/Capture d’écran 2025-06-07 à 17.20.58.png",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.20.58.png",
+          "type": "file",
+          "size": 1418019,
+          "modified": "2025-11-08T21:04:03.520Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.21.48.png",
+          "type": "file",
+          "size": 1616529,
+          "modified": "2025-11-08T21:04:03.665Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d’écran 2025-06-07 à 17.22.17.png",
+          "type": "file",
+          "size": 593929,
+          "modified": "2025-11-08T21:04:03.735Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "Capture d'écran 2025-10-16 194709.png",
+          "type": "file",
+          "size": 347901,
+          "modified": "2025-11-08T21:04:03.414Z",
+          "contentType": "image/png"
+        },
+        {
+          "name": "preview.png",
+          "type": "file",
+          "size": 244904,
+          "modified": "2025-11-08T21:04:03.790Z",
+          "contentType": "image/png"
+        }
+      ]
+    },
+    {
+      "orderKey": "60",
+      "folder": "60",
+      "title": "Portfolio 60",
+      "previewUrl": "/media/hidrive/60/DIOR_JEWELS_NOEL_23_MAIN_FILM_1-1_VA_20231107 copie.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/60/DIOR_JEWELS_NOEL_23_MAIN_FILM_1-1_VA_20231107 copie.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "DIOR_JEWELS_NOEL_23_MAIN_FILM_1-1_VA_20231107 copie.mp4",
+          "type": "file",
+          "size": 95910557,
+          "modified": "2025-11-08T21:04:08.707Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "61",
+      "folder": "61",
+      "title": "Portfolio 61",
+      "previewUrl": "/media/hidrive/61/image-1757179966-1.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/61/image-1757179966-1.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "image-1757179966-1.jpg",
+          "type": "file",
+          "size": 186887,
+          "modified": "2025-11-08T21:04:08.836Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 141017,
+          "modified": "2025-11-08T21:04:08.879Z",
+          "contentType": "image/jpeg"
+        }
+      ]
+    },
+    {
+      "orderKey": "62",
+      "folder": "62",
+      "title": "Portfolio 62",
+      "previewUrl": "/media/hidrive/62/62.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/62/62.mp4",
+      "fullType": "video",
+      "files": [
+        {
+          "name": "62.mp4",
+          "type": "file",
+          "size": 459259,
+          "modified": "2025-11-08T21:04:08.963Z",
+          "contentType": "video/mp4"
+        }
+      ]
+    },
+    {
+      "orderKey": "63",
+      "folder": "63",
+      "title": "Portfolio 63",
+      "previewUrl": "/media/hidrive/63/image-1757180026-5.jpg",
+      "previewType": "image",
+      "fullUrl": "/media/hidrive/63/image-1757180026-5.jpg",
+      "fullType": "image",
+      "files": [
+        {
+          "name": "image-1757180026-5.jpg",
+          "type": "file",
+          "size": 130437,
+          "modified": "2025-11-08T21:04:09.057Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "image-1757180026-6.jpg",
+          "type": "file",
+          "size": 122378,
+          "modified": "2025-11-08T21:04:09.115Z",
+          "contentType": "image/jpeg"
+        },
+        {
+          "name": "preview.jpg",
+          "type": "file",
+          "size": 108549,
+          "modified": "2025-11-08T21:04:09.190Z",
+          "contentType": "image/jpeg"
+        }
+      ]
     }
   ],
-  "generatedAt": "2024-12-11T15:30:00.000Z",
-  "source": "hidrive"
+  "generatedAt": "2025-11-09T02:06:08.341Z",
+  "source": "local"
 }
