@@ -30,7 +30,7 @@ jobs:
       run: |
         npm run dev &
         sleep 10
-        npm run test:headless || echo "Tests failed but continuing"
+        npm run test:headless
 
     - name: Check media size
       run: |
