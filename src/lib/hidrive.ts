@@ -366,6 +366,22 @@ const listDirAll = async (path: string): Promise<HiDriveItem[]> => {
  */
 export const fetchText = async (path: string, noStore = true): Promise<string | null> => {
   try {
+    // Try local fetch first if it's a public path
+    if (typeof window !== 'undefined' && path.startsWith('/public/')) {
+      const localPath = path.replace('/public', '');
+      try {
+        const response = await fetch(localPath);
+        if (response.ok) {
+          const text = await response.text();
+          if (text && !text.trim().startsWith('<html')) {
+            return text;
+          }
+        }
+      } catch {
+        // Fall back to proxy
+      }
+    }
+    
     const url = new URL('https://fvrgjyyflojdiklqepqt.functions.supabase.co/hidrive-proxy');
     url.searchParams.set('path', path);
     url.searchParams.set('owner', 'juliecamus');
@@ -385,21 +401,22 @@ export const fetchText = async (path: string, noStore = true): Promise<string | 
     // Check if response is HTML (error page) instead of text/plain
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('text/html')) {
-      console.warn('⚠️ Received HTML response instead of text (likely 404 error page)', { path, contentType });
-      return null;
+      return null; // Silently return null for HTML error pages
     }
     
     const text = await res.text();
     
     // Additional check: reject if content starts with HTML
     if (text.trim().startsWith('<html') || text.trim().startsWith('<!DOCTYPE')) {
-      console.warn('⚠️ Content appears to be HTML, rejecting', { path });
-      return null;
+      return null; // Silently return null for HTML content
     }
     
     return text;
   } catch (error) {
-    console.error('❌ Failed to fetch text', { path, error });
+    // Only log actual errors, not 404s
+    if (!error.message.includes('404')) {
+      console.error('❌ Failed to fetch text', { path, error });
+    }
     return null;
   }
 };
@@ -421,6 +438,26 @@ export const findManifestMarkdown = async (folderPath: string): Promise<{ conten
       'MANIFEST', 'Manifest', 'manifest',
       'README.md', 'INFO.md'
     ];
+    
+    // First try local files if we're in development and the path is in /public
+    if (typeof window !== 'undefined' && normalizedPath.startsWith('/public/')) {
+      const localPath = normalizedPath.replace('/public', '');
+      
+      for (const variant of manifestVariants) {
+        try {
+          const response = await fetch(localPath + variant);
+          if (response.ok) {
+            const content = await response.text();
+            if (content && content.trim() && !content.trim().startsWith('<html')) {
+              console.log('✅ Found manifest locally', { folder: normalizedPath, file: variant });
+              return { content, matchedFilename: variant };
+            }
+          }
+        } catch {
+          // Continue to next variant
+        }
+      }
+    }
     
     // PRIORITY: Direct GET first with 5s timeout (WebDAV listing may not show .md files)
     for (const variant of manifestVariants) {
@@ -446,20 +483,19 @@ export const findManifestMarkdown = async (folderPath: string): Promise<{ conten
         if (res.ok) {
           const contentType = res.headers.get('content-type') || '';
           if (contentType.includes('text/html')) {
-            console.warn('⚠️ Manifest request returned HTML (error page)', { folder: normalizedPath, file: variant });
-            continue; // Try next variant
+            // Silently continue - don't log HTML errors for missing manifests
+            continue; 
           }
           
           const content = await res.text();
           
           // Reject HTML content
           if (content.trim().startsWith('<html') || content.trim().startsWith('<!DOCTYPE')) {
-            console.warn('⚠️ Manifest content appears to be HTML, rejecting', { folder: normalizedPath, file: variant });
-            continue; // Try next variant
+            continue; // Silently skip HTML content
           }
           
           if (content && content.trim()) {
-            console.log('✅ Found manifest via direct GET', { folder: normalizedPath, file: variant });
+            console.log('✅ Found manifest via proxy', { folder: normalizedPath, file: variant });
             return { content, matchedFilename: variant };
           }
         }
