@@ -542,6 +542,13 @@ export const parseManifestMarkdown = (md: string): { title?: string; description
   try {
     if (!md || !md.trim()) return {};
     
+    // Reject HTML content (error pages)
+    const trimmed = md.trim();
+    if (trimmed.startsWith('<html') || trimmed.startsWith('<!DOCTYPE')) {
+      console.warn('⚠️ parseManifestMarkdown: Rejecting HTML content');
+      return {};
+    }
+    
     // Check for YAML front-matter
     if (md.startsWith('---')) {
       const endIndex = md.indexOf('---', 3);
@@ -581,11 +588,24 @@ export const parseManifestMarkdown = (md: string): { title?: string; description
     const lines = md.split('\n').map(l => l.trim()).filter(l => l);
     if (lines.length === 0) return {};
     
+    // Filter out HTML lines
+    const filteredLines = lines.filter(line => 
+      !line.startsWith('<html') && 
+      !line.startsWith('<!DOCTYPE') &&
+      !line.startsWith('<head') &&
+      !line.startsWith('<body') &&
+      !line.includes('</html>') &&
+      !line.includes('</head>') &&
+      !line.includes('</body>')
+    );
+    
+    if (filteredLines.length === 0) return {};
+    
     const result: { title?: string; description?: string; tags?: string[] } = {};
     
     // Try key-value format first (Title:, Description:, Tags:)
     let hasKeyValue = false;
-    for (const line of lines) {
+    for (const line of filteredLines) {
       const colonIndex = line.indexOf(':');
       if (colonIndex > 0) {
         const key = line.slice(0, colonIndex).trim().toLowerCase();
@@ -617,18 +637,18 @@ export const parseManifestMarkdown = (md: string): { title?: string; description
     
     // Markdown format fallback
     // Find first H1
-    const h1Line = lines.find(line => line.startsWith('# '));
+    const h1Line = filteredLines.find(line => line.startsWith('# '));
     if (h1Line) {
       result.title = h1Line.slice(2).trim();
     } else {
       // First non-empty line as title
-      if (lines[0]) {
-        result.title = lines[0];
+      if (filteredLines[0]) {
+        result.title = filteredLines[0];
       }
     }
     
     // Find first non-empty paragraph (not starting with #, at least 10 chars)
-    const paragraph = lines.find(line => 
+    const paragraph = filteredLines.find(line => 
       line && 
       !line.startsWith('#') && 
       !line.includes(':') && 
@@ -637,9 +657,9 @@ export const parseManifestMarkdown = (md: string): { title?: string; description
     );
     if (paragraph) {
       result.description = paragraph;
-    } else if (lines.length > 1 && lines[1] && lines[1] !== result.title) {
+    } else if (filteredLines.length > 1 && filteredLines[1] && filteredLines[1] !== result.title) {
       // Second line as description if exists
-      result.description = lines[1];
+      result.description = filteredLines[1];
     }
     
     return result;

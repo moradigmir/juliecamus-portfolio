@@ -450,7 +450,11 @@ const AutoMediaTile = ({ media, index, onHover, onLeave, onClick }: AutoMediaTil
             <h3 className={`text-xs sm:text-sm font-semibold line-clamp-2 drop-shadow-lg ${
               isMobile ? 'text-white' : 'text-charcoal'
             }`}>
-              {media.title ?? media.meta?.title ?? media.folder}
+              {(() => {
+                const title = media.title ?? media.meta?.title ?? media.folder;
+                // Strip HTML tags as a safety measure
+                return title.replace(/<[^>]*>/g, '').trim();
+              })()}
             </h3>
           </div>
         </div>
