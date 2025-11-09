@@ -1,0 +1,1050 @@
+{
+  "version": 1762703110274,
+  "cdn": {
+    "videos": "https://youtube.com/embed/",
+    "images": "https://cdn.example.com/",
+    "fallback": "/media/hidrive/"
+  },
+  "files": [
+    {
+      "path": "09/PARURE_05_EDIT_CARRE_v4 ETALO.mp4",
+      "size": 34.74100589752197,
+      "strategy": "cdn"
+    },
+    {
+      "path": "09/PARURE_03_EDIT_CARRE_v4 ETALO.mp4",
+      "size": 29.97495937347412,
+      "strategy": "cdn"
+    },
+    {
+      "path": "43/GIVENCHY LE ROUGE INTERDIT.mp4",
+      "size": 23.30734920501709,
+      "strategy": "cdn"
+    },
+    {
+      "path": "58/preview",
+      "size": 12.997397422790527,
+      "strategy": "cdn"
+    },
+    {
+      "path": "03/03_short.mp4",
+      "size": 12.53312873840332,
+      "strategy": "cdn"
+    },
+    {
+      "path": "02/02_preview.jpg",
+      "size": 12.48052978515625,
+      "strategy": "cdn"
+    },
+    {
+      "path": "21/231221_DIOR_OR_WOMEN_A_ZAHER_05_052.jpg",
+      "size": 11.790277481079102,
+      "strategy": "cdn"
+    },
+    {
+      "path": "19/231011_Dior_Christmas_11_007_CMYK_FULL FRAME.jpg",
+      "size": 11.707975387573242,
+      "strategy": "cdn"
+    },
+    {
+      "path": "27/video-1749482497-1.mp4",
+      "size": 10.403546333312988,
+      "strategy": "cdn"
+    },
+    {
+      "path": "51/video-1749482497-1.mp4",
+      "size": 10.403546333312988,
+      "strategy": "cdn"
+    },
+    {
+      "path": "42/DIOR HOLIDY NEIGE BY ELINA KECHICHEVA.mp4",
+      "size": 10.175148010253906,
+      "strategy": "cdn"
+    },
+    {
+      "path": "40/DIOR HOLIDY NEIGE BY ELINA KECHICHEVA.mp4",
+      "size": 10.1731595993042,
+      "strategy": "cdn"
+    },
+    {
+      "path": "48/Scala Regia by Dorothée Murail.mp4",
+      "size": 9.77734375,
+      "strategy": "cdn"
+    },
+    {
+      "path": "58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
+      "size": 8.759140968322754,
+      "strategy": "cdn"
+    },
+    {
+      "path": "21/231221_DIOR_OR_WOMEN_A_ZAHER_08_016.jpg",
+      "size": 8.454169273376465,
+      "strategy": "cdn"
+    },
+    {
+      "path": "47/domperignonby woodkid.MP4",
+      "size": 8.387333869934082,
+      "strategy": "cdn"
+    },
+    {
+      "path": "32/32_short.mp4",
+      "size": 8.28990364074707,
+      "strategy": "cdn"
+    },
+    {
+      "path": "53/53.mp4",
+      "size": 8.28990364074707,
+      "strategy": "cdn"
+    },
+    {
+      "path": "60/DIOR_JEWELS_NOEL_23_MAIN_FILM_1-1_VA_20231107 copie.mp4",
+      "size": 7.799539566040039,
+      "strategy": "cdn"
+    },
+    {
+      "path": "01/01_short.mp4",
+      "size": 6.372705459594727,
+      "strategy": "cdn"
+    },
+    {
+      "path": "42/DIOR HOLIDAY BY ELINA KECHICHEVA.MP4",
+      "size": 6.372705459594727,
+      "strategy": "cdn"
+    },
+    {
+      "path": "29/Capture d’écran 2025-06-07 à 18.38.13.png",
+      "size": 6.241971969604492,
+      "strategy": "cdn"
+    },
+    {
+      "path": "57/Marie-Claire South Africa by Daniella Midenge 09.jpg",
+      "size": 6.139409065246582,
+      "strategy": "cdn"
+    },
+    {
+      "path": "31/afterclicik.jpg",
+      "size": 6.103464126586914,
+      "strategy": "cdn"
+    },
+    {
+      "path": "31/Harper_s Bazaar Poland by Michal Radwanski 01.jpg",
+      "size": 5.845854759216309,
+      "strategy": "cdn"
+    },
+    {
+      "path": "30/Capture d’écran 2025-06-13 à 10.46.48.png",
+      "size": 5.205740928649902,
+      "strategy": "cdn"
+    },
+    {
+      "path": "31/Harper_s Bazaar Poland by Michal Radwanski 03.jpg",
+      "size": 4.990744590759277,
+      "strategy": "local"
+    },
+    {
+      "path": "31/Harper_s Bazaar Poland by Michal Radwanski 04.jpg",
+      "size": 4.81125545501709,
+      "strategy": "local"
+    },
+    {
+      "path": "57/Marie-Claire South Africa by Daniella Midenge 08.jpg",
+      "size": 4.623076438903809,
+      "strategy": "local"
+    },
+    {
+      "path": "11/GIV_MAKEUP_LE9_N5_BS_4448-V7_1X1.jpg",
+      "size": 4.401532173156738,
+      "strategy": "local"
+    },
+    {
+      "path": "33/DELVAUX_SHOT_08_115_RVB.jpg",
+      "size": 4.347843170166016,
+      "strategy": "local"
+    },
+    {
+      "path": "57/Marie-Claire South Africa by Daniella Midenge 01.jpg",
+      "size": 4.245114326477051,
+      "strategy": "local"
+    },
+    {
+      "path": "06/Capture d’écran 2025-06-07 à 18.42.43.png",
+      "size": 4.162402153015137,
+      "strategy": "local"
+    },
+    {
+      "path": "06/Capture d’écran 2025-06-07 à 18.42.29.png",
+      "size": 3.7579421997070312,
+      "strategy": "local"
+    },
+    {
+      "path": "44/chanel beauty by anairam lips x.mp4",
+      "size": 3.6632566452026367,
+      "strategy": "local"
+    },
+    {
+      "path": "25/SET_04_0426 copie.jpg",
+      "size": 3.3318042755126953,
+      "strategy": "local"
+    },
+    {
+      "path": "06/Capture d’écran 2025-06-07 à 18.43.17.png",
+      "size": 3.2567138671875,
+      "strategy": "local"
+    },
+    {
+      "path": "29/preview.png",
+      "size": 3.2112998962402344,
+      "strategy": "local"
+    },
+    {
+      "path": "57/Marie-Claire South Africa by Daniella Midenge 04.jpg",
+      "size": 3.0166006088256836,
+      "strategy": "local"
+    },
+    {
+      "path": "02/GIV_SC22_DISTURBIA_BS_1001_1x1.jpg",
+      "size": 2.928647994995117,
+      "strategy": "local"
+    },
+    {
+      "path": "25/JGEM95036_0539 copie.jpg",
+      "size": 2.797985076904297,
+      "strategy": "local"
+    },
+    {
+      "path": "17/17_short.mp4",
+      "size": 2.373501777648926,
+      "strategy": "local"
+    },
+    {
+      "path": "41/Capture d’écran 2025-06-07 à 17.10.04.png",
+      "size": 2.309999465942383,
+      "strategy": "local"
+    },
+    {
+      "path": "56/56.mp4",
+      "size": 2.309978485107422,
+      "strategy": "local"
+    },
+    {
+      "path": "38/Capture d’écran 2025-06-07 à 17.13.51.png",
+      "size": 2.1623477935791016,
+      "strategy": "local"
+    },
+    {
+      "path": "49/GIVENCHY BEAUTY PRISME LIBRE.MP4",
+      "size": 2.148343086242676,
+      "strategy": "local"
+    },
+    {
+      "path": "28/Capture d’écran 2025-06-07 à 18.31.29.png",
+      "size": 2.136591911315918,
+      "strategy": "local"
+    },
+    {
+      "path": "55/video-1760636399-1.mp4",
+      "size": 2.1108598709106445,
+      "strategy": "local"
+    },
+    {
+      "path": "26/eyes_adjusted.mp4",
+      "size": 2.064509391784668,
+      "strategy": "local"
+    },
+    {
+      "path": "28/Capture d’écran 2025-06-07 à 17.16.56.png",
+      "size": 2.045498847961426,
+      "strategy": "local"
+    },
+    {
+      "path": "15/Capture d’écran 2025-06-07 à 17.05.06.png",
+      "size": 2.026310920715332,
+      "strategy": "local"
+    },
+    {
+      "path": "15/Capture d’écran 2025-06-07 à 17.04.15.png",
+      "size": 2.022775650024414,
+      "strategy": "local"
+    },
+    {
+      "path": "11/11.jpg",
+      "size": 1.9779176712036133,
+      "strategy": "local"
+    },
+    {
+      "path": "08/Chanel Beauty by Anairam 13 copie.jpg",
+      "size": 1.9627647399902344,
+      "strategy": "local"
+    },
+    {
+      "path": "33/DELVAUX_SHOT_10_150.jpg",
+      "size": 1.841090202331543,
+      "strategy": "local"
+    },
+    {
+      "path": "12/GIV_SC22_SHEERVELVET_BS_1914_1x1.jpg",
+      "size": 1.8040037155151367,
+      "strategy": "local"
+    },
+    {
+      "path": "07/SET-2_MY_DIOR_0123.jpg",
+      "size": 1.7839317321777344,
+      "strategy": "local"
+    },
+    {
+      "path": "39/video-1749460781-1.mp4",
+      "size": 1.7381477355957031,
+      "strategy": "local"
+    },
+    {
+      "path": "12/GIV_SC22_ROSEPERFECTO_BS_DUO_1693_4x5.jpg",
+      "size": 1.732625961303711,
+      "strategy": "local"
+    },
+    {
+      "path": "12/12.jpg",
+      "size": 1.697770118713379,
+      "strategy": "local"
+    },
+    {
+      "path": "41/Capture d’écran 2025-06-07 à 17.09.25.png",
+      "size": 1.681488037109375,
+      "strategy": "local"
+    },
+    {
+      "path": "10/DIOR LE BAUME by axel morin.mp4",
+      "size": 1.6690731048583984,
+      "strategy": "local"
+    },
+    {
+      "path": "24/Capture d’écran 2025-06-07 à 17.00.46.png",
+      "size": 1.6501522064208984,
+      "strategy": "local"
+    },
+    {
+      "path": "12/GIV_SC22_ROSEPERFECTO_BS_1555_4x5.jpg",
+      "size": 1.6442384719848633,
+      "strategy": "local"
+    },
+    {
+      "path": "04/Capture d’écran 2025-06-07 à 17.18.39.png",
+      "size": 1.6031255722045898,
+      "strategy": "local"
+    },
+    {
+      "path": "04/01.png",
+      "size": 1.5949325561523438,
+      "strategy": "local"
+    },
+    {
+      "path": "15/Capture d’écran 2025-06-07 à 17.06.25.png",
+      "size": 1.5601882934570312,
+      "strategy": "local"
+    },
+    {
+      "path": "59/Capture d’écran 2025-06-07 à 17.21.48.png",
+      "size": 1.541642189025879,
+      "strategy": "local"
+    },
+    {
+      "path": "28/preview.png",
+      "size": 1.483205795288086,
+      "strategy": "local"
+    },
+    {
+      "path": "06/Capture d’écran 2025-06-13 à 11.00.52.png",
+      "size": 1.4586963653564453,
+      "strategy": "local"
+    },
+    {
+      "path": "23/Crush by Nicolas Wagner 05 copie.jpg",
+      "size": 1.457341194152832,
+      "strategy": "local"
+    },
+    {
+      "path": "46/160g by Benjamin Armand.mp4",
+      "size": 1.4448175430297852,
+      "strategy": "local"
+    },
+    {
+      "path": "20/Chanel  beauty by Barnaby Roper.mp4",
+      "size": 1.4078454971313477,
+      "strategy": "local"
+    },
+    {
+      "path": "06/preview.png",
+      "size": 1.3960189819335938,
+      "strategy": "local"
+    },
+    {
+      "path": "24/Capture d’écran 2025-06-07 à 17.01.20.png",
+      "size": 1.3833112716674805,
+      "strategy": "local"
+    },
+    {
+      "path": "59/Capture d’écran 2025-06-07 à 17.20.58.png",
+      "size": 1.3523283004760742,
+      "strategy": "local"
+    },
+    {
+      "path": "15/Capture d’écran 2025-06-07 à 17.05.46.png",
+      "size": 1.3352022171020508,
+      "strategy": "local"
+    },
+    {
+      "path": "38/Capture d’écran 2025-06-07 à 17.14.19.png",
+      "size": 1.3136606216430664,
+      "strategy": "local"
+    },
+    {
+      "path": "38/Capture d’écran 2025-06-07 à 17.13.23.png",
+      "size": 1.2873525619506836,
+      "strategy": "local"
+    },
+    {
+      "path": "41/Capture d’écran 2025-06-07 à 17.09.09.png",
+      "size": 1.2409543991088867,
+      "strategy": "local"
+    },
+    {
+      "path": "54/54.mp4",
+      "size": 1.2187566757202148,
+      "strategy": "local"
+    },
+    {
+      "path": "31/preview.png",
+      "size": 1.1915597915649414,
+      "strategy": "local"
+    },
+    {
+      "path": "02/GIV_SC22_DEEPVELVET_BS_DUO_1849_16x9.jpg",
+      "size": 1.1877307891845703,
+      "strategy": "local"
+    },
+    {
+      "path": "04/Capture d’écran 2025-06-07 à 17.19.38.png",
+      "size": 1.1476144790649414,
+      "strategy": "local"
+    },
+    {
+      "path": "38/Capture d’écran 2025-06-07 à 17.12.13.png",
+      "size": 1.1217975616455078,
+      "strategy": "local"
+    },
+    {
+      "path": "23/Crush by Nicolas Wagner 03 copie.jpg",
+      "size": 1.0359601974487305,
+      "strategy": "local"
+    },
+    {
+      "path": "27/preview.jpg",
+      "size": 0.9426441192626953,
+      "strategy": "local"
+    },
+    {
+      "path": "22/Capture d’écran 2025-06-07 à 16.50.51.png",
+      "size": 0.9130916595458984,
+      "strategy": "local"
+    },
+    {
+      "path": "22/Capture d’écran 2025-06-07 à 16.51.28.png",
+      "size": 0.8967485427856445,
+      "strategy": "local"
+    },
+    {
+      "path": "37/afer_click.jpg",
+      "size": 0.8862705230712891,
+      "strategy": "local"
+    },
+    {
+      "path": "37/preview.jpg",
+      "size": 0.8862705230712891,
+      "strategy": "local"
+    },
+    {
+      "path": "01/01_long.mp4",
+      "size": 0.8857698440551758,
+      "strategy": "local"
+    },
+    {
+      "path": "24/Capture d’écran 2025-06-07 à 17.00.03.png",
+      "size": 0.8731231689453125,
+      "strategy": "local"
+    },
+    {
+      "path": "50/50.mp4",
+      "size": 0.8302268981933594,
+      "strategy": "local"
+    },
+    {
+      "path": "25/JGEM95031_1243 copie.jpg",
+      "size": 0.7754507064819336,
+      "strategy": "local"
+    },
+    {
+      "path": "04/Capture d’écran 2025-06-07 à 17.20.03.png",
+      "size": 0.7521295547485352,
+      "strategy": "local"
+    },
+    {
+      "path": "57/preview.png",
+      "size": 0.7432851791381836,
+      "strategy": "local"
+    },
+    {
+      "path": "29/full.png",
+      "size": 0.7107048034667969,
+      "strategy": "local"
+    },
+    {
+      "path": "30/Capture d'écran 2025-10-16 185737.png",
+      "size": 0.7019281387329102,
+      "strategy": "local"
+    },
+    {
+      "path": "37/IMG_5790.jpg",
+      "size": 0.670562744140625,
+      "strategy": "local"
+    },
+    {
+      "path": "21/preview.png",
+      "size": 0.6394844055175781,
+      "strategy": "local"
+    },
+    {
+      "path": "35/35.jpg",
+      "size": 0.6069784164428711,
+      "strategy": "local"
+    },
+    {
+      "path": "16/preview.png",
+      "size": 0.5794868469238281,
+      "strategy": "local"
+    },
+    {
+      "path": "23/Capture d'écran 2025-10-03 173436.png",
+      "size": 0.570378303527832,
+      "strategy": "local"
+    },
+    {
+      "path": "59/Capture d’écran 2025-06-07 à 17.22.17.png",
+      "size": 0.5664148330688477,
+      "strategy": "local"
+    },
+    {
+      "path": "34/preview.jpg",
+      "size": 0.4790477752685547,
+      "strategy": "local"
+    },
+    {
+      "path": "15/15_preview.png",
+      "size": 0.4645986557006836,
+      "strategy": "local"
+    },
+    {
+      "path": "05/Factice by Anton Zemlyanoy 05 copie.jpg",
+      "size": 0.4478130340576172,
+      "strategy": "local"
+    },
+    {
+      "path": "18/IMG_6271.JPG",
+      "size": 0.4391450881958008,
+      "strategy": "local"
+    },
+    {
+      "path": "62/62.mp4",
+      "size": 0.43798351287841797,
+      "strategy": "local"
+    },
+    {
+      "path": "33/preview.png",
+      "size": 0.41229915618896484,
+      "strategy": "local"
+    },
+    {
+      "path": "05/Factice by Anton Zemlyanoy 02 copie.jpg",
+      "size": 0.40978527069091797,
+      "strategy": "local"
+    },
+    {
+      "path": "05/Factice by Anton Zemlyanoy 01 copie.jpg",
+      "size": 0.3768186569213867,
+      "strategy": "local"
+    },
+    {
+      "path": "25/dior joaillere 7 copie.avif",
+      "size": 0.36854076385498047,
+      "strategy": "local"
+    },
+    {
+      "path": "18/IMG_6269.JPG",
+      "size": 0.35506248474121094,
+      "strategy": "local"
+    },
+    {
+      "path": "35/preview.png",
+      "size": 0.3511037826538086,
+      "strategy": "local"
+    },
+    {
+      "path": "59/Capture d'écran 2025-10-16 194709.png",
+      "size": 0.3317842483520508,
+      "strategy": "local"
+    },
+    {
+      "path": "23/23.png",
+      "size": 0.294586181640625,
+      "strategy": "local"
+    },
+    {
+      "path": "19/IMG_6245.JPG",
+      "size": 0.2893972396850586,
+      "strategy": "local"
+    },
+    {
+      "path": "18/IMG_6267.JPG",
+      "size": 0.2864999771118164,
+      "strategy": "local"
+    },
+    {
+      "path": "18/IMG_6273.JPG",
+      "size": 0.2788124084472656,
+      "strategy": "local"
+    },
+    {
+      "path": "16/dior fall copie.jpeg",
+      "size": 0.2369241714477539,
+      "strategy": "local"
+    },
+    {
+      "path": "30/Capture d'écran 2025-10-16 185813.png",
+      "size": 0.23609256744384766,
+      "strategy": "local"
+    },
+    {
+      "path": "59/preview.png",
+      "size": 0.23355865478515625,
+      "strategy": "local"
+    },
+    {
+      "path": "13/zv_push_noel_sac-4-2000x1335-q80.jpg",
+      "size": 0.23051929473876953,
+      "strategy": "local"
+    },
+    {
+      "path": "36/second.png",
+      "size": 0.22443103790283203,
+      "strategy": "local"
+    },
+    {
+      "path": "38/preview.png",
+      "size": 0.21621990203857422,
+      "strategy": "local"
+    },
+    {
+      "path": "13/Capture d'écran 2025-10-03 171017.png",
+      "size": 0.21565628051757812,
+      "strategy": "local"
+    },
+    {
+      "path": "22/Capture d'écran 2025-10-03 173225.png",
+      "size": 0.21259212493896484,
+      "strategy": "local"
+    },
+    {
+      "path": "16/dior fall 4 copie.jpeg",
+      "size": 0.18979263305664062,
+      "strategy": "local"
+    },
+    {
+      "path": "04/preview.png",
+      "size": 0.18676471710205078,
+      "strategy": "local"
+    },
+    {
+      "path": "14/14.png",
+      "size": 0.18660259246826172,
+      "strategy": "local"
+    },
+    {
+      "path": "58/IMG_6240.JPG",
+      "size": 0.18586158752441406,
+      "strategy": "local"
+    },
+    {
+      "path": "21/0_a_afficher_en_premier.JPG",
+      "size": 0.1837472915649414,
+      "strategy": "local"
+    },
+    {
+      "path": "07/image-1749460467-1.jpg",
+      "size": 0.18215274810791016,
+      "strategy": "local"
+    },
+    {
+      "path": "25/SET-1_DIOARAMA_JDIO94025_0102.jpg",
+      "size": 0.18163585662841797,
+      "strategy": "local"
+    },
+    {
+      "path": "61/image-1757179966-1.jpg",
+      "size": 0.17822933197021484,
+      "strategy": "local"
+    },
+    {
+      "path": "25/SET-3_0196 copie.jpg",
+      "size": 0.17686843872070312,
+      "strategy": "local"
+    },
+    {
+      "path": "19/image-1749481898-3.jpg",
+      "size": 0.17292308807373047,
+      "strategy": "local"
+    },
+    {
+      "path": "16/dior fall 2 copie.jpeg",
+      "size": 0.16821861267089844,
+      "strategy": "local"
+    },
+    {
+      "path": "22/preview.png",
+      "size": 0.1632528305053711,
+      "strategy": "local"
+    },
+    {
+      "path": "45/IMG_6280.JPG",
+      "size": 0.15220928192138672,
+      "strategy": "local"
+    },
+    {
+      "path": "16/dior fall 5 copie.jpeg",
+      "size": 0.14068126678466797,
+      "strategy": "local"
+    },
+    {
+      "path": "52/image-1749652884-1.jpg",
+      "size": 0.13798904418945312,
+      "strategy": "local"
+    },
+    {
+      "path": "61/preview.jpg",
+      "size": 0.13448429107666016,
+      "strategy": "local"
+    },
+    {
+      "path": "13/Capture d'écran 2025-10-03 171007.png",
+      "size": 0.1310901641845703,
+      "strategy": "local"
+    },
+    {
+      "path": "35/image-1749478221-1.jpg",
+      "size": 0.13013935089111328,
+      "strategy": "local"
+    },
+    {
+      "path": "16/00_a_afficher.jpg",
+      "size": 0.12889957427978516,
+      "strategy": "local"
+    },
+    {
+      "path": "35/image-1749478283-1.jpg",
+      "size": 0.12873554229736328,
+      "strategy": "local"
+    },
+    {
+      "path": "63/image-1757180026-5.jpg",
+      "size": 0.12439441680908203,
+      "strategy": "local"
+    },
+    {
+      "path": "25/SET-12_0079 copie.jpg",
+      "size": 0.12254905700683594,
+      "strategy": "local"
+    },
+    {
+      "path": "27/image-1749482387-1.jpg",
+      "size": 0.11841487884521484,
+      "strategy": "local"
+    },
+    {
+      "path": "63/image-1757180026-6.jpg",
+      "size": 0.11670875549316406,
+      "strategy": "local"
+    },
+    {
+      "path": "45/IMG_6286.JPG",
+      "size": 0.11651611328125,
+      "strategy": "local"
+    },
+    {
+      "path": "19/image-1749481956-1.jpg",
+      "size": 0.11582756042480469,
+      "strategy": "local"
+    },
+    {
+      "path": "07/image-1749460307-3.jpg",
+      "size": 0.1156148910522461,
+      "strategy": "local"
+    },
+    {
+      "path": "45/IMG_6283.JPG",
+      "size": 0.11412620544433594,
+      "strategy": "local"
+    },
+    {
+      "path": "27/image-1749482423-1.jpg",
+      "size": 0.11226940155029297,
+      "strategy": "local"
+    },
+    {
+      "path": "27/image-1749482339-2.jpg",
+      "size": 0.11171627044677734,
+      "strategy": "local"
+    },
+    {
+      "path": "58/IMG_6238.JPG",
+      "size": 0.10786628723144531,
+      "strategy": "local"
+    },
+    {
+      "path": "45/IMG_6285.JPG",
+      "size": 0.10536861419677734,
+      "strategy": "local"
+    },
+    {
+      "path": "21/IMG_6225.JPG",
+      "size": 0.10430240631103516,
+      "strategy": "local"
+    },
+    {
+      "path": "63/preview.jpg",
+      "size": 0.10352039337158203,
+      "strategy": "local"
+    },
+    {
+      "path": "13/preview.jpg",
+      "size": 0.10241413116455078,
+      "strategy": "local"
+    },
+    {
+      "path": "13/13.jpg",
+      "size": 0.10087776184082031,
+      "strategy": "local"
+    },
+    {
+      "path": "45/IMG_6282.JPG",
+      "size": 0.09830474853515625,
+      "strategy": "local"
+    },
+    {
+      "path": "35/image-1749478283-2.jpg",
+      "size": 0.09596443176269531,
+      "strategy": "local"
+    },
+    {
+      "path": "36/image-1749489616-1.jpg",
+      "size": 0.09380245208740234,
+      "strategy": "local"
+    },
+    {
+      "path": "33/image-1749477790-1.jpg",
+      "size": 0.09225749969482422,
+      "strategy": "local"
+    },
+    {
+      "path": "34/IMG_2480.JPG",
+      "size": 0.09000873565673828,
+      "strategy": "local"
+    },
+    {
+      "path": "52/image-1749652884-3.jpg",
+      "size": 0.08694171905517578,
+      "strategy": "local"
+    },
+    {
+      "path": "07/preview.jpg",
+      "size": 0.0789337158203125,
+      "strategy": "local"
+    },
+    {
+      "path": "37/image-1749460204-1.jpg",
+      "size": 0.07763195037841797,
+      "strategy": "local"
+    },
+    {
+      "path": "35/image-1749478320-1.jpg",
+      "size": 0.07362556457519531,
+      "strategy": "local"
+    },
+    {
+      "path": "14/IMG_6288.JPG",
+      "size": 0.07268142700195312,
+      "strategy": "local"
+    },
+    {
+      "path": "35/image-1749478320-2.jpg",
+      "size": 0.07243824005126953,
+      "strategy": "local"
+    },
+    {
+      "path": "52/preview.jpg",
+      "size": 0.0691671371459961,
+      "strategy": "local"
+    },
+    {
+      "path": "14/IMG_6291.JPG",
+      "size": 0.06171417236328125,
+      "strategy": "local"
+    },
+    {
+      "path": "07/image-1749460376-2.jpg",
+      "size": 0.06102180480957031,
+      "strategy": "local"
+    },
+    {
+      "path": "14/IMG_6290.JPG",
+      "size": 0.059966087341308594,
+      "strategy": "local"
+    },
+    {
+      "path": "36/first.jpg",
+      "size": 0.05942058563232422,
+      "strategy": "local"
+    },
+    {
+      "path": "36/preview.jpg",
+      "size": 0.05942058563232422,
+      "strategy": "local"
+    },
+    {
+      "path": "14/IMG_6289.JPG",
+      "size": 0.05782890319824219,
+      "strategy": "local"
+    },
+    {
+      "path": "02/image-1749479668-1.jpg",
+      "size": 0.05763435363769531,
+      "strategy": "local"
+    },
+    {
+      "path": "36/image-1749489616-2.jpg",
+      "size": 0.051769256591796875,
+      "strategy": "local"
+    },
+    {
+      "path": "02/preview.svg",
+      "size": 0.00054168701171875,
+      "strategy": "local"
+    },
+    {
+      "path": "01/preview.svg",
+      "size": 0.0005359649658203125,
+      "strategy": "local"
+    },
+    {
+      "path": "03/preview.svg",
+      "size": 0.0005359649658203125,
+      "strategy": "local"
+    },
+    {
+      "path": "21/MANIFEST.md",
+      "size": 0.00017070770263671875,
+      "strategy": "local"
+    },
+    {
+      "path": "06/MANIFEST.txt",
+      "size": 0.00008296966552734375,
+      "strategy": "local"
+    },
+    {
+      "path": "05/MANIFEST.txt",
+      "size": 0.00007915496826171875,
+      "strategy": "local"
+    },
+    {
+      "path": "14/MANIFEST.txt",
+      "size": 0.0000762939453125,
+      "strategy": "local"
+    },
+    {
+      "path": "02/MANIFEST.txt",
+      "size": 0.00007534027099609375,
+      "strategy": "local"
+    },
+    {
+      "path": "09/MANIFEST.txt",
+      "size": 0.00007534027099609375,
+      "strategy": "local"
+    },
+    {
+      "path": "11/MANIFEST.txt",
+      "size": 0.00007534027099609375,
+      "strategy": "local"
+    },
+    {
+      "path": "12/MANIFEST.txt",
+      "size": 0.00007534027099609375,
+      "strategy": "local"
+    },
+    {
+      "path": "10/MANIFEST.txt",
+      "size": 0.00007343292236328125,
+      "strategy": "local"
+    },
+    {
+      "path": "13/MANIFEST.txt",
+      "size": 0.00007152557373046875,
+      "strategy": "local"
+    },
+    {
+      "path": "04/MANIFEST.txt",
+      "size": 0.0000705718994140625,
+      "strategy": "local"
+    },
+    {
+      "path": "17/MANIFEST.txt",
+      "size": 0.00006771087646484375,
+      "strategy": "local"
+    },
+    {
+      "path": "01/MANIFEST.txt",
+      "size": 0.00006580352783203125,
+      "strategy": "local"
+    },
+    {
+      "path": "18/MANIFEST.txt",
+      "size": 0.00006580352783203125,
+      "strategy": "local"
+    },
+    {
+      "path": "07/MANIFEST.txt",
+      "size": 0.000064849853515625,
+      "strategy": "local"
+    },
+    {
+      "path": "03/MANIFEST.txt",
+      "size": 0.00006103515625,
+      "strategy": "local"
+    },
+    {
+      "path": "08/MANIFEST.txt",
+      "size": 0.00006008148193359375,
+      "strategy": "local"
+    },
+    {
+      "path": "16/MANIFEST.txt",
+      "size": 0.000057220458984375,
+      "strategy": "local"
+    },
+    {
+      "path": "15/MANIFEST.txt",
+      "size": 0.00005245208740234375,
+      "strategy": "local"
+    },
+    {
+      "path": "01/preview.jpg",
+      "size": 0.00001239776611328125,
+      "strategy": "local"
+    }
+  ]
+}
