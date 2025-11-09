@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Cache</title>
+</head>
+<body>
+    <h1>Cache Clearer</h1>
+    <button id="clearBtn">Clear LocalStorage Cache</button>
+    <div id="result"></div>
+    
+    <script>
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            const keys = [
+                'manifestMetaCache:v1:juliecamus',
+                'manifestMetaCache:v2:juliecamus',
+                'manifest:last_refresh_ts',
+                'manifest:last_result'
+            ];
+            
+            keys.forEach(key => {
+                localStorage.removeItem(key);
+            });
+            
+            document.getElementById('result').innerHTML = '<p style="color: green;">✅ Cache cleared! Now reload the main page.</p>';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Load All Media Test</title>
+    <style>
+        body { padding: 20px; font-family: monospace; font-size: 12px; }
+        .item { margin: 5px 0; padding: 5px; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        .pending { background: #fff3cd; }
+    </style>
+</head>
+<body>
+    <h1>Testing All Manifest Items</h1>
+    <div id="results"></div>
+    
+    <script>
+        const results = document.getElementById('results');
+        
+        fetch('/media.manifest.json')
+            .then(r => r.json())
+            .then(manifest => {
+                console.log('Manifest loaded:', manifest.items.length, 'items');
+                
+                manifest.items.forEach((item, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'item pending';
+                    div.innerHTML = `${idx + 1}. ${item.folder}: ${item.title}<br>Preview: ${item.previewUrl}`;
+                    results.appendChild(div);
+                    
+                    // Test preview URL
+                    fetch(item.previewUrl, { method: 'HEAD' })
+                        .then(r => {
+                            if (r.ok) {
+                                div.className = 'item success';
+                                div.innerHTML += `<br>✅ ${r.status} (${r.headers.get('content-type')})`;
+                            } else {
+                                div.className = 'item error';
+                                div.innerHTML += `<br>❌ ${r.status} ${r.statusText}`;
+                            }
+                        })
+                        .catch(e => {
+                            div.className = 'item error';
+                            div.innerHTML += `<br>❌ Error: ${e.message}`;
+                        });
+                });
+            })
+            .catch(e => {
+                results.innerHTML = `<div class="error">Failed to load manifest: ${e.message}</div>`;
+            });
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+---
+title: "Vogue Hong Kong by Alan Gelati"
+tags: ["Vogue", "Magazine"]
+---

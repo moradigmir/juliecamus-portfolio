@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800">
+  <defs>
+    <linearGradient id="grad03" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#9b59b6" />
+      <stop offset="100%" stop-color="#f1c40f" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#grad03)" />
+  <g fill="#ffffff" font-family="'Inter', sans-serif" text-anchor="middle">
+    <text x="50%" y="45%" font-size="54" font-weight="700">Givenchy</text>
+    <text x="50%" y="55%" font-size="32">Le Rouge</text>
+  </g>
+</svg>

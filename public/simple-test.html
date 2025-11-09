@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Media Test</title>
+    <style>
+        body { padding: 20px; font-family: sans-serif; }
+        img, video { max-width: 400px; margin: 10px; border: 2px solid #ccc; }
+        .error { border-color: red; }
+        .success { border-color: green; }
+    </style>
+</head>
+<body>
+    <h1>Direct Media File Test</h1>
+    
+    <h2>Video (should work)</h2>
+    <video controls width="400" id="video1">
+        <source src="/media/hidrive/01/01_short.mp4" type="video/mp4">
+    </video>
+    
+    <h2>Image (should work)</h2>
+    <img id="img1" src="/media/hidrive/02/02_preview.jpg" width="400">
+    
+    <h2>Video 2</h2>
+    <video controls width="400" id="video2">
+        <source src="/media/hidrive/03/03_short.mp4" type="video/mp4">
+    </video>
+    
+    <div id="log"></div>
+    
+    <script>
+        const log = document.getElementById('log');
+        
+        function logMsg(msg) {
+            const p = document.createElement('p');
+            p.textContent = msg;
+            log.appendChild(p);
+        }
+        
+        document.getElementById('video1').addEventListener('loadedmetadata', () => {
+            logMsg('✅ Video 1 loaded');
+            document.getElementById('video1').className = 'success';
+        });
+        
+        document.getElementById('video1').addEventListener('error', (e) => {
+            logMsg('❌ Video 1 error: ' + e.message);
+            document.getElementById('video1').className = 'error';
+        });
+        
+        document.getElementById('img1').addEventListener('load', () => {
+            logMsg('✅ Image loaded');
+            document.getElementById('img1').className = 'success';
+        });
+        
+        document.getElementById('img1').addEventListener('error', (e) => {
+            logMsg('❌ Image error');
+            document.getElementById('img1').className = 'error';
+        });
+        
+        document.getElementById('video2').addEventListener('loadedmetadata', () => {
+            logMsg('✅ Video 2 loaded');
+            document.getElementById('video2').className = 'success';
+        });
+        
+        document.getElementById('video2').addEventListener('error', (e) => {
+            logMsg('❌ Video 2 error: ' + e.message);
+            document.getElementById('video2').className = 'error';
+        });
+        
+        // Test manifest load
+        fetch('/media.manifest.json')
+            .then(r => r.json())
+            .then(data => {
+                logMsg(`✅ Manifest loaded: ${data.items.length} items`);
+                logMsg(`First item: ${data.items[0].title}`);
+                logMsg(`Preview URL: ${data.items[0].previewUrl}`);
+            })
+            .catch(e => logMsg(`❌ Manifest error: ${e.message}`));
+    </script>
+</body>
+</html>

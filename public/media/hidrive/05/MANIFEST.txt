@@ -1,0 +1,4 @@
+---
+title: "Factice Magazine by Anton Zemlyanov"
+tags: ["b&w", "magazine"]
+---
