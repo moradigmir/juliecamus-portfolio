@@ -22,15 +22,31 @@ if "%MAGICK_PATH%"=="" (
 echo Using ImageMagick at: %MAGICK_PATH%
 echo.
 
-REM Compress the large image
-echo Compressing 58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg...
-%MAGICK_PATH% "public/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg" -quality 85 -strip "public/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg.tmp.jpg"
-if exist "public/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg.tmp.jpg" (
-    del "public/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg"
-    rename "public/media/hidrive\58\2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg.tmp.jpg" "2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg"
-    echo ✓ Image compressed
+REM Check if the large image still needs compression
+if exist "public/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg" (
+    echo Compressing 58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg...
+    %MAGICK_PATH% "public/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg" -quality 85 -strip "public/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg.tmp.jpg"
+    if exist "public/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg.tmp.jpg" (
+        del "public/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg"
+        rename "public/media/hidrive\58\2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg.tmp.jpg" "2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg"
+        echo ✓ Image compressed
+    ) else (
+        echo ✗ Failed to compress image
+    )
 ) else (
-    echo ✗ Failed to compress image
+    echo ✓ Image already compressed with Sharp
+)
+
+REM Try to compress the preview file (detect format)
+echo Compressing 58/preview...
+%MAGICK_PATH% "public/media/hidrive/58/preview" -quality 85 -strip "public/media/hidrive/58/preview.tmp"
+if exist "public/media/hidrive/58/preview.tmp" (
+    del "public/media/hidrive/58/preview"
+    rename "public/media/hidrive\58\preview.tmp" "preview"
+    echo ✓ Preview compressed
+) else (
+    echo ✗ Failed to compress preview file
+    echo   Try manual compression with online tools
 )
 
 echo.
