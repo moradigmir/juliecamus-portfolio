@@ -1,0 +1,28 @@
+IMAGE COMPRESSION INSTRUCTIONS
+
+Remaining large files:
+1. 58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg (56.70 MB)
+2. 58/preview (52.86 MB) - this is a binary preview file
+
+Option 1: Use Squoosh (Recommended)
+1. Go to: https://squoosh.app/
+2. Drag and drop the image file
+3. Set quality to 80-85%
+4. Download the compressed image
+5. Replace the original file
+
+Option 2: Use TinyPNG
+1. Go to: https://tinypng.com/
+2. Upload the image
+3. Download the compressed version
+4. Replace the original file
+
+Option 3: Install ImageMagick
+Run: winget install ImageMagick.ImageMagick
+Then run: .\compress-image.bat
+
+After compression:
+Run: npm run build:manifest
+Then: npm run build
+
+The portfolio will be ready for free hosting!
