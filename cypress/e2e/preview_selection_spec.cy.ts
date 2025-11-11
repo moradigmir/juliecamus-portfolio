@@ -12,7 +12,7 @@ describe('Preview File Selection Validation', () => {
     // Test specific folders with known preview files
     const testCases = [
       { folder: '01', expectedFile: '01_short.mp4', title: 'Dior Holiday by Elena Kechicheva' },
-      { folder: '02', expectedFile: 'preview.svg', title: 'Givenchy Beauty by Pascal Ming Hao Lou' },
+      { folder: '02', expectedFile: 'preview.jpg', title: 'Givenchy Beauty by Pascal Ming Hao Lou' },
       { folder: '03', expectedFile: '03_short.mp4', title: 'Givenchy Beauty Le Rouge by Jonathan Elhaik' },
       { folder: '04', expectedFile: 'preview.png', title: 'Schön Magazine' },
       { folder: '06', expectedFile: 'preview.png', title: 'Dior Magazine by Aishwarya Aruum Bekha' },

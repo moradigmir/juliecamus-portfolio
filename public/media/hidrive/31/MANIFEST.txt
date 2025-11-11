@@ -1,0 +1,4 @@
+---
+title: "Harper's Bazar poland by Michal Nadwansky"
+tags: ["Magazine"]
+---

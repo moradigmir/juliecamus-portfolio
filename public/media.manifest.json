@@ -20,11 +20,11 @@
       "orderKey": "02",
       "folder": "02",
       "title": "Givenchy Beauty by Pascal Ming Hao Lou",
-      "previewUrl": "/media/hidrive/02/preview.svg",
+      "previewUrl": "/media/hidrive/02/preview.jpg",
       "previewType": "image",
-      "fullUrl": "/media/hidrive/02/02_preview.jpg",
+      "fullUrl": "/media/hidrive/02/GIV_SC22_DEEPVELVET_BS_DUO_1849_16x9.jpg",
       "fullType": "image",
-      "thumbnailUrl": "/media/hidrive/02/02_preview.jpg",
+      "thumbnailUrl": "/media/hidrive/02/GIV_SC22_DEEPVELVET_BS_DUO_1849_16x9.jpg",
       "meta": {
         "title": "Givenchy Beauty by Pascal Ming Hao Lou",
         "tags": [
@@ -32,7 +32,6 @@
         ]
       },
       "allImages": [
-        "/media/hidrive/02/02_preview.jpg",
         "/media/hidrive/02/GIV_SC22_DEEPVELVET_BS_DUO_1849_16x9.jpg",
         "/media/hidrive/02/GIV_SC22_DISTURBIA_BS_1001_1x1.jpg",
         "/media/hidrive/02/image-1749479668-1.jpg"
@@ -436,14 +435,17 @@
     {
       "orderKey": "24",
       "folder": "24",
-      "title": "Test 24",
+      "title": "Dedicate magazine by Axel Morin",
       "previewUrl": "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
       "meta": {
-        "title": "Test 24"
+        "title": "Dedicate magazine by Axel Morin",
+        "tags": [
+          "Magazine"
+        ]
       },
       "allImages": [
         "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
@@ -454,12 +456,18 @@
     {
       "orderKey": "25",
       "folder": "25",
-      "title": "Portfolio 25",
+      "title": "Dior Jewelry by Melanie + Ramon",
       "previewUrl": "/media/hidrive/25/JGEM95031_1243 copie.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/25/JGEM95031_1243 copie.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/25/JGEM95031_1243 copie.jpg",
+      "meta": {
+        "title": "Dior Jewelry by Melanie + Ramon",
+        "tags": [
+          "Dior"
+        ]
+      },
       "allImages": [
         "/media/hidrive/25/JGEM95031_1243 copie.jpg",
         "/media/hidrive/25/JGEM95036_0539 copie.jpg",
@@ -484,12 +492,19 @@
     {
       "orderKey": "27",
       "folder": "27",
-      "title": "Portfolio 27",
+      "title": "Dior Jewelry by Louise Thornfelt",
       "previewUrl": "/media/hidrive/27/preview.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/27/video-1749482497-1.mp4",
       "fullType": "video",
       "thumbnailUrl": "/media/hidrive/27/image-1749482339-2.jpg",
+      "meta": {
+        "title": "Dior Jewelry by Louise Thornfelt",
+        "tags": [
+          "Dior",
+          "Jewelry"
+        ]
+      },
       "allImages": [
         "/media/hidrive/27/image-1749482339-2.jpg",
         "/media/hidrive/27/image-1749482387-1.jpg",
@@ -499,12 +514,18 @@
     {
       "orderKey": "28",
       "folder": "28",
-      "title": "Portfolio 28",
+      "title": "Scala Regia by Dorothée Murat",
       "previewUrl": "/media/hidrive/28/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/28/Capture d’écran 2025-06-07 à 17.16.56.png",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/28/Capture d’écran 2025-06-07 à 17.16.56.png",
+      "meta": {
+        "title": "Scala Regia by Dorothée Murat",
+        "tags": [
+          "Scala Regia"
+        ]
+      },
       "allImages": [
         "/media/hidrive/28/Capture d’écran 2025-06-07 à 17.16.56.png",
         "/media/hidrive/28/Capture d’écran 2025-06-07 à 18.31.29.png"
@@ -513,12 +534,19 @@
     {
       "orderKey": "29",
       "folder": "29",
-      "title": "Portfolio 29",
+      "title": "Dior Magazine by Priarthna Sing",
       "previewUrl": "/media/hidrive/29/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/29/Capture d’écran 2025-06-07 à 18.38.13.png",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/29/Capture d’écran 2025-06-07 à 18.38.13.png",
+      "meta": {
+        "title": "Dior Magazine by Priarthna Sing",
+        "tags": [
+          "Dior",
+          "Magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/29/Capture d’écran 2025-06-07 à 18.38.13.png",
         "/media/hidrive/29/full.png"
@@ -527,12 +555,18 @@
     {
       "orderKey": "30",
       "folder": "30",
-      "title": "Portfolio 30",
+      "title": "Dior Holiday by Elena Kechicheva",
       "previewUrl": "/media/hidrive/30/Capture d'écran 2025-10-16 185737.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/30/Capture d'écran 2025-10-16 185737.png",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/30/Capture d'écran 2025-10-16 185737.png",
+      "meta": {
+        "title": "Dior Holiday by Elena Kechicheva",
+        "tags": [
+          "Dior"
+        ]
+      },
       "allImages": [
         "/media/hidrive/30/Capture d'écran 2025-10-16 185737.png",
         "/media/hidrive/30/Capture d'écran 2025-10-16 185813.png",
@@ -542,12 +576,18 @@
     {
       "orderKey": "31",
       "folder": "31",
-      "title": "Portfolio 31",
+      "title": "Harper's Bazar poland by Michal Nadwansky",
       "previewUrl": "/media/hidrive/31/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/31/afterclicik.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/31/afterclicik.jpg",
+      "meta": {
+        "title": "Harper's Bazar poland by Michal Nadwansky",
+        "tags": [
+          "Magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/31/Harper_s Bazaar Poland by Michal Radwanski 01.jpg",
         "/media/hidrive/31/Harper_s Bazaar Poland by Michal Radwanski 03.jpg",
@@ -556,14 +596,29 @@
       ]
     },
     {
+      "orderKey": "32",
+      "folder": "32",
+      "title": "Chanel Beauty by Anne Rohart",
+      "previewUrl": "/media/hidrive/32/32_short.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/32/32_long.mp4",
+      "fullType": "video",
+      "meta": {
+        "title": "Chanel Beauty by Anne Rohart"
+      }
+    },
+    {
       "orderKey": "33",
       "folder": "33",
-      "title": "Portfolio 33",
+      "title": "Delvaux by Adrien Toubiane",
       "previewUrl": "/media/hidrive/33/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/33/DELVAUX_SHOT_08_115_RVB.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/33/DELVAUX_SHOT_08_115_RVB.jpg",
+      "meta": {
+        "title": "Delvaux by Adrien Toubiane"
+      },
       "allImages": [
         "/media/hidrive/33/DELVAUX_SHOT_08_115_RVB.jpg",
         "/media/hidrive/33/DELVAUX_SHOT_10_150.jpg",
@@ -573,22 +628,34 @@
     {
       "orderKey": "34",
       "folder": "34",
-      "title": "Portfolio 34",
+      "title": "Dior Le Baume by Anthony Seklaoui",
       "previewUrl": "/media/hidrive/34/preview.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/34/IMG_2480.JPG",
       "fullType": "image",
-      "thumbnailUrl": "/media/hidrive/34/IMG_2480.JPG"
+      "thumbnailUrl": "/media/hidrive/34/IMG_2480.JPG",
+      "meta": {
+        "title": "Dior Le Baume by Anthony Seklaoui",
+        "tags": [
+          "Dior"
+        ]
+      }
     },
     {
       "orderKey": "35",
       "folder": "35",
-      "title": "Portfolio 35",
+      "title": "Dior Homme x Stone Island by Ethan Hart",
       "previewUrl": "/media/hidrive/35/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/35/35.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/35/35.jpg",
+      "meta": {
+        "title": "Dior Homme x Stone Island by Ethan Hart",
+        "tags": [
+          "Dior"
+        ]
+      },
       "allImages": [
         "/media/hidrive/35/35.jpg",
         "/media/hidrive/35/image-1749478221-1.jpg",
@@ -601,12 +668,18 @@
     {
       "orderKey": "36",
       "folder": "36",
-      "title": "Portfolio 36",
+      "title": "Numero Magazine by Setphane Gigand",
       "previewUrl": "/media/hidrive/36/preview.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/36/first.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/36/first.jpg",
+      "meta": {
+        "title": "Numero Magazine by Setphane Gigand",
+        "tags": [
+          "Magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/36/first.jpg",
         "/media/hidrive/36/image-1749489616-1.jpg",
@@ -617,12 +690,18 @@
     {
       "orderKey": "37",
       "folder": "37",
-      "title": "Portfolio 37",
+      "title": "Dior Gold by Elena Kechicheva",
       "previewUrl": "/media/hidrive/37/preview.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/37/afer_click.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/37/afer_click.jpg",
+      "meta": {
+        "title": "Dior Gold by Elena Kechicheva",
+        "tags": [
+          "Dior"
+        ]
+      },
       "allImages": [
         "/media/hidrive/37/IMG_5790.jpg",
         "/media/hidrive/37/afer_click.jpg",
@@ -632,12 +711,19 @@
     {
       "orderKey": "38",
       "folder": "38",
-      "title": "Portfolio 38",
+      "title": "Gala by Rasmus Morgensen",
       "previewUrl": "/media/hidrive/38/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.12.13.png",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.12.13.png",
+      "meta": {
+        "title": "Gala by Rasmus Morgensen",
+        "tags": [
+          "Gala",
+          "Magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.12.13.png",
         "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.13.23.png",
@@ -648,30 +734,48 @@
     {
       "orderKey": "39",
       "folder": "39",
-      "title": "Portfolio 39",
+      "title": "Dior Gold by Elena Kechicheva",
       "previewUrl": "/media/hidrive/39/video-1749460781-1.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/39/video-1749460781-1.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Gold by Elena Kechicheva",
+        "tags": [
+          "Dior"
+        ]
+      }
     },
     {
       "orderKey": "40",
       "folder": "40",
-      "title": "Portfolio 40",
+      "title": "Dior Holiday by Elena Kechicheva",
       "previewUrl": "/media/hidrive/40/DIOR HOLIDY NEIGE BY ELINA KECHICHEVA.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/40/DIOR HOLIDY NEIGE BY ELINA KECHICHEVA.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Holiday by Elena Kechicheva",
+        "tags": [
+          "Dior"
+        ]
+      }
     },
     {
       "orderKey": "41",
       "folder": "41",
-      "title": "Portfolio 41",
+      "title": "Crush Magazine by Emma Picq",
       "previewUrl": "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.09.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.09.png",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.09.png",
+      "meta": {
+        "title": "Crush Magazine by Emma Picq",
+        "tags": [
+          "Magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.09.png",
         "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.25.png",
@@ -681,39 +785,61 @@
     {
       "orderKey": "42",
       "folder": "42",
-      "title": "Portfolio 42",
+      "title": "Dior Holiday by Elena Kechicheva",
       "previewUrl": "/media/hidrive/42/DIOR HOLIDAY BY ELINA KECHICHEVA.MP4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/42/DIOR HOLIDAY BY ELINA KECHICHEVA.MP4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Holiday by Elena Kechicheva",
+        "tags": [
+          "Dior"
+        ]
+      }
     },
     {
       "orderKey": "43",
       "folder": "43",
-      "title": "Portfolio 43",
+      "title": "Givenchy Beauty by Jonathan Elhaik",
       "previewUrl": "/media/hidrive/43/GIVENCHY LE ROUGE INTERDIT.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/43/GIVENCHY LE ROUGE INTERDIT.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Givenchy Beauty by Jonathan Elhaik",
+        "tags": [
+          "Givenchy",
+          "Beauty"
+        ]
+      }
     },
     {
       "orderKey": "44",
       "folder": "44",
-      "title": "Portfolio 44",
+      "title": "Chanel Beauty by Anairam",
       "previewUrl": "/media/hidrive/44/chanel beauty by anairam lips x.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/44/chanel beauty by anairam lips x.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Chanel Beauty by Anairam"
+      }
     },
     {
       "orderKey": "45",
       "folder": "45",
-      "title": "Portfolio 45",
+      "title": "Armani Beauty by Tom Newton",
       "previewUrl": "/media/hidrive/45/IMG_6280.JPG",
       "previewType": "image",
       "fullUrl": "/media/hidrive/45/IMG_6280.JPG",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/45/IMG_6280.JPG",
+      "meta": {
+        "title": "Armani Beauty by Tom Newton",
+        "tags": [
+          "Armani"
+        ]
+      },
       "allImages": [
         "/media/hidrive/45/IMG_6280.JPG",
         "/media/hidrive/45/IMG_6282.JPG",
@@ -725,66 +851,98 @@
     {
       "orderKey": "46",
       "folder": "46",
-      "title": "Portfolio 46",
+      "title": "160g by Benjamin Armand",
       "previewUrl": "/media/hidrive/46/160g by Benjamin Armand.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/46/160g by Benjamin Armand.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "160g by Benjamin Armand",
+        "tags": [
+          "Magazine"
+        ]
+      }
     },
     {
       "orderKey": "47",
       "folder": "47",
-      "title": "Portfolio 47",
+      "title": "Dom Perignon by Woodkid",
       "previewUrl": "/media/hidrive/47/domperignonby woodkid.MP4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/47/domperignonby woodkid.MP4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Dom Perignon by Woodkid"
+      }
     },
     {
       "orderKey": "48",
       "folder": "48",
-      "title": "Portfolio 48",
+      "title": "Scala Regia by Dorothée Murat",
       "previewUrl": "/media/hidrive/48/Scala Regia by Dorothée Murail.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/48/Scala Regia by Dorothée Murail.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Scala Regia by Dorothée Murat"
+      }
     },
     {
       "orderKey": "49",
       "folder": "49",
-      "title": "Portfolio 49",
+      "title": "Givenchy Beauty by Jonathan Elhaik",
       "previewUrl": "/media/hidrive/49/GIVENCHY BEAUTY PRISME LIBRE.MP4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/49/GIVENCHY BEAUTY PRISME LIBRE.MP4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Givenchy Beauty by Jonathan Elhaik",
+        "tags": [
+          "Givenchy",
+          "Beauty"
+        ]
+      }
     },
     {
       "orderKey": "50",
       "folder": "50",
-      "title": "Portfolio 50",
+      "title": "Chanel Beauty by Anairam",
       "previewUrl": "/media/hidrive/50/50.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/50/50.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Chanel Beauty by Anairam",
+        "tags": [
+          "Chanel",
+          "Beauty"
+        ]
+      }
     },
     {
       "orderKey": "51",
       "folder": "51",
-      "title": "Portfolio 51",
+      "title": "Dior Jewelry Show",
       "previewUrl": "/media/hidrive/51/video-1749482497-1.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/51/video-1749482497-1.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Jewelry Show"
+      }
     },
     {
       "orderKey": "52",
       "folder": "52",
-      "title": "Portfolio 52",
+      "title": "Falke by Jacob Sutton",
       "previewUrl": "/media/hidrive/52/preview.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/52/image-1749652884-1.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/52/image-1749652884-1.jpg",
+      "meta": {
+        "title": "Falke by Jacob Sutton"
+      },
       "allImages": [
         "/media/hidrive/52/image-1749652884-1.jpg",
         "/media/hidrive/52/image-1749652884-3.jpg"
@@ -793,48 +951,63 @@
     {
       "orderKey": "53",
       "folder": "53",
-      "title": "Portfolio 53",
+      "title": "Chanel Beauty by Anne Rohart",
       "previewUrl": "/media/hidrive/53/53.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/53/53.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Chanel Beauty by Anne Rohart"
+      }
     },
     {
       "orderKey": "54",
       "folder": "54",
-      "title": "Portfolio 54",
+      "title": "Borders Saint John x Lenny Kravitz by Mathieu César",
       "previewUrl": "/media/hidrive/54/54.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/54/54.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Borders Saint John x Lenny Kravitz by Mathieu César"
+      }
     },
     {
       "orderKey": "55",
       "folder": "55",
-      "title": "Portfolio 55",
+      "title": "Givenchy Beauty by Jonathan Elhaik",
       "previewUrl": "/media/hidrive/55/video-1760636399-1.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/55/video-1760636399-1.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Givenchy Beauty by Jonathan Elhaik"
+      }
     },
     {
       "orderKey": "56",
       "folder": "56",
-      "title": "Portfolio 56",
+      "title": "RAD x Nekfeu",
       "previewUrl": "/media/hidrive/56/56.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/56/56.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "RAD x Nekfeu"
+      }
     },
     {
       "orderKey": "57",
       "folder": "57",
-      "title": "Portfolio 57",
+      "title": "Marie Claire International by Daniel Midense",
       "previewUrl": "/media/hidrive/57/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 01.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 01.jpg",
+      "meta": {
+        "title": "Marie Claire International by Daniel Midense"
+      },
       "allImages": [
         "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 01.jpg",
         "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 04.jpg",
@@ -845,12 +1018,15 @@
     {
       "orderKey": "58",
       "folder": "58",
-      "title": "Portfolio 58",
+      "title": "Dior Jewelry by Anya Holdstock",
       "previewUrl": "/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
+      "meta": {
+        "title": "Dior Jewelry by Anya Holdstock"
+      },
       "allImages": [
         "/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
         "/media/hidrive/58/IMG_6238.JPG",
@@ -860,12 +1036,15 @@
     {
       "orderKey": "59",
       "folder": "59",
-      "title": "Portfolio 59",
+      "title": "Dedicate Magazine by Dimitri Dimitriacacos",
       "previewUrl": "/media/hidrive/59/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/59/Capture d'écran 2025-10-16 194709.png",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/59/Capture d'écran 2025-10-16 194709.png",
+      "meta": {
+        "title": "Dedicate Magazine by Dimitri Dimitriacacos"
+      },
       "allImages": [
         "/media/hidrive/59/Capture d'écran 2025-10-16 194709.png",
         "/media/hidrive/59/Capture d’écran 2025-06-07 à 17.20.58.png",
@@ -876,46 +1055,58 @@
     {
       "orderKey": "60",
       "folder": "60",
-      "title": "Portfolio 60",
+      "title": "Dior Holiday Jewelry by Anya Holdstock",
       "previewUrl": "/media/hidrive/60/DIOR_JEWELS_NOEL_23_MAIN_FILM_1-1_VA_20231107 copie.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/60/DIOR_JEWELS_NOEL_23_MAIN_FILM_1-1_VA_20231107 copie.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Holiday Jewelry by Anya Holdstock"
+      }
     },
     {
       "orderKey": "61",
       "folder": "61",
-      "title": "Portfolio 61",
+      "title": "Dior Jewelry Eden Rock by Markn",
       "previewUrl": "/media/hidrive/61/preview.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/61/image-1757179966-1.jpg",
       "fullType": "image",
-      "thumbnailUrl": "/media/hidrive/61/image-1757179966-1.jpg"
+      "thumbnailUrl": "/media/hidrive/61/image-1757179966-1.jpg",
+      "meta": {
+        "title": "Dior Jewelry Eden Rock by Markn"
+      }
     },
     {
       "orderKey": "62",
       "folder": "62",
-      "title": "Portfolio 62",
+      "title": "Dior Jewelry Eden Rock by Markn",
       "previewUrl": "/media/hidrive/62/62.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/62/62.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Jewelry Eden Rock by Markn"
+      }
     },
     {
       "orderKey": "63",
       "folder": "63",
-      "title": "Portfolio 63",
+      "title": "Dior Jewelry Eden Rock by Markn",
       "previewUrl": "/media/hidrive/63/preview.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/63/image-1757180026-5.jpg",
       "fullType": "image",
       "thumbnailUrl": "/media/hidrive/63/image-1757180026-5.jpg",
+      "meta": {
+        "title": "Dior Jewelry Eden Rock by Markn"
+      },
       "allImages": [
         "/media/hidrive/63/image-1757180026-5.jpg",
         "/media/hidrive/63/image-1757180026-6.jpg"
       ]
     }
   ],
-  "generatedAt": "2025-11-11T15:37:31.640Z",
+  "generatedAt": "2025-11-11T16:32:28.566Z",
   "source": "local"
 }

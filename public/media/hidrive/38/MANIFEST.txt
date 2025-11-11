@@ -1,0 +1,4 @@
+---
+title: "Gala by Rasmus Morgensen"
+tags: ["Gala", "Magazine"]
+---

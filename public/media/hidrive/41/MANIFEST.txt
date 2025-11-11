@@ -1,0 +1,4 @@
+---
+title: "Crush Magazine by Emma Picq"
+tags: ["Magazine"]
+---

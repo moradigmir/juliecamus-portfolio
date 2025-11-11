@@ -1,3 +1,4 @@
 ---
-title: "Test 24"
+title: "Dedicate magazine by Axel Morin"
+tags: ["Magazine"]
 ---
