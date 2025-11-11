@@ -3,8 +3,8 @@ import Navigation from "../components/Navigation";
 import juliePortfolio from "@/assets/julie-portfolio-preview.png";
 const About = () => {
   const base = import.meta.env.BASE_URL || "/";
-  // Generate logos array for all 57 processed logos
-  const logos = Array.from({ length: 57 }, (_, i) => ({
+  // Generate logos array for all 56 processed logos
+  const logos = Array.from({ length: 56 }, (_, i) => ({
     src: `${base}logos/logo-${String(i + 1).padStart(3, '0')}.png`,
     alt: `Client ${i + 1}`
   }));
