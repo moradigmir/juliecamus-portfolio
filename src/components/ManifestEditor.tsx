@@ -14,7 +14,6 @@ import {
   type ManifestMetadata 
 } from '@/lib/manifestEditor';
 import { clearMetaCache } from '@/lib/metaCache';
-import { toProxy } from '@/lib/hidrive';
 import type { MediaItem } from '@/hooks/useMediaIndex';
 
 interface ManifestEditorProps {
@@ -168,6 +167,12 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
       // Clear cache and trigger refresh
       clearMetaCache('juliecamus');
       onSave();
+      
+      // Reload data from saved files to show updated values
+      await refreshFromFiles();
+      
+      // Trigger global refresh event so MasonryGrid can update
+      window.dispatchEvent(new CustomEvent('manifestUpdated'));
     } else {
       toast({
         title: 'Partial Success',
@@ -177,7 +182,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
     }
   };
 
-  const refreshFromHiDrive = async () => {
+  const refreshFromFiles = async () => {
     setIsLoadingAll(true);
     
     for (let i = 0; i < folders.length; i++) {
@@ -205,7 +210,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
     setIsLoadingAll(false);
     toast({
       title: 'Refreshed',
-      description: 'Loaded latest metadata from HiDrive.',
+      description: 'Loaded latest metadata from files.',
     });
   };
 
@@ -241,7 +246,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={refreshFromHiDrive}
+                    onClick={refreshFromFiles}
                     disabled={isLoadingAll}
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
@@ -277,6 +282,7 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
                   return (
                     <div
                       key={folder.folder}
+                      data-folder={folder.folder}
                       className={`p-4 rounded-lg border transition-all ${
                         isPreviewActive 
                           ? 'border-primary bg-primary/5 shadow-md' 
@@ -393,17 +399,17 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
                     {/* Media Content */}
                     {previewMediaItem.previewType === 'video' ? (
                       <video
-                        src={toProxy(previewMediaItem.previewUrl)}
+                        src={previewMediaItem.previewUrl}
                         className="w-full h-full object-cover"
                         autoPlay
                         muted
                         loop
                         playsInline
-                        poster={previewMediaItem.thumbnailUrl ? toProxy(previewMediaItem.thumbnailUrl) : '/placeholder.svg'}
+                        poster={previewMediaItem.thumbnailUrl || '/placeholder.svg'}
                       />
                     ) : (
                       <img
-                        src={toProxy(previewMediaItem.previewUrl)}
+                        src={previewMediaItem.previewUrl}
                         alt={previewFolder.title}
                         className="w-full h-full object-cover"
                       />
@@ -493,18 +499,18 @@ export default function ManifestEditor({ open, onOpenChange, mediaItems, onSave 
               <div className="w-full h-full flex items-center justify-center">
                 {previewMediaItem.previewType === 'video' ? (
                   <video
-                    src={toProxy(previewMediaItem.fullUrl || previewMediaItem.previewUrl)}
+                    src={previewMediaItem.fullUrl || previewMediaItem.previewUrl}
                     className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                     autoPlay
                     muted
                     loop
                     playsInline
                     controls
-                    poster={previewMediaItem.thumbnailUrl ? toProxy(previewMediaItem.thumbnailUrl) : '/placeholder.svg'}
+                    poster={previewMediaItem.thumbnailUrl || '/placeholder.svg'}
                   />
                 ) : (
                   <img
-                    src={toProxy(previewMediaItem.fullUrl || previewMediaItem.previewUrl)}
+                    src={previewMediaItem.fullUrl || previewMediaItem.previewUrl}
                     alt={previewFolder.title}
                     className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                   />

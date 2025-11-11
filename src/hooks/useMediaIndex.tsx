@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, SetStateAction, Dispatch } from 'react';
-import { detectSupabaseIssueFromResponse } from '@/lib/projectHealth';
 import { findPreviewForFolder, findPosterForFolder, findFirstVideoForFolder, probeStream, getFolderMetadata, toProxyStrict, persistFolderMetaToCache } from '@/lib/hidrive';
 import { loadMetaCache, saveMetaCache, Meta as ManifestMeta } from '@/lib/metaCache';
 
@@ -161,12 +160,7 @@ export const useMediaIndex = (): UseMediaIndexReturn => {
         emit('MANIFEST','manifest_fetch_fail', { status: response.status });
         console.warn('MANIFEST_FETCH_FAILED', { status: response.status });
         __safeDiag('MANIFEST', 'manifest_fetch_failed', { status: response.status });
-        // Check if this looks like a Supabase issue
-        const contentType = response.headers.get('content-type') || '';
-        if (detectSupabaseIssueFromResponse(response.status, contentType)) {
-          setIsSupabasePaused(true);
-        }
-        // continue gracefully; discovery can still run
+        // continue gracefully
       }
       
       const manifest = response.ok ? await response.json().catch(() => null) : null;

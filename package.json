@@ -13,7 +13,7 @@
     "test:headless": "cypress run",
     "optimize:media": "tsx scripts/optimizeMediaSimple.ts",
     "report:large-media": "tsx scripts/reportLargeMedia.ts",
-    "build:manifest": "tsx scripts/buildMediaManifest.ts",
+    "build:manifest": "tsx scripts/buildLocalManifest.ts",
     "compress:images": "tsx scripts/compressImages.ts",
     "compress": "node compress-for-deploy.cjs",
     "deploy": "node deploy.cjs",

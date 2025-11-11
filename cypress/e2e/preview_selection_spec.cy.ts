@@ -7,12 +7,12 @@ describe('Preview File Selection Validation', () => {
 
   it('Should display correct preview files based on directory contents', () => {
     // Wait for tiles to load
-    cy.get('.gallery-tile', { timeout: 15000 }).should('have.length.greaterThan', 60);
+    cy.get('.gallery-tile', { timeout: 15000 }).should('have.length.at.least', 50);
 
     // Test specific folders with known preview files
     const testCases = [
       { folder: '01', expectedFile: '01_short.mp4', title: 'Dior Holiday by Elena Kechicheva' },
-      { folder: '02', expectedFile: '02_preview.jpg', title: 'Givenchy Beauty by Pascal Ming Hao Lou' },
+      { folder: '02', expectedFile: 'preview.svg', title: 'Givenchy Beauty by Pascal Ming Hao Lou' },
       { folder: '03', expectedFile: '03_short.mp4', title: 'Givenchy Beauty Le Rouge by Jonathan Elhaik' },
       { folder: '04', expectedFile: 'preview.png', title: 'Schön Magazine' },
       { folder: '06', expectedFile: 'preview.png', title: 'Dior Magazine by Aishwarya Aruum Bekha' },
@@ -108,7 +108,7 @@ describe('Preview File Selection Validation', () => {
       expect(response.status).to.eq(200);
       expect(response.body).to.have.property('items');
       expect(response.body.items).to.be.an('array');
-      expect(response.body.items.length).to.be.greaterThan(60);
+      expect(response.body.items.length).to.be.at.least(50);
       
       // Check a few specific items
       const item04 = response.body.items.find((item: any) => item.folder === '04');

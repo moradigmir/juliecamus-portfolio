@@ -1,5 +1,4 @@
 // Manifest file editor utilities
-import { toProxy } from './hidrive';
 
 export interface ManifestMetadata {
   title?: string;
@@ -64,7 +63,7 @@ export function parseManifestContent(content: string): ManifestMetadata {
 }
 
 /**
- * Save MANIFEST.txt file to HiDrive via hidrive-proxy
+ * Save MANIFEST.txt file via local API
  */
 export async function saveManifestFile(
   folderPath: string,
@@ -72,13 +71,14 @@ export async function saveManifestFile(
   owner: string = 'juliecamus'
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const manifestPath = `${folderPath}/MANIFEST.txt`;
+    // Extract folder number from path like /public/26
+    const folderMatch = folderPath.match(/\/(\d+)$/);
+    if (!folderMatch) {
+      return { success: false, error: 'Invalid folder path format' };
+    }
     
-    // Use the hidrive-proxy PUT endpoint
-    const proxyUrl = toProxy(manifestPath);
-    const url = new URL(proxyUrl);
-    
-    const response = await fetch(url.toString(), {
+    const folder = folderMatch[1];
+    const response = await fetch(`/api/manifest/${folder}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'text/plain',
@@ -87,14 +87,15 @@ export async function saveManifestFile(
     });
 
     if (!response.ok) {
-      const text = await response.text();
+      const result = await response.json();
       return { 
         success: false, 
-        error: `HTTP ${response.status}: ${text || response.statusText}` 
+        error: result.error || `HTTP ${response.status}` 
       };
     }
 
-    return { success: true };
+    const result = await response.json();
+    return result;
   } catch (error) {
     console.error('Failed to save manifest file:', error);
     return { 
@@ -105,34 +106,71 @@ export async function saveManifestFile(
 }
 
 /**
- * Fetch existing MANIFEST.txt content from HiDrive
+ * Fetch existing MANIFEST.txt content via local API
  */
 export async function fetchManifestFile(
   folderPath: string,
   owner: string = 'juliecamus'
 ): Promise<{ success: boolean; content?: string; error?: string }> {
   try {
-    const manifestPath = `${folderPath}/MANIFEST.txt`;
-    const proxyUrl = toProxy(manifestPath);
-    
-    const response = await fetch(proxyUrl);
-
-    if (response.status === 404) {
-      // File doesn't exist, return empty content
-      return { success: true, content: '' };
+    // Extract folder number from path like /public/26
+    const folderMatch = folderPath.match(/\/(\d+)$/);
+    if (!folderMatch) {
+      return { success: false, error: 'Invalid folder path format' };
     }
+    
+    const folder = folderMatch[1];
+    const response = await fetch(`/api/manifest/${folder}`);
 
     if (!response.ok) {
+      const result = await response.json();
       return { 
         success: false, 
-        error: `HTTP ${response.status}: ${response.statusText}` 
+        error: result.error || `HTTP ${response.status}` 
       };
     }
 
-    const content = await response.text();
-    return { success: true, content };
+    const result = await response.json();
+    return result;
   } catch (error) {
     console.error('Failed to fetch manifest file:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+/**
+ * Delete MANIFEST.txt file via local API
+ */
+export async function deleteManifestFile(
+  folderPath: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Extract folder number from path like /public/26
+    const folderMatch = folderPath.match(/\/(\d+)$/);
+    if (!folderMatch) {
+      return { success: false, error: 'Invalid folder path format' };
+    }
+    
+    const folder = folderMatch[1];
+    const response = await fetch(`/api/manifest/${folder}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      return { 
+        success: false, 
+        error: result.error || `HTTP ${response.status}` 
+      };
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Failed to delete manifest file:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

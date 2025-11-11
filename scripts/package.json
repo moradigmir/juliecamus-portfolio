@@ -6,6 +6,6 @@
     "tsx": "^4.7.0"
   },
   "scripts": {
-    "build-media": "tsx buildMediaManifest.ts"
+    "build-media": "tsx buildLocalManifest.ts"
   }
 }

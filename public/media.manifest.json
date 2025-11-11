@@ -7,31 +7,36 @@
       "previewUrl": "/media/hidrive/01/01_short.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/01/01_long.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "thumbnailUrl": "/media/hidrive/01/preview.jpg",
+      "meta": {
+        "title": "Dior Holiday by Elena Kechicheva",
+        "tags": [
+          "Dior"
+        ]
+      }
     },
     {
       "orderKey": "02",
       "folder": "02",
       "title": "Givenchy Beauty by Pascal Ming Hao Lou",
-      "previewUrl": "/media/hidrive/02/02_preview.jpg",
+      "previewUrl": "/media/hidrive/02/preview.svg",
       "previewType": "image",
-      "fullUrl": "/media/hidrive/02/GIV_SC22_DEEPVELVET_BS_DUO_1849_16x9.jpg",
+      "fullUrl": "/media/hidrive/02/02_preview.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/02/02_preview.jpg",
+      "meta": {
+        "title": "Givenchy Beauty by Pascal Ming Hao Lou",
+        "tags": [
+          "Givenchy"
+        ]
+      },
       "allImages": [
         "/media/hidrive/02/02_preview.jpg",
         "/media/hidrive/02/GIV_SC22_DEEPVELVET_BS_DUO_1849_16x9.jpg",
         "/media/hidrive/02/GIV_SC22_DISTURBIA_BS_1001_1x1.jpg",
         "/media/hidrive/02/image-1749479668-1.jpg"
       ]
-    },
-    {
-      "orderKey": "03",
-      "folder": "03",
-      "title": "Givenchy Beauty Le Rouge by Jonathan Elhaik",
-      "previewUrl": "/media/hidrive/03/03_short.mp4",
-      "previewType": "video",
-      "fullUrl": "/media/hidrive/03/03_short.mp4",
-      "fullType": "video"
     },
     {
       "orderKey": "04",
@@ -41,6 +46,15 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/04/01.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/04/01.png",
+      "meta": {
+        "title": "Schön Magazine",
+        "tags": [
+          "fashion",
+          "magazine",
+          "b&w"
+        ]
+      },
       "allImages": [
         "/media/hidrive/04/01.png",
         "/media/hidrive/04/Capture d’écran 2025-06-07 à 17.18.39.png",
@@ -56,6 +70,14 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/05/Factice by Anton Zemlyanoy 01 copie.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/05/Factice by Anton Zemlyanoy 01 copie.jpg",
+      "meta": {
+        "title": "Factice Magazine by Anton Zemlyanov",
+        "tags": [
+          "b&w",
+          "magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/05/Factice by Anton Zemlyanoy 01 copie.jpg",
         "/media/hidrive/05/Factice by Anton Zemlyanoy 02 copie.jpg",
@@ -70,6 +92,14 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/06/Capture d’écran 2025-06-07 à 18.42.29.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/06/Capture d’écran 2025-06-07 à 18.42.29.png",
+      "meta": {
+        "title": "Dior Magazine by Aishwarya Aruum Bekha",
+        "tags": [
+          "Dior",
+          "Magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/06/Capture d’écran 2025-06-07 à 18.42.29.png",
         "/media/hidrive/06/Capture d’écran 2025-06-07 à 18.42.43.png",
@@ -85,11 +115,18 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/07/image-1749460307-3.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/07/image-1749460307-3.jpg",
+      "meta": {
+        "title": "Dior Jewelry by Melanie + Ramon",
+        "tags": [
+          "Dior"
+        ]
+      },
       "allImages": [
+        "/media/hidrive/07/SET-2_MY_DIOR_0123.jpg",
         "/media/hidrive/07/image-1749460307-3.jpg",
         "/media/hidrive/07/image-1749460376-2.jpg",
-        "/media/hidrive/07/image-1749460467-1.jpg",
-        "/media/hidrive/07/SET-2_MY_DIOR_0123.jpg"
+        "/media/hidrive/07/image-1749460467-1.jpg"
       ]
     },
     {
@@ -99,7 +136,14 @@
       "previewUrl": "/media/hidrive/08/Chanel Beauty by Anairam 13 copie.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/08/Chanel Beauty by Anairam 13 copie.jpg",
-      "fullType": "image"
+      "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/08/Chanel Beauty by Anairam 13 copie.jpg",
+      "meta": {
+        "title": "Chanel Beauty by Anairam",
+        "tags": [
+          "Chanel"
+        ]
+      }
     },
     {
       "orderKey": "09",
@@ -108,7 +152,14 @@
       "previewUrl": "/media/hidrive/09/PARURE_03_EDIT_CARRE_v4 ETALO.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/09/PARURE_03_EDIT_CARRE_v4 ETALO.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Jewelry by Melanie + Ramon",
+        "tags": [
+          "Dior",
+          "Jewelry"
+        ]
+      }
     },
     {
       "orderKey": "10",
@@ -117,7 +168,14 @@
       "previewUrl": "/media/hidrive/10/DIOR LE BAUME by axel morin.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/10/DIOR LE BAUME by axel morin.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Le baume by Axel Morin",
+        "tags": [
+          "Dior",
+          "Cosmetics"
+        ]
+      }
     },
     {
       "orderKey": "11",
@@ -127,6 +185,13 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/11/11.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/11/11.jpg",
+      "meta": {
+        "title": "Givenchy Beauty by Pascal Ming Hao Lou",
+        "tags": [
+          "Givenchy"
+        ]
+      },
       "allImages": [
         "/media/hidrive/11/11.jpg",
         "/media/hidrive/11/GIV_MAKEUP_LE9_N5_BS_4448-V7_1X1.jpg"
@@ -140,6 +205,13 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/12/12.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/12/12.jpg",
+      "meta": {
+        "title": "Givenchy Beauty by Pascal Ming Hao Lou",
+        "tags": [
+          "Givenchy"
+        ]
+      },
       "allImages": [
         "/media/hidrive/12/12.jpg",
         "/media/hidrive/12/GIV_SC22_ROSEPERFECTO_BS_1555_4x5.jpg",
@@ -155,6 +227,13 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/13/13.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/13/13.jpg",
+      "meta": {
+        "title": "Zadig & Voltaire by Melissa de Araujo",
+        "tags": [
+          "Zadig"
+        ]
+      },
       "allImages": [
         "/media/hidrive/13/13.jpg",
         "/media/hidrive/13/Capture d'écran 2025-10-03 171007.png",
@@ -170,6 +249,14 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/14/14.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/14/14.png",
+      "meta": {
+        "title": "Vogue Hong Kong by Alan Gelati",
+        "tags": [
+          "Vogue",
+          "Magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/14/14.png",
         "/media/hidrive/14/IMG_6288.JPG",
@@ -184,8 +271,12 @@
       "title": "1stant Magazine by Thierry Lebraly",
       "previewUrl": "/media/hidrive/15/15_preview.png",
       "previewType": "image",
-      "fullUrl": "/media/hidrive/15/Capture d’écran 2025-06-07 à 17.04.15.png",
+      "fullUrl": "/media/hidrive/15/15_preview.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/15/15_preview.png",
+      "meta": {
+        "title": "1stant Magazine by Thierry Lebraly"
+      },
       "allImages": [
         "/media/hidrive/15/15_preview.png",
         "/media/hidrive/15/Capture d’écran 2025-06-07 à 17.04.15.png",
@@ -202,6 +293,13 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/16/00_a_afficher.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/16/00_a_afficher.jpg",
+      "meta": {
+        "title": "Dior Fall by Tess Ayano",
+        "tags": [
+          "Dior"
+        ]
+      },
       "allImages": [
         "/media/hidrive/16/00_a_afficher.jpg",
         "/media/hidrive/16/dior fall 2 copie.jpeg",
@@ -211,15 +309,6 @@
       ]
     },
     {
-      "orderKey": "17",
-      "folder": "17",
-      "title": "Dior Holiday by Agnès Lloyd Platt",
-      "previewUrl": "/media/hidrive/17/17_short.mp4",
-      "previewType": "video",
-      "fullUrl": "/media/hidrive/17/17_short.mp4",
-      "fullType": "video"
-    },
-    {
       "orderKey": "18",
       "folder": "18",
       "title": "Dior Holiday by Elina Kechicheva",
@@ -227,6 +316,13 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/18/IMG_6267.JPG",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/18/IMG_6267.JPG",
+      "meta": {
+        "title": "Dior Holiday by Elina Kechicheva",
+        "tags": [
+          "Dior"
+        ]
+      },
       "allImages": [
         "/media/hidrive/18/IMG_6267.JPG",
         "/media/hidrive/18/IMG_6269.JPG",
@@ -237,35 +333,56 @@
     {
       "orderKey": "19",
       "folder": "19",
-      "title": "Portfolio 19",
+      "title": "Dior Holiday by Agnès Lloyd Platt",
       "previewUrl": "/media/hidrive/19/231011_Dior_Christmas_11_007_CMYK_FULL FRAME.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/19/231011_Dior_Christmas_11_007_CMYK_FULL FRAME.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/19/231011_Dior_Christmas_11_007_CMYK_FULL FRAME.jpg",
+      "meta": {
+        "title": "Dior Holiday by Agnès Lloyd Platt",
+        "tags": [
+          "Dior"
+        ]
+      },
       "allImages": [
         "/media/hidrive/19/231011_Dior_Christmas_11_007_CMYK_FULL FRAME.jpg",
+        "/media/hidrive/19/IMG_6245.JPG",
         "/media/hidrive/19/image-1749481898-3.jpg",
-        "/media/hidrive/19/image-1749481956-1.jpg",
-        "/media/hidrive/19/IMG_6245.JPG"
+        "/media/hidrive/19/image-1749481956-1.jpg"
       ]
     },
     {
       "orderKey": "20",
       "folder": "20",
-      "title": "Portfolio 20",
+      "title": "Chanel Beauty by Barnaby Roper",
       "previewUrl": "/media/hidrive/20/Chanel  beauty by Barnaby Roper.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/20/Chanel  beauty by Barnaby Roper.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Chanel Beauty by Barnaby Roper",
+        "tags": [
+          "Chanel",
+          "Beauty"
+        ]
+      }
     },
     {
       "orderKey": "21",
       "folder": "21",
-      "title": "Portfolio 21",
+      "title": "Dior Gold by Amina Zaher",
       "previewUrl": "/media/hidrive/21/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/21/0_a_afficher_en_premier.JPG",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/21/0_a_afficher_en_premier.JPG",
+      "meta": {
+        "title": "Dior Gold by Amina Zaher",
+        "tags": [
+          "Dior"
+        ]
+      },
       "allImages": [
         "/media/hidrive/21/0_a_afficher_en_premier.JPG",
         "/media/hidrive/21/231221_DIOR_OR_WOMEN_A_ZAHER_05_052.jpg",
@@ -276,11 +393,18 @@
     {
       "orderKey": "22",
       "folder": "22",
-      "title": "Portfolio 22",
+      "title": "160g magazine by Marc Hervouet",
       "previewUrl": "/media/hidrive/22/preview.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/22/Capture d'écran 2025-10-03 173225.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/22/Capture d'écran 2025-10-03 173225.png",
+      "meta": {
+        "title": "160g magazine by Marc Hervouet",
+        "tags": [
+          "Magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/22/Capture d'écran 2025-10-03 173225.png",
         "/media/hidrive/22/Capture d’écran 2025-06-07 à 16.50.51.png",
@@ -290,11 +414,18 @@
     {
       "orderKey": "23",
       "folder": "23",
-      "title": "Portfolio 23",
+      "title": "Crush Magazine by Nicolas Wagner",
       "previewUrl": "/media/hidrive/23/23.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/23/23.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/23/23.png",
+      "meta": {
+        "title": "Crush Magazine by Nicolas Wagner",
+        "tags": [
+          "Magazine"
+        ]
+      },
       "allImages": [
         "/media/hidrive/23/23.png",
         "/media/hidrive/23/Capture d'écran 2025-10-03 173436.png",
@@ -305,11 +436,15 @@
     {
       "orderKey": "24",
       "folder": "24",
-      "title": "Portfolio 24",
+      "title": "Test 24",
       "previewUrl": "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
       "previewType": "image",
       "fullUrl": "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
+      "meta": {
+        "title": "Test 24"
+      },
       "allImages": [
         "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.03.png",
         "/media/hidrive/24/Capture d’écran 2025-06-07 à 17.00.46.png",
@@ -320,12 +455,12 @@
       "orderKey": "25",
       "folder": "25",
       "title": "Portfolio 25",
-      "previewUrl": "/media/hidrive/25/dior joaillere 7 copie.avif",
+      "previewUrl": "/media/hidrive/25/JGEM95031_1243 copie.jpg",
       "previewType": "image",
-      "fullUrl": "/media/hidrive/25/dior joaillere 7 copie.avif",
+      "fullUrl": "/media/hidrive/25/JGEM95031_1243 copie.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/25/JGEM95031_1243 copie.jpg",
       "allImages": [
-        "/media/hidrive/25/dior joaillere 7 copie.avif",
         "/media/hidrive/25/JGEM95031_1243 copie.jpg",
         "/media/hidrive/25/JGEM95036_0539 copie.jpg",
         "/media/hidrive/25/SET-12_0079 copie.jpg",
@@ -337,20 +472,24 @@
     {
       "orderKey": "26",
       "folder": "26",
-      "title": "Portfolio 26",
+      "title": "Second Value - Should Appear",
       "previewUrl": "/media/hidrive/26/eyes_adjusted.mp4",
       "previewType": "video",
       "fullUrl": "/media/hidrive/26/eyes_adjusted.mp4",
-      "fullType": "video"
+      "fullType": "video",
+      "meta": {
+        "title": "Second Value - Should Appear"
+      }
     },
     {
       "orderKey": "27",
       "folder": "27",
       "title": "Portfolio 27",
-      "previewUrl": "/media/hidrive/27/video-1749482497-1.mp4",
-      "previewType": "video",
+      "previewUrl": "/media/hidrive/27/preview.jpg",
+      "previewType": "image",
       "fullUrl": "/media/hidrive/27/video-1749482497-1.mp4",
       "fullType": "video",
+      "thumbnailUrl": "/media/hidrive/27/image-1749482339-2.jpg",
       "allImages": [
         "/media/hidrive/27/image-1749482339-2.jpg",
         "/media/hidrive/27/image-1749482387-1.jpg",
@@ -365,6 +504,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/28/Capture d’écran 2025-06-07 à 17.16.56.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/28/Capture d’écran 2025-06-07 à 17.16.56.png",
       "allImages": [
         "/media/hidrive/28/Capture d’écran 2025-06-07 à 17.16.56.png",
         "/media/hidrive/28/Capture d’écran 2025-06-07 à 18.31.29.png"
@@ -378,6 +518,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/29/Capture d’écran 2025-06-07 à 18.38.13.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/29/Capture d’écran 2025-06-07 à 18.38.13.png",
       "allImages": [
         "/media/hidrive/29/Capture d’écran 2025-06-07 à 18.38.13.png",
         "/media/hidrive/29/full.png"
@@ -391,6 +532,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/30/Capture d'écran 2025-10-16 185737.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/30/Capture d'écran 2025-10-16 185737.png",
       "allImages": [
         "/media/hidrive/30/Capture d'écran 2025-10-16 185737.png",
         "/media/hidrive/30/Capture d'écran 2025-10-16 185813.png",
@@ -405,21 +547,13 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/31/afterclicik.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/31/afterclicik.jpg",
       "allImages": [
-        "/media/hidrive/31/afterclicik.jpg",
         "/media/hidrive/31/Harper_s Bazaar Poland by Michal Radwanski 01.jpg",
         "/media/hidrive/31/Harper_s Bazaar Poland by Michal Radwanski 03.jpg",
-        "/media/hidrive/31/Harper_s Bazaar Poland by Michal Radwanski 04.jpg"
+        "/media/hidrive/31/Harper_s Bazaar Poland by Michal Radwanski 04.jpg",
+        "/media/hidrive/31/afterclicik.jpg"
       ]
-    },
-    {
-      "orderKey": "32",
-      "folder": "32",
-      "title": "Portfolio 32",
-      "previewUrl": "/media/hidrive/32/32_short.mp4",
-      "previewType": "video",
-      "fullUrl": "/media/hidrive/32/32_short.mp4",
-      "fullType": "video"
     },
     {
       "orderKey": "33",
@@ -429,6 +563,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/33/DELVAUX_SHOT_08_115_RVB.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/33/DELVAUX_SHOT_08_115_RVB.jpg",
       "allImages": [
         "/media/hidrive/33/DELVAUX_SHOT_08_115_RVB.jpg",
         "/media/hidrive/33/DELVAUX_SHOT_10_150.jpg",
@@ -442,7 +577,8 @@
       "previewUrl": "/media/hidrive/34/preview.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/34/IMG_2480.JPG",
-      "fullType": "image"
+      "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/34/IMG_2480.JPG"
     },
     {
       "orderKey": "35",
@@ -452,6 +588,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/35/35.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/35/35.jpg",
       "allImages": [
         "/media/hidrive/35/35.jpg",
         "/media/hidrive/35/image-1749478221-1.jpg",
@@ -469,6 +606,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/36/first.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/36/first.jpg",
       "allImages": [
         "/media/hidrive/36/first.jpg",
         "/media/hidrive/36/image-1749489616-1.jpg",
@@ -484,10 +622,11 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/37/afer_click.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/37/afer_click.jpg",
       "allImages": [
+        "/media/hidrive/37/IMG_5790.jpg",
         "/media/hidrive/37/afer_click.jpg",
-        "/media/hidrive/37/image-1749460204-1.jpg",
-        "/media/hidrive/37/IMG_5790.jpg"
+        "/media/hidrive/37/image-1749460204-1.jpg"
       ]
     },
     {
@@ -498,6 +637,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.12.13.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.12.13.png",
       "allImages": [
         "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.12.13.png",
         "/media/hidrive/38/Capture d’écran 2025-06-07 à 17.13.23.png",
@@ -531,6 +671,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.09.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.09.png",
       "allImages": [
         "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.09.png",
         "/media/hidrive/41/Capture d’écran 2025-06-07 à 17.09.25.png",
@@ -572,6 +713,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/45/IMG_6280.JPG",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/45/IMG_6280.JPG",
       "allImages": [
         "/media/hidrive/45/IMG_6280.JPG",
         "/media/hidrive/45/IMG_6282.JPG",
@@ -642,6 +784,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/52/image-1749652884-1.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/52/image-1749652884-1.jpg",
       "allImages": [
         "/media/hidrive/52/image-1749652884-1.jpg",
         "/media/hidrive/52/image-1749652884-3.jpg"
@@ -691,6 +834,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 01.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 01.jpg",
       "allImages": [
         "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 01.jpg",
         "/media/hidrive/57/Marie-Claire South Africa by Daniella Midenge 04.jpg",
@@ -706,6 +850,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
       "allImages": [
         "/media/hidrive/58/2023_10_13_DIOR_HOLDSTOCK_04_0068.jpg",
         "/media/hidrive/58/IMG_6238.JPG",
@@ -720,6 +865,7 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/59/Capture d'écran 2025-10-16 194709.png",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/59/Capture d'écran 2025-10-16 194709.png",
       "allImages": [
         "/media/hidrive/59/Capture d'écran 2025-10-16 194709.png",
         "/media/hidrive/59/Capture d’écran 2025-06-07 à 17.20.58.png",
@@ -743,7 +889,8 @@
       "previewUrl": "/media/hidrive/61/preview.jpg",
       "previewType": "image",
       "fullUrl": "/media/hidrive/61/image-1757179966-1.jpg",
-      "fullType": "image"
+      "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/61/image-1757179966-1.jpg"
     },
     {
       "orderKey": "62",
@@ -762,12 +909,13 @@
       "previewType": "image",
       "fullUrl": "/media/hidrive/63/image-1757180026-5.jpg",
       "fullType": "image",
+      "thumbnailUrl": "/media/hidrive/63/image-1757180026-5.jpg",
       "allImages": [
         "/media/hidrive/63/image-1757180026-5.jpg",
         "/media/hidrive/63/image-1757180026-6.jpg"
       ]
     }
   ],
-  "generatedAt": "2025-11-09T19:50:30.348Z",
+  "generatedAt": "2025-11-11T15:12:28.833Z",
   "source": "local"
 }

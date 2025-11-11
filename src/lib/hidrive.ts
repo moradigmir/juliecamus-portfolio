@@ -240,36 +240,22 @@ export const findManifestMarkdown = async (folderPath: string): Promise<{ conten
     // Ensure trailing slash
     const normalizedPath = folderPath.endsWith('/') ? folderPath : folderPath + '/';
     
-    // Priority order: MANIFEST variants first, then README/INFO as low-priority fallback
-    const manifestVariants = [
-      'MANIFEST.md', 'Manifest.md', 'manifest.md',
-      'MANIFEST.txt', 'Manifest.txt', 'manifest.txt',
-      'MANIFEST', 'Manifest', 'manifest',
-      'README.md', 'INFO.md'
-    ];
-    
-    // Convert /public/XX/ to /media/hidrive/XX/
+    // Convert /public/XX/ to folder number
     const folderMatch = normalizedPath.match(/\/public\/(\d+)\//);
     if (folderMatch) {
-      const localPath = `/media/hidrive/${folderMatch[1]}/`;
+      const folder = folderMatch[1];
       
-      for (const variant of manifestVariants) {
-        try {
-          const response = await fetch(localPath + variant);
-          if (response.ok) {
-            const content = await response.text();
-            if (content && content.trim()) {
-              // Only reject if it's actually HTML (starts with < tag)
-              const trimmed = content.trim();
-              if (trimmed.startsWith('<')) {
-                continue; // Skip HTML files
-              }
-              return { content, matchedFilename: variant };
-            }
+      // Use the local API endpoint to get fresh data from disk
+      try {
+        const response = await fetch(`/api/manifest/${folder}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.content && result.content.trim()) {
+            return { content: result.content, matchedFilename: 'MANIFEST.txt' };
           }
-        } catch {
-          // Continue to next variant
         }
+      } catch (error) {
+        console.error(`Failed to fetch manifest for folder ${folder}:`, error);
       }
     }
     

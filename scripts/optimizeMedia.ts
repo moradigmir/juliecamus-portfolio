@@ -146,7 +146,7 @@ async function main() {
   
   if (optimized > 0) {
     console.log("\nRebuilding media manifest...");
-    await runCommand("npx", ["tsx", "scripts/buildMediaManifest.ts"]);
+    await runCommand("npx", ["tsx", "scripts/buildLocalManifest.ts"]);
     console.log("✓ Manifest updated");
   }
 }

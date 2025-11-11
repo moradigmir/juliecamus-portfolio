@@ -14,7 +14,7 @@ import { useMediaIndex } from '@/hooks/useMediaIndex';
 const Index = () => {
   const isMobile = useIsMobile();
   const [editorOpen, setEditorOpen] = useState(false);
-  const { mediaItems, refetch } = useMediaIndex();
+  const { mediaItems, refetch, forceRefreshManifests } = useMediaIndex();
   const showEditButton = typeof window !== 'undefined' && 
     new URLSearchParams(window.location.search).get('diagnostics') === '1';
   
@@ -30,9 +30,11 @@ const Index = () => {
     forceReload();
   }, []);
   
-  const handleEditorSave = () => {
+  const handleEditorSave = async () => {
     // Trigger refetch of media items to reflect updated metadata
-    refetch();
+    await refetch();
+    // Force refresh manifests to reload metadata from disk
+    await forceRefreshManifests();
   };
 
   return (

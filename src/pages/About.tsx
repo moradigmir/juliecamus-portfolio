@@ -3,24 +3,11 @@ import Navigation from "../components/Navigation";
 import juliePortfolio from "@/assets/julie-portfolio-preview.png";
 const About = () => {
   const base = import.meta.env.BASE_URL || "/";
-  const logos = [
-    { src: `${base}logos/dior.png`, alt: "Dior" },
-    { src: `${base}logos/givenchy.png`, alt: "Givenchy" },
-    { src: `${base}logos/armani-beauty.png`, alt: "Armani Beauty" },
-    { src: `${base}logos/carolina-herrera.png`, alt: "Carolina Herrera" },
-    { src: `${base}logos/numero.png`, alt: "Numéro" },
-    { src: `${base}logos/harpers-bazaar.png`, alt: "Harper's Bazaar" },
-    { src: `${base}logos/chanel.png`, alt: "Chanel" },
-    { src: `${base}logos/lancome.png`, alt: "Lancôme" },
-    { src: `${base}logos/lacoste.png`, alt: "Lacoste" },
-    { src: `${base}logos/loreal-luxe.png`, alt: "L'Oréal Luxe" },
-    { src: `${base}logos/vogue.png`, alt: "Vogue" },
-    { src: `${base}logos/elle.png`, alt: "Elle" },
-    { src: `${base}logos/nike.png`, alt: "Nike" },
-    { src: `${base}logos/puma.png`, alt: "Puma" },
-    { src: `${base}logos/replay.png`, alt: "Replay" },
-    { src: `${base}logos/levis.png`, alt: "Levi's" },
-  ];
+  // Generate logos array for all 57 processed logos
+  const logos = Array.from({ length: 57 }, (_, i) => ({
+    src: `${base}logos/logo-${String(i + 1).padStart(3, '0')}.png`,
+    alt: `Client ${i + 1}`
+  }));
   return (
     <div className="min-h-screen bg-background">
       <Navigation />

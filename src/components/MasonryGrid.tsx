@@ -4,8 +4,6 @@ import ProjectTile from './ProjectTile';
 import AutoMediaTile from './AutoMediaTile';
 import { useMediaIndex, type MediaItem, type MediaManifest } from '../hooks/useMediaIndex';
 import Lightbox from './Lightbox';
-import HiDriveBrowser from './HiDriveBrowser';
-import ProjectStatusIndicator from './ProjectStatusIndicator';
 import { DiagnosticsModal } from '../debug/DiagnosticsModal';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -44,7 +42,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   const [lightboxProject, setLightboxProject] = useState<Project | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<MediaItem | null>(null);
   const [lightboxImageIndex, setLightboxImageIndex] = useState(0);
-  const [showHiDriveBrowser, setShowHiDriveBrowser] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showManifestDialog, setShowManifestDialog] = useState(false);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -102,6 +99,22 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
     metaStats,
     forceRefreshManifests
   } = useMediaIndex();
+
+  // Listen for manifest updates from editor and auto-refresh
+  useEffect(() => {
+    const handleManifestUpdate = async () => {
+      console.log('📝 Manifest updated, refreshing grid...');
+      await refetch();
+      await forceRefreshManifests();
+      toast({
+        title: 'Grid Updated',
+        description: 'Manifest changes applied to grid.',
+      });
+    };
+    
+    window.addEventListener('manifestUpdated', handleManifestUpdate);
+    return () => window.removeEventListener('manifestUpdated', handleManifestUpdate);
+  }, [refetch, forceRefreshManifests, toast]);
 
   // Keep lightbox media in sync with latest metadata (e.g., MANIFEST updates)
   useEffect(() => {
@@ -173,16 +186,24 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
   }, []);
 
   const nextImage = useCallback(() => {
-    if (!lightboxProject) return;
-    const allImages = [lightboxProject.coverImage, ...(lightboxProject.images || [])];
-    setLightboxImageIndex((prev) => (prev + 1) % allImages.length);
-  }, [lightboxProject]);
+    if (lightboxProject) {
+      const allImages = [lightboxProject.coverImage, ...(lightboxProject.images || [])];
+      setLightboxImageIndex((prev) => (prev + 1) % allImages.length);
+    } else if (lightboxMedia && (lightboxMedia as any).allImages) {
+      const allImages = (lightboxMedia as any).allImages as string[];
+      setLightboxImageIndex((prev) => (prev + 1) % allImages.length);
+    }
+  }, [lightboxProject, lightboxMedia]);
 
   const prevImage = useCallback(() => {
-    if (!lightboxProject) return;
-    const allImages = [lightboxProject.coverImage, ...(lightboxProject.images || [])];
-    setLightboxImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-  }, [lightboxProject]);
+    if (lightboxProject) {
+      const allImages = [lightboxProject.coverImage, ...(lightboxProject.images || [])];
+      setLightboxImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    } else if (lightboxMedia && (lightboxMedia as any).allImages) {
+      const allImages = (lightboxMedia as any).allImages as string[];
+      setLightboxImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+    }
+  }, [lightboxProject, lightboxMedia]);
 
   const handlePathFound = useCallback((correctPath: string) => {
     console.log('📍 Found correct path:', correctPath);
@@ -647,13 +668,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
       className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
       style={{ minHeight: '100vh' }}
     >
-      {/* Project Status Indicator for Supabase Issues */}
-      {isSupabasePaused && (
-        <div className="mb-8">
-          <ProjectStatusIndicator onRetry={refetch} />
-        </div>
-      )}
-
       {/* Diagnostic Panel - Only show when debug=1 */}
       {showDevControls && (
         <div data-dev-toolbar className="mb-6 space-y-3">
@@ -800,14 +814,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Button
-              onClick={() => setShowHiDriveBrowser(!showHiDriveBrowser)}
-              variant="outline"
-              size="sm"
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              {showHiDriveBrowser ? 'Hide' : 'Show'} HiDrive Browser
-            </Button>
             {(mediaError || autoMediaItems.length === 0) && !isSupabasePaused && (
               <Button onClick={refetch} variant="outline" size="sm" disabled={mediaLoading}>
                 {mediaLoading ? 'Retrying…' : 'Retry Loading'}
@@ -945,13 +951,6 @@ const MasonryGrid = ({ projects }: MasonryGridProps) => {
             </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* HiDrive Browser Panel */}
-      {showHiDriveBrowser && (
-        <div className="mb-8">
-          <HiDriveBrowser onPathFound={handlePathFound} />
         </div>
       )}
 

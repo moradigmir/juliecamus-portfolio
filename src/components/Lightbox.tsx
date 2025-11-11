@@ -48,13 +48,18 @@ const Lightbox: React.FC<LightboxProps> = ({
   // Get all images/content
   let allContent: string[] = [];
   if (media) {
-    allContent = [media.fullUrl];
+    // Check if media has multiple images (allImages from manifest)
+    if ((media as any).allImages && Array.isArray((media as any).allImages)) {
+      allContent = (media as any).allImages;
+    } else {
+      allContent = [media.fullUrl];
+    }
   } else if (project) {
     allContent = [project.coverImage, ...(project.images || [])];
   }
   
   const currentContent = allContent[imageIndex];
-  const hasNavigation = allContent.length > 1 && !media; // Media items don't have navigation
+  const hasNavigation = allContent.length > 1; // Show navigation if multiple images
 
   // Keyboard navigation (disabled for media items since they're single content)
   useEffect(() => {

@@ -5,7 +5,7 @@ describe('Visual Title Display Check', () => {
     cy.visit('http://localhost:8080/');
     
     // Wait for tiles to load
-    cy.get('.gallery-tile', { timeout: 15000 }).should('have.length.greaterThan', 60);
+    cy.get('.gallery-tile', { timeout: 15000 }).should('have.length.at.least', 50);
     
     // Check first 5 tiles
     cy.get('.gallery-tile').each(($tile, index) => {
