@@ -38,6 +38,18 @@
       ]
     },
     {
+      "orderKey": "03",
+      "folder": "03",
+      "title": "Givenchy Beauty Le Rouge by Jonathan Elhaik",
+      "previewUrl": "/media/hidrive/03/03_short.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/03/03_long.mp4",
+      "fullType": "video",
+      "meta": {
+        "title": "Givenchy Beauty Le Rouge by Jonathan Elhaik"
+      }
+    },
+    {
       "orderKey": "04",
       "folder": "04",
       "title": "Schön Magazine",
@@ -306,6 +318,21 @@
         "/media/hidrive/16/dior fall 5 copie.jpeg",
         "/media/hidrive/16/dior fall copie.jpeg"
       ]
+    },
+    {
+      "orderKey": "17",
+      "folder": "17",
+      "title": "Dior Holiday by Agnès Lloyd Platt",
+      "previewUrl": "/media/hidrive/17/17_short.mp4",
+      "previewType": "video",
+      "fullUrl": "/media/hidrive/17/17_long.mp4",
+      "fullType": "video",
+      "meta": {
+        "title": "Dior Holiday by Agnès Lloyd Platt",
+        "tags": [
+          "Dior"
+        ]
+      }
     },
     {
       "orderKey": "18",
@@ -1107,6 +1134,6 @@
       ]
     }
   ],
-  "generatedAt": "2025-11-11T16:32:28.566Z",
+  "generatedAt": "2025-11-11T16:38:55.242Z",
   "source": "local"
 }
